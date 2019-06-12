@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ProjectModuleManager">
+    <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/flask_taxonomies.iml" filepath="$PROJECT_DIR$/.idea/flask_taxonomies.iml" />
+      <module fileurl="file://$PROJECT_DIR$/../flask_taxonomies_boiler/.idea/flask_taxonomies_boiler.iml" filepath="$PROJECT_DIR$/../flask_taxonomies_boiler/.idea/flask_taxonomies_boiler.iml" />
+    </modules>
+  </component>
+</project>
