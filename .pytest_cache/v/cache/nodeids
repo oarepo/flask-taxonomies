@@ -1,1 +1,9 @@
-[]
+[
+  "tests/test_models.py::TestTaxonomy::()::test_get_by_id",
+  "tests/test_models.py::TestTaxonomy::()::test_get_by_slug",
+  "tests/test_models.py::TestTaxonomy::()::test_insert_term",
+  "tests/test_models.py::TestTaxonomy::()::test_update_taxonomy",
+  "tests/test_models.py::TestTaxonomy::()::test_move_tree",
+  "tests/test_models.py::TestTaxonomy::()::test_delete_taxonomy",
+  "tests/test_models.py::TestTaxonomy::()::test_delete_tree"
+]

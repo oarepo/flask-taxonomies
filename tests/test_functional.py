@@ -3,3 +3,9 @@
 
 See: http://webtest.readthedocs.org/
 """
+
+
+class TestTaxonomy:
+    """Taxonomy functional test."""
+
+    pass

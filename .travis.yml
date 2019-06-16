@@ -12,7 +12,5 @@ install:
   - nvm use 12
   - npm install
 before_script:
-  - npm run lint
-  - npm run build
   - flask lint --check
 script: flask test
