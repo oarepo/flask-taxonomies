@@ -2,22 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="4ed2d711-7c01-4f29-bf39-155460bbddd2" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/flask_taxonomies/commands.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/flask_taxonomies/models.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/setup.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.pytest_cache/v/cache/nodeids" beforeDir="false" afterPath="$PROJECT_DIR$/.pytest_cache/v/cache/nodeids" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.travis.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.travis.yml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.rst" beforeDir="false" afterPath="$PROJECT_DIR$/README.rst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/flask_taxonomies/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/flask_taxonomies/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/flask_taxonomies/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/flask_taxonomies/app.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/flask_taxonomies/database.py" beforeDir="false" afterPath="$PROJECT_DIR$/flask_taxonomies/database.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/flask_taxonomies/extensions.py" beforeDir="false" afterPath="$PROJECT_DIR$/flask_taxonomies/extensions.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/flask_taxonomies/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/flask_taxonomies/views.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/requirements/prod.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements/prod.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/conftest.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/conftest.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_functional.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_functional.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_models.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_models.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -316,12 +301,12 @@
       <workItem from="1560352928313" duration="2004000" />
       <workItem from="1560409549634" duration="5784000" />
       <workItem from="1560501130753" duration="18000" />
-      <workItem from="1560677675197" duration="25824000" />
+      <workItem from="1560677675197" duration="25933000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="33630000" />
+    <option name="totallyTimeSpent" value="33739000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="-3" y="-26" width="1926" height="1109" extended-state="0" />
@@ -341,7 +326,7 @@
       <window_info anchor="bottom" id="Version Control" order="8" />
       <window_info anchor="bottom" id="Database Changes" order="9" />
       <window_info anchor="bottom" id="Event Log" order="10" side_tool="true" />
-      <window_info active="true" anchor="bottom" id="Terminal" order="11" visible="true" weight="0.03058104" />
+      <window_info anchor="bottom" id="Terminal" order="11" weight="0.69317025" />
       <window_info anchor="bottom" id="Python Console" order="12" weight="0.32997763" />
       <window_info anchor="right" id="Commander" order="0" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />

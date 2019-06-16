@@ -16,7 +16,7 @@ Quickstart
 
 Run the following commands to bootstrap your environment ::
 
-    git clone https://github.com/mirekys/flask_taxonomies
+    git clone https://github.com/oarepo/flask_taxonomies
     cd flask_taxonomies
     pip install -r requirements/dev.txt
 
