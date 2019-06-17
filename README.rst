@@ -8,6 +8,9 @@ Flask Taxonomies
 .. image:: https://img.shields.io/travis/oarepo/flask-taxonomies.svg
         :target: https://travis-ci.org/oarepo/flask-taxonomies
 
+.. image:: https://img.shields.io/coveralls/oarepo/flask-taxonomies.svg
+        :target: https://coveralls.io/r/oarepo/flask-taxonomies
+
 Taxonomy trees REST API for Flask Applications
 
 
