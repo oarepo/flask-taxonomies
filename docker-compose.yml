@@ -7,7 +7,6 @@ x-build-args: &build_args
 x-default-volumes: &default_volumes
   volumes:
     - ./:/app
-    - node-modules:/app/node_modules
     - ./dev.db:/tmp/dev.db
 
 services:
@@ -20,7 +19,6 @@ services:
     image: "flask_taxonomies-development"
     ports:
       - "5000:5000"
-      - "2992:2992"
     <<: *default_volumes
 
   flask-prod:
@@ -36,7 +34,6 @@ services:
       FLASK_ENV: production
       FLASK_DEBUG: 0
       LOG_LEVEL: info
-      GUNICORN_WORKERS: 4
     <<: *default_volumes
 
   manage:

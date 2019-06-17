@@ -57,3 +57,8 @@ env/
 
 # Development database
 *.db
+
+.idea/
+.pytest_cache/
+.venv/
+migrations/

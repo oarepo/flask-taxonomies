@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""User views."""
+"""Taxonomy views."""
 from flask import Blueprint, abort, jsonify
 from sqlalchemy import asc
 from webargs import fields
