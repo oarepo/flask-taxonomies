@@ -2,6 +2,7 @@
 """Defines fixtures available to all tests."""
 
 import pytest
+from webtest import TestApp
 
 from flask_taxonomies.app import create_app
 from flask_taxonomies.extensions import db as _db
@@ -18,6 +19,12 @@ def app():
     yield _app
 
     ctx.pop()
+
+
+@pytest.fixture
+def testapp(app):
+    """Create Webtest app."""
+    return TestApp(app)
 
 
 @pytest.fixture

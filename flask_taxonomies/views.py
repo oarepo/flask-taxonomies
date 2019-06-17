@@ -38,6 +38,8 @@ def slug_path_parent(value: str) -> Taxonomy:
 def jsonify_taxonomy(t: Taxonomy) -> dict:
     """Prepare Taxonomy to be easily jsonified."""
     return {
+        "id": t.id,
+        "label": str(t),
         "slug": t.slug,
         "title": t.title,
         "description": t.description,
@@ -46,8 +48,8 @@ def jsonify_taxonomy(t: Taxonomy) -> dict:
 
 
 @blueprint.route("/", methods=("GET",))
-@blueprint.route("/<string:taxonomy_slug>", methods=("GET",))
-@blueprint.route("/<path:taxonomy_path>/<string:taxonomy_slug>", methods=("GET",))
+@blueprint.route("/<string:taxonomy_slug>/", methods=("GET",))
+@blueprint.route("/<path:taxonomy_path>/<string:taxonomy_slug>/", methods=("GET",))
 def taxonomy_list(taxonomy_id=None, taxonomy_path=None, taxonomy_slug=None):
     """List all available taxonomy trees with a given optional parent slug."""
     tax = None
@@ -66,8 +68,8 @@ def taxonomy_list(taxonomy_id=None, taxonomy_path=None, taxonomy_slug=None):
     return jsonify([jsonify_taxonomy(t) for t in result])
 
 
-@blueprint.route("/<string:slug>", methods=("POST",))
-@blueprint.route("/<path:attach_to_path>/<string:slug>", methods=("POST",))
+@blueprint.route("/<string:slug>/", methods=("POST",))
+@blueprint.route("/<path:attach_to_path>/<string:slug>/", methods=("POST",))
 @use_kwargs(
     {
         "title": fields.Str(required=True),
@@ -102,8 +104,8 @@ def taxonomy_create(slug, title, description="", attach_to=None, attach_to_path=
     return response
 
 
-@blueprint.route("/<string:slug>", methods=("DELETE",))
-@blueprint.route("/<path:taxonomy_path>/<string:slug>", methods=("DELETE",))
+@blueprint.route("/<string:slug>/", methods=("DELETE",))
+@blueprint.route("/<path:taxonomy_path>/<string:slug>/", methods=("DELETE",))
 def taxonomy_delete(slug, taxonomy_path=None):
     """Delete a Taxonomy entry on a given path."""
     slug_validator(slug)
@@ -116,11 +118,12 @@ def taxonomy_delete(slug, taxonomy_path=None):
 
     response = jsonify()
     response.status_code = 204
+    response.headers = []
     return response
 
 
-@blueprint.route("/<string:slug>", methods=("PATCH",))
-@blueprint.route("/<path:taxonomy_path>/<string:slug>", methods=("PATCH",))
+@blueprint.route("/<string:slug>/", methods=("PATCH",))
+@blueprint.route("/<path:taxonomy_path>/<string:slug>/", methods=("PATCH",))
 @use_kwargs(
     {"title": fields.Str(required=False), "description": fields.Str(required=False)}
 )

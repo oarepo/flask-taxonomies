@@ -11,3 +11,5 @@ install:
 before_script:
   - flask lint --check
 script: flask test
+after_success:
+  - coveralls
