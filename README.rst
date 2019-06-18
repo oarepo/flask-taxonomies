@@ -51,36 +51,36 @@ Usage
 Create taxonomies ::
 
     curl -X POST \
-      http://localhost:5000/taxonomies/vehicle \
+      http://localhost:5000/taxonomies/vehicle/ \
       -d '{"title": "{\"en\": \"Vehicle\"}", "description": "Some Vehicle"}'
 
     curl -X POST \
-      http://localhost:5000/taxonomies/vehicle/land-vehicle \
+      http://localhost:5000/taxonomies/vehicle/land-vehicle/ \
       -d '{"title": "{\"en\": \"Land Vehicle\"}", "description": "Land Vehicle"}'
 
     curl -X POST \
-      http://localhost:5000/taxonomies/car \
+      http://localhost:5000/taxonomies/car/ \
       -d '{"title": "{\"en\": \"Vehicle\"}", "description": "Some Vehicle", "attach_to": "land-vehicle"}'
 
 
 List taxonomies ::
 
-    curl -X GET http://localhost:5000/taxonomies/car
+    curl -X GET http://localhost:5000/taxonomies/car/
     > [ { "description": "A Car", "id": 7, "label": "", "path": "vehicle/land-vehicle/car", "slug": "car", "title": "{\"en\": \"Car\"}" } ]
 
-    curl -X GET http://localhost:5000/taxonomies/vehicle/land-vehicle
+    curl -X GET http://localhost:5000/taxonomies/vehicle/land-vehicle/
     > [ { "children": [ { "description": "A Car", "id": 7, "label": "", "path": "vehicle/land-vehicle/car", "slug": "car", "title": "{\"en\": \"Car\"}" } ], "description": "Some Land Vehicle", "id": 6, "label": "", "path": "vehicle/land-vehicle", "slug": "land-vehicle", "title": "{\"en\": \"Land Vehicle\"}" } ]
 
 Update taxonomy entry ::
 
     curl -X PATCH \
-      http://localhost:5000/taxonomies/vehicle/land-vehicle \
+      http://localhost:5000/taxonomies/vehicle/land-vehicle/ \
       -d '{"description": "A Fancy Land vehicle"}'
 
 Delete taxonomy (or Taxonomy subtree) ::
 
     curl -X DELETE \
-      http://localhost:5000/taxonomies/vehicle/land-vehicle
+      http://localhost:5000/taxonomies/vehicle/land-vehicle/
 
 Move taxonony (or whole subtree) to another tree (identified by slug) ::
 
