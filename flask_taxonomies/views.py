@@ -1,19 +1,19 @@
 # -*- coding: utf-8 -*-
-"""Taxonomy views."""
+"""TaxonomyTerm views."""
 from flask import Blueprint, abort, jsonify
 from sqlalchemy import asc
 from webargs import fields
 from webargs.flaskparser import use_kwargs
 
 from flask_taxonomies.extensions import db
-from flask_taxonomies.models import Taxonomy
+from flask_taxonomies.models import TaxonomyTerm
 
 blueprint = Blueprint("taxonomies", __name__, url_prefix="/taxonomies")
 
 
 def slug_validator(value: str):
     """Validate if slug exists."""
-    tax = Taxonomy.get_by_slug(value)
+    tax = TaxonomyTerm.get_by_slug(value)
     if not tax:
         abort(400, "Invalid slug passed: {}".format(value))
 
@@ -24,25 +24,25 @@ def slug_path_validator(value: str):
     for i, slug in enumerate(slugs):
         slug_validator(slug)
         if i > 0:
-            parent = Taxonomy.get_by_slug(slugs[i - 1])
-            current: Taxonomy = Taxonomy.get_by_slug(slug)
+            parent = TaxonomyTerm.get_by_slug(slugs[i - 1])
+            current: TaxonomyTerm = TaxonomyTerm.get_by_slug(slug)
             if not current.parent_id == parent.id:
                 abort(400, "Invalid slug path passed: {}".format(value))
 
 
-def slug_path_parent(value: str) -> Taxonomy:
-    """Get Taxonomy instance for last component of slug path."""
-    return Taxonomy.get_by_slug(value.split("/")[-1])
+def slug_path_parent(value: str) -> TaxonomyTerm:
+    """Get TaxonomyTerm instance for last component of slug path."""
+    return TaxonomyTerm.get_by_slug(value.split("/")[-1])
 
 
-def jsonify_taxonomy(t: Taxonomy) -> dict:
-    """Prepare Taxonomy to be easily jsonified."""
+def jsonify_taxonomy(t: TaxonomyTerm) -> dict:
+    """Prepare TaxonomyTerm to be easily jsonified."""
     return {
         "id": t.id,
         "label": str(t),
         "slug": t.slug,
         "title": t.title,
-        "description": t.description,
+        "description": t.extra_data,
         "path": "/".join([tx.slug for tx in t.path_to_root(order=asc).all()]),
     }
 
@@ -56,14 +56,14 @@ def taxonomy_list(taxonomy_id=None, taxonomy_path=None, taxonomy_slug=None):
     result = None
 
     if taxonomy_slug:
-        tax = Taxonomy.get_by_slug(taxonomy_slug)
+        tax = TaxonomyTerm.get_by_slug(taxonomy_slug)
         if not tax:
-            abort(404, "Taxonomy not found.")
+            abort(404, "TaxonomyTerm not found.")
         result = []
         tax_tree = tax.drilldown_tree(json=True, json_fields=jsonify_taxonomy)
         return jsonify(tax_tree)
     else:
-        result = Taxonomy.query.filter(Taxonomy.parent_id == None).all()  # noqa E711
+        result = TaxonomyTerm.query.filter(TaxonomyTerm.parent_id == None).all()  # noqa E711
 
     return jsonify([jsonify_taxonomy(t) for t in result])
 
@@ -78,14 +78,14 @@ def taxonomy_list(taxonomy_id=None, taxonomy_path=None, taxonomy_slug=None):
     }
 )
 def taxonomy_create(slug, title, description="", attach_to=None, attach_to_path=None):
-    """Create new Taxonomy entry on a specified path, or attach it to a tree."""
+    """Create new TaxonomyTerm entry on a specified path, or attach it to a tree."""
     if slug == "move":
         abort(400, "Move is a reserved keyword")
 
-    if Taxonomy.get_by_slug(slug):
-        abort(400, "Taxonomy with this slug already exists.")
+    if TaxonomyTerm.get_by_slug(slug):
+        abort(400, "TaxonomyTerm with this slug already exists.")
 
-    taxonomy = Taxonomy(slug=slug, description=description, title=title)
+    taxonomy = TaxonomyTerm(slug=slug, description=description, title=title)
 
     if attach_to and attach_to_path:
         abort(400, "You cannot use `attach_to` and `slug path` at the same time.")
@@ -107,12 +107,12 @@ def taxonomy_create(slug, title, description="", attach_to=None, attach_to_path=
 @blueprint.route("/<string:slug>/", methods=("DELETE",))
 @blueprint.route("/<path:taxonomy_path>/<string:slug>/", methods=("DELETE",))
 def taxonomy_delete(slug, taxonomy_path=None):
-    """Delete a Taxonomy entry on a given path."""
+    """Delete a TaxonomyTerm entry on a given path."""
     slug_validator(slug)
     if taxonomy_path:
         slug_path_validator(taxonomy_path)
 
-    taxonomy = Taxonomy.get_by_slug(slug)
+    taxonomy = TaxonomyTerm.get_by_slug(slug)
     db.session.delete(taxonomy)
     db.session.commit()
 
@@ -128,12 +128,12 @@ def taxonomy_delete(slug, taxonomy_path=None):
     {"title": fields.Str(required=False), "description": fields.Str(required=False)}
 )
 def taxonomy_patch(slug, title=False, description=False, taxonomy_path=None):
-    """Update Taxonomy entry on a given path."""
+    """Update TaxonomyTerm entry on a given path."""
     slug_validator(slug)
     if taxonomy_path:
         slug_path_validator(taxonomy_path)
 
-    taxonomy = Taxonomy.get_by_slug(slug)
+    taxonomy = TaxonomyTerm.get_by_slug(slug)
     if title:
         taxonomy.title = title
     if description:
@@ -149,13 +149,13 @@ def taxonomy_patch(slug, title=False, description=False, taxonomy_path=None):
 @blueprint.route("/<path:taxonomy_path>/<string:slug>/move", methods=("POST",))
 @use_kwargs({"destination": fields.Str(required=True, validate=slug_validator)})
 def taxonomy_move(slug, destination, taxonomy_path=None):
-    """Move Taxonomy tree to another tree."""
+    """Move TaxonomyTerm tree to another tree."""
     slug_validator(slug)
     if taxonomy_path:
         slug_path_validator(taxonomy_path)
 
-    source: Taxonomy = Taxonomy.get_by_slug(slug)
-    dest: Taxonomy = Taxonomy.get_by_slug(destination)
+    source: TaxonomyTerm = TaxonomyTerm.get_by_slug(slug)
+    dest: TaxonomyTerm = TaxonomyTerm.get_by_slug(destination)
 
     source.move_inside(dest.id)
 

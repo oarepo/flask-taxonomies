@@ -11,7 +11,7 @@ Flask Taxonomies
 .. image:: https://img.shields.io/coveralls/oarepo/flask-taxonomies.svg
         :target: https://coveralls.io/r/oarepo/flask-taxonomies
 
-Taxonomy trees REST API for Flask Applications
+TaxonomyTerm trees REST API for Flask Applications
 
 
 Quickstart
@@ -77,7 +77,7 @@ Update taxonomy entry ::
       http://localhost:5000/taxonomies/vehicle/land-vehicle/ \
       -d '{"description": "A Fancy Land vehicle"}'
 
-Delete taxonomy (or Taxonomy subtree) ::
+Delete taxonomy (or TaxonomyTerm subtree) ::
 
     curl -X DELETE \
       http://localhost:5000/taxonomies/vehicle/land-vehicle/
