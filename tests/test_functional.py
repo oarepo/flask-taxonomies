@@ -3,211 +3,152 @@
 #
 # See: http://webtest.readthedocs.org/
 # """
-# import json
-#
-# import pytest
+import json
+
+import pytest
+
+from flask_taxonomies.models import Taxonomy
+
+
 # from webtest import AppError
-# from werkzeug.exceptions import BadRequest
 #
 # from flask_taxonomies.models import TaxonomyTerm
 # from flask_taxonomies.views import slug_path_parent, slug_path_validator, slug_validator
-#
-#
-# @pytest.mark.usefixtures("db")
-# class TestTaxonomy:
-#     """TaxonomyTerm functional test."""
-#
-#     def test_slug_valdiator(self, root_taxonomy):
-#         """Returns BadRequest on invalid/non-existent slugs."""
-#         with pytest.raises(BadRequest):
-#             slug_validator("nonexistent-slug")
-#
-#         assert slug_validator("root") is None
-#
-#     def test_slug_path_validator(self, db, root_taxonomy):
-#         """Returns BadRequest on invalid/non-existent paths."""
-#         leaf = TaxonomyTerm(
-#             slug="valid-path",
-#             title='{"en": "Leaf"}',
-#             description="TaxonomyTerm leaf term",
-#             parent_id=root_taxonomy.id,
-#         )
-#         db.session.add(leaf)
-#         db.session.commit()
-#
-#         with pytest.raises(BadRequest):
-#             slug_path_validator("root/invalid-path")
-#
-#         assert slug_path_validator("root/valid-path") is None
-#
-#     def test_slug_path_parent(self, db, root_taxonomy):
-#         """Returns last component of slug path as TaxonomyTerm instance."""
-#         leaf = TaxonomyTerm(
-#             slug="valid-path",
-#             title='{"en": "Leaf"}',
-#             description="TaxonomyTerm leaf term",
-#             parent_id=root_taxonomy.id,
-#         )
-#         db.session.add(leaf)
-#         db.session.commit()
-#
-#         returned = slug_path_parent("root/valid-path")
-#         assert returned == returned
-#
-#     def test_taxonomy_list(self, db, root_taxonomy, testapp):
-#         """Test listing of taxonomies."""
-#         leaf = TaxonomyTerm(
-#             slug="valid-path",
-#             title='{"en": "Leaf"}',
-#             description="TaxonomyTerm leaf term",
-#             parent_id=root_taxonomy.id,
-#         )
-#         db.session.add(leaf)
-#         db.session.commit()
-#
-#         expected_root = {
-#             "description": "TaxonomyTerm root term",
-#             "path": "root",
-#             "slug": "root",
-#             "id": 1,
-#             "label": "<TaxonomyTerm(root)>",
-#             "title": '{"en": "Root"}',
-#         }
-#
-#         expected_leaf = {
-#             "description": "TaxonomyTerm leaf term",
-#             "path": "root/valid-path",
-#             "slug": "valid-path",
-#             "id": 2,
-#             "label": "<TaxonomyTerm(valid-path)>",
-#             "title": '{"en": "Leaf"}',
-#         }
-#         expected_fulltree = expected_root.copy()
-#         expected_fulltree.update({"children": [expected_leaf]})
-#
-#         # List top-level TaxonomyTerm trees
-#         res = testapp.get("/taxonomies/")
-#         jsonres = json.loads(res.body)
-#         assert jsonres == [expected_root]
-#
-#         # List full TaxonomyTerm tree terms
-#         res = testapp.get("/taxonomies/root/")
-#         jsonres = json.loads(res.body)
-#         assert jsonres == [expected_fulltree]
-#
-#     def test_taxonomy_create(self, root_taxonomy, testapp):
-#         """Test TaxonomyTerm creation."""
-#         newtitle = {"en": "NEW"}
-#
-#         # Create on path
-#         resp = testapp.post("/taxonomies/root/new/", {"title": json.dumps(newtitle)})
-#         assert resp.status_code == 201
-#
-#         created: TaxonomyTerm = TaxonomyTerm.get_by_slug("new")
-#         assert created.is_descendant_of(root_taxonomy)
-#         assert created.title == json.dumps(newtitle)
-#
-#         # Create and attach to
-#         resp = testapp.post(
-#             "/taxonomies/new2/",
-#             {"title": json.dumps(newtitle), "attach_to": root_taxonomy.slug},
-#         )
-#         assert resp.status_code == 201
-#
-#         created: TaxonomyTerm = TaxonomyTerm.get_by_slug("new2")
-#         assert created.is_descendant_of(root_taxonomy)
-#         assert created.title == json.dumps(newtitle)
-#
-#         # Both create on path and attach to fails
-#         with pytest.raises(AppError) as ae:
-#             testapp.post(
-#                 "/taxonomies/root/new3/",
-#                 {"title": json.dumps(newtitle), "attach_to": root_taxonomy.slug},
-#             )
-#             assert ae.error.code == 400
-#
-#     def test_taxonomy_delete(self, db, root_taxonomy, testapp):
-#         """Test TaxonomyTerm deletion."""
-#         leaf = TaxonomyTerm(
-#             slug="valid-path",
-#             title='{"en": "Leaf"}',
-#             description="TaxonomyTerm leaf term",
-#             parent_id=root_taxonomy.id,
-#         )
-#         db.session.add(leaf)
-#         db.session.commit()
-#
-#         # Delete leaf
-#         resp = testapp.delete("/taxonomies/valid-path/")
-#         assert resp.status_code == 204
-#
-#         assert TaxonomyTerm.get_by_slug("valid-path") is None
-#
-#         leaf = TaxonomyTerm(
-#             slug="valid-path",
-#             title='{"en": "Leaf"}',
-#             description="TaxonomyTerm leaf term",
-#             parent_id=root_taxonomy.id,
-#         )
-#         db.session.add(leaf)
-#         db.session.commit()
-#
-#         # Delete tree
-#         resp = testapp.delete("/taxonomies/root/")
-#         assert resp.status_code == 204
-#
-#         assert TaxonomyTerm.get_by_slug("valid-path") is None
-#         assert TaxonomyTerm.get_by_slug("root") is None
-#
-#     def test_taxonomy_patch(self, root_taxonomy, testapp):
-#         """Test update TaxonomyTerm node."""
-#         newtitle = json.dumps({"en": "patched"})
-#         newdesc = "Patched"
-#
-#         resp = testapp.patch(
-#             "/taxonomies/root/", {"title": newtitle, "description": newdesc}
-#         )
-#         assert resp.status_code == 200
-#
-#         patched = TaxonomyTerm.get_by_slug("root")
-#         assert patched.title == newtitle
-#         assert patched.description == newdesc
-#
-#     def test_taxonomy_move(self, db, root_taxonomy, testapp):
-#         """Test move ops on TaxonomyTerm nodes.
-#
-#                    11
-#         root - 1 <       ==>  root - 1 - 11 - 12
-#                    12
-#         """
-#         leaf = TaxonomyTerm(
-#             slug="1",
-#             title='{"en": "Leaf"}',
-#             description="TaxonomyTerm leaf term",
-#             parent_id=root_taxonomy.id,
-#         )
-#         db.session.add(leaf)
-#         db.session.commit()
-#
-#         subleaf1 = TaxonomyTerm(
-#             slug="11",
-#             title='{"en": "Leaf"}',
-#             description="TaxonomyTerm leaf term",
-#             parent_id=leaf.id,
-#         )
-#         subleaf2 = TaxonomyTerm(
-#             slug="12",
-#             title='{"en": "Leaf"}',
-#             description="TaxonomyTerm leaf term",
-#             parent_id=leaf.id,
-#         )
-#         db.session.add_all([subleaf1, subleaf2])
-#         db.session.commit()
-#
-#         assert not subleaf2.is_descendant_of(subleaf1)
-#
-#         resp = testapp.post("/taxonomies/root/1/12/move", {"destination": "11"})
-#         assert resp.status_code == 200
-#
-#         moved: TaxonomyTerm = TaxonomyTerm.get_by_slug("12")
-#         assert moved.is_descendant_of(TaxonomyTerm.get_by_slug("11"))
+
+
+@pytest.mark.usefixtures("db")
+class TestTaxonomy:
+    """TaxonomyTerm functional test."""
+
+    def test_list_taxonomies(self, db, testapp, root_taxonomy):
+        """Test listing of taxonomies."""
+        additional = Taxonomy(code='additional', extra_data={'extra': 'data'})
+        db.session.add(additional)
+        db.session.commit()
+
+        res = testapp.get('/taxonomies/')
+        jsonres = json.loads(res.body)
+        assert {'id': root_taxonomy.id, 'code': root_taxonomy.code, 'extra_data': root_taxonomy.extra_data} in jsonres
+        assert {'id': additional.id, 'code': additional.code, 'extra_data': additional.extra_data} in jsonres
+
+    def test_create_taxonomy(self, testapp, root_taxonomy):
+        """Test Taxonomy creation."""
+
+        res = testapp.post('/taxonomies/', {'code': 'new', 'extra_data': '{"extra": "new"}'})
+
+        retrieved = Taxonomy.query.filter(Taxonomy.code == 'new').first()
+        assert res.status_code == 201
+        assert retrieved is not None
+        assert retrieved.extra_data == {'extra': 'new'}
+
+        # Test putting invalid exxtra data fails
+        res = testapp.post('/taxonomies/', {'code': 'bad', 'extra_data': "{'extra': }"}, expect_errors=True)
+        assert res.status_code == 400
+
+        # Test duplicit create fails
+        res = testapp.post('/taxonomies/', {'code': root_taxonomy.code}, expect_errors=True)
+        assert res.status_code == 400
+
+    def test_list_taxonomy_roots(self, testapp, root_taxonomy, manager):
+        """Test listing of top-level taxonomy terms."""
+
+        # Test empty taxonomy
+        res = testapp.get('/taxonomies/{}/'.format(root_taxonomy.code))
+        jsonres = json.loads(res.body)
+        assert jsonres == []
+
+        manager.create('top1', {'en': 'Top1'}, '/root/')
+        manager.create('leaf1', {'en': 'Leaf1'}, '/root/top1/')
+        manager.create('top2', {'en': 'Top2'}, '/root/')
+
+        # Test multiple top-level terms
+        res = testapp.get('/taxonomies/{}/'.format(root_taxonomy.code))
+        jsonres = json.loads(res.body)
+        assert len(jsonres) == 2
+        slugs = [r['slug'] for r in jsonres]
+        assert 'top1' in slugs
+        assert 'top2' in slugs
+        assert 'leaf1' not in slugs
+
+        # Test non-existent taxonomy
+        res = testapp.get('/taxonomies/blah/', expect_errors=True)
+        assert res.status_code == 404
+
+    def test_get_taxonomy_term(self, testapp, root_taxonomy, manager):
+        """Test getting Term details."""
+        manager.create('top1', {'en': 'Top1'}, '/root/')
+        manager.create('leaf1', {'en': 'Leaf1'}, '/root/top1/')
+        manager.create('leafeaf', {'en': 'LeafOfLeaf'}, '/root/top1/leaf1')
+
+        res = testapp.get('/taxonomies/{}/top1/leaf1/'.format(root_taxonomy.code))
+        jsonres = json.loads(res.body)
+        assert isinstance(jsonres, dict)
+        assert jsonres['slug'] == 'leaf1'
+        assert jsonres['path'] == '/root/top1/leaf1'
+        assert len(jsonres['children']) == 1
+
+        # Test get nonexistent path
+        res = testapp.get('/taxonomies/{}/top1/nope/'.format(root_taxonomy.code), expect_errors=True)
+        assert res.status_code == 404
+
+    def test_term_create(self, root_taxonomy, testapp, manager):
+        """Test TaxonomyTerm creation."""
+        res = testapp.post('/taxonomies/{}/leaf1/'.format(root_taxonomy.code), {'title': '{"en": "Leaf"}'})
+        jsonres = json.loads(res.body)
+        assert res.status_code == 201
+        assert jsonres['slug'] == 'leaf1'
+
+        created = manager.get_term(root_taxonomy, 'leaf1')
+        assert created.title == {'en': 'Leaf'}
+        assert created.slug == 'leaf1'
+        assert created.taxonomy == root_taxonomy
+
+        # Test invalid path fails
+        res = testapp.post('/taxonomies/{}/top1/leaf1/'.format(root_taxonomy.code), {'title': '{"en": "Leaf"}'},
+                           expect_errors=True)
+        assert res.status_code == 400
+
+        # Test create on nested path
+        manager.create('top1', {'en': 'Top1'}, '/root/')
+        res = testapp.post('/taxonomies/{}/top1/leaf2/'.format(root_taxonomy.code), {'title': '{"en": "Leaf"}'})
+        assert res.status_code == 201
+
+        created = manager.get_term(root_taxonomy, 'leaf2')
+        assert created.title == {'en': 'Leaf'}
+        assert created.slug == 'leaf2'
+        assert created.taxonomy == root_taxonomy
+
+        # Test create duplicit slug fails
+        res = testapp.post('/taxonomies/{}/leaf2/'.format(root_taxonomy.code), {'title': '{"en": "Leaf"}'},
+                           expect_errors=True)
+        assert res.status_code == 400
+
+    def test_taxonomy_delete(self, db, root_taxonomy, manager, testapp):
+        """Test deleting whole taxonomy."""
+        t = Taxonomy(code='tbd')
+        db.session.add(t)
+        db.session.commit()
+
+        manager.create('top1', {'en': 'Top1'}, '/tbd/')
+        manager.create('leaf1', {'en': 'Leaf1'}, '/tbd/top1/')
+
+        res = testapp.delete('/taxonomies/tbd/')
+        assert res.status_code == 204
+        assert manager.get_taxonomy('tbd') is None
+        assert manager.get_term(t, 'leaf1') is None
+        assert manager.get_term(t, 'top1') is None
+
+        # Delete nonexistent taxonomy fails
+        res = testapp.delete('/taxonomies/nope/', expect_errors=True)
+        assert res.status_code == 404
+
+    def test_term_delete(self, root_taxonomy, manager, testapp):
+        manager.create('top1', {'en': 'Top1'}, '/root/')
+        manager.create('leaf1', {'en': 'Leaf1'}, '/root/top1/')
+        manager.create('top2', {'en': 'Top2'}, '/root/')
+
+        testapp.delete('/taxonomies/root/top1/')
+        assert manager.get_term(root_taxonomy, 'leaf1') is None
+        assert manager.get_term(root_taxonomy, 'top1') is not None
+        assert manager.get_term(root_taxonomy, 'top2') is not None
+

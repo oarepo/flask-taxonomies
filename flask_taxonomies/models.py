@@ -36,9 +36,10 @@ class Taxonomy(SurrogatePK, db.Model):
     extra_data = db.Column(db.JSON)
     terms = relationship('TaxonomyTerm', cascade='all,delete', back_populates='taxonomy')
 
-    def __init__(self, code: str):
+    def __init__(self, code: str, extra_data: dict = None):
         """Taxonomy constructor."""
         self.code = code
+        self.extra_data = extra_data
 
     def update(self, extra_data: dict = None):
         self.extra_data = extra_data

@@ -24,7 +24,7 @@ def app():
 
 @pytest.fixture
 def manager(app):
-    return TaxonomyManager()
+    return TaxonomyManager
 
 
 @pytest.fixture

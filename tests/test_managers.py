@@ -13,9 +13,11 @@ class TestTaxonomyManager:
         """TaxonomyTerm creation tests"""
 
         # Test create valid term
-        created = manager.create(slug='child', title={'en': 'Leaf'}, path='/root/')
+        created = manager.create(slug='child', extra_data={'extra': 'data'}, title={'en': 'Leaf'}, path='/root/')
 
+        assert isinstance(created, TaxonomyTerm)
         assert created.slug == 'child'
+        assert created.extra_data['extra'] == 'data'
         assert created.taxonomy == root_taxonomy
 
         # Test create term on non-existing path fails
@@ -49,8 +51,6 @@ class TestTaxonomyManager:
         db.session.commit()
 
         created = manager.create(slug='subleaf', title={'en': 'Leaf'}, path='/different/')
-        db.session.add(created)
-        db.session.commit()
 
         assert created.slug == subleaf.slug
         assert created.id != subleaf.id
@@ -60,7 +60,28 @@ class TestTaxonomyManager:
         """Test get Taxonomy by codename."""
         retrieved = manager.get_taxonomy('root')
 
+        assert isinstance(retrieved, Taxonomy)
         assert retrieved == root_taxonomy
+
+        # Test nonexistent taxonomy
+        retrieved = manager.get_taxonomy(code='nothing')
+        assert retrieved is None
+
+    def test_get_taxonomy_roots(self, root_taxonomy, manager):
+        topterm = manager.create(slug='top', title={'en': 'Top'}, path='/root/')
+        leafterm = manager.create(slug='leaf', title={'en': 'Leaf'}, path='/root/top/')
+
+        # Test single toplevel term
+        root = list(manager.get_taxonomy_roots(root_taxonomy))
+        assert len(root) == 1
+        assert root[0] == topterm
+
+        # Test multiple toplevel terms
+        anothertopterm = manager.create(slug='anothertop', title={'en': 'Another Top'}, path='/root/')
+        roots = list(manager.get_taxonomy_roots(root_taxonomy))
+        assert len(roots) == 2
+        assert topterm in roots
+        assert anothertopterm in roots
 
     def test_get_term(self, db, root_taxonomy, manager):
         """Test get terms associtated by taxonomy and slug."""
@@ -84,6 +105,10 @@ class TestTaxonomyManager:
         retrieved = manager.get_term(second_taxonomy, 'leaf')
         assert retrieved == dup_leaf
         assert retrieved != leaf
+
+        # Test get invalid term fails
+        retrieved = manager.get_term(root_taxonomy, 'notterm')
+        assert retrieved is None
 
     def test_get_from_path(self, db, root_taxonomy, manager):
         """Test get taxonomy and term by its path in a taxonomy tree."""
@@ -127,8 +152,6 @@ class TestTaxonomyManager:
         db.session.commit()
 
         created = manager.create(slug='leaf', title={'en': 'Leaf'}, path='/different/')
-        db.session.add(created)
-        db.session.commit()
 
         root, term = manager.get_from_path('/different/leaf')
         assert root == different
@@ -171,6 +194,10 @@ class TestTaxonomyManager:
 
         vehicle = TaxonomyTerm.get_by_id(vehicle.id)
         assert vehicle.taxonomy == manufacturer
+
+        # Test move to invalid target path
+        with pytest.raises(AttributeError):
+            manager.move_tree('/manufacturer/vehicle/', '/dump/')
 
     def test_delete_tree(self, db, root_taxonomy, manager):
         """Test deleting existing TaxonomyTerm tree."""
