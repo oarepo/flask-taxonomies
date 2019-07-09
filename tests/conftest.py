@@ -24,6 +24,7 @@ def app():
 
 @pytest.fixture
 def manager(app):
+    """Taxonomy Manager fixture."""
     return TaxonomyManager
 
 
