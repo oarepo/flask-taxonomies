@@ -106,8 +106,20 @@ Delete taxonomy term (including all its childrens) ::
     curl -X DELETE \
       http://localhost:5000/taxonomies/<taxonomy-code>/<taxonomy-term-path>/
 
-Move taxonony (or whole subtree) to another tree (identified by slug) ::
+Update taxonomy extra data ::
 
-    curl -X POST \
-        http://localhost:5000/taxonomies/vehicle/land-vehicle/car/move \
-        -d '{"destination":"road-vehicle"}'
+    curl -X PATCH \
+        http://localhost:5000/taxonomies/<taxonomy-code>/ \
+        -d '{"extra_data":"{...}"}'
+
+Update taxonomy term data ::
+
+    curl -X PATCH \
+        http://localhost:5000/taxonomies/<taxonomy-code>/<taxonomy-term-path>/ \
+        -d '{"title":"{...}", "extra_data":"{...}"}'
+
+Move taxonomy term (or whole term subtree) to another location ::
+
+    curl -X PATCH \
+        http://localhost:5000/taxonomies/<taxonomy-code>/<taxonomy-term-path>/ \
+        -d '{"move_target":"/<target-taxonomy-code>/<target-taxonomy-term-path>/"}'

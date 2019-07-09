@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 """Managers module for database models."""
-from typing import Optional, Iterator
+from typing import Iterator, Optional
 
 from sqlalchemy import and_
 
 from flask_taxonomies.extensions import db
-from flask_taxonomies.models import TaxonomyTerm, Taxonomy
+from flask_taxonomies.models import Taxonomy, TaxonomyTerm
 
 
 class TaxonomyManager(object):

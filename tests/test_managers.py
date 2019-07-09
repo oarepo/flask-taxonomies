@@ -2,7 +2,7 @@
 """Model unit tests."""
 import pytest
 
-from flask_taxonomies.models import TaxonomyTerm, Taxonomy
+from flask_taxonomies.models import Taxonomy, TaxonomyTerm
 
 
 @pytest.mark.usefixtures('db')

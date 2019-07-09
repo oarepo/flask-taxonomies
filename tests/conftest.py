@@ -7,7 +7,7 @@ from webtest import TestApp
 from flask_taxonomies.app import create_app
 from flask_taxonomies.extensions import db as _db
 from flask_taxonomies.managers import TaxonomyManager
-from flask_taxonomies.models import TaxonomyTerm, Taxonomy
+from flask_taxonomies.models import Taxonomy
 
 
 @pytest.fixture

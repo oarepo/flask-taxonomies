@@ -10,14 +10,8 @@ import pytest
 from flask_taxonomies.models import Taxonomy
 
 
-# from webtest import AppError
-#
-# from flask_taxonomies.models import TaxonomyTerm
-# from flask_taxonomies.views import slug_path_parent, slug_path_validator, slug_validator
-
-
 @pytest.mark.usefixtures("db")
-class TestTaxonomy:
+class TestTaxonomyAPI:
     """TaxonomyTerm functional test."""
 
     def test_list_taxonomies(self, db, testapp, root_taxonomy):
@@ -143,12 +137,84 @@ class TestTaxonomy:
         assert res.status_code == 404
 
     def test_term_delete(self, root_taxonomy, manager, testapp):
+        """Test deleting whole term and a subtree."""
         manager.create('top1', {'en': 'Top1'}, '/root/')
         manager.create('leaf1', {'en': 'Leaf1'}, '/root/top1/')
         manager.create('top2', {'en': 'Top2'}, '/root/')
 
         testapp.delete('/taxonomies/root/top1/')
         assert manager.get_term(root_taxonomy, 'leaf1') is None
-        assert manager.get_term(root_taxonomy, 'top1') is not None
+        assert manager.get_term(root_taxonomy, 'top1') is None
         assert manager.get_term(root_taxonomy, 'top2') is not None
 
+    def test_taxomomy_update(self, root_taxonomy, testapp, manager):
+        """Test updating a taxonomy."""
+        res = testapp.patch('/taxonomies/root/', {'extra_data': '{"updated": "yes"}'})
+        jsonres = json.loads(res.body)
+        assert res.status_code == 200
+        assert jsonres['extra_data'] == {'updated': 'yes'}
+        assert manager.get_taxonomy('root').extra_data == {'updated': 'yes'}
+
+        # Test update invalid taxonomy fails
+        res = testapp.patch('/taxonomies/nope/', {'extra_data': '{"updated": "yes"}'}, expect_errors=True)
+        assert res.status_code == 404
+
+    def test_term_update(self, root_taxonomy, testapp, manager):
+        """Test updating a term."""
+        manager.create('term1', {'en': 'Term1'}, '/root/')
+
+        res = testapp.patch('/taxonomies/root/term1/', {'extra_data': '{"updated": "yes"}'})
+        jsonres = json.loads(res.body)
+        assert res.status_code == 200
+        assert jsonres['extra_data'] == {'updated': 'yes'}
+        assert manager.get_term(root_taxonomy, 'term1').extra_data == {'updated': 'yes'}
+
+        res = testapp.patch('/taxonomies/root/term1/', {'title': '{"updated": "yes"}'})
+        jsonres = json.loads(res.body)
+        assert res.status_code == 200
+        assert jsonres['title'] == {'updated': 'yes'}
+        assert manager.get_term(root_taxonomy, 'term1').title == {'updated': 'yes'}
+
+        # Test update invalid term fails
+        res = testapp.patch('/taxonomies/root/nope/', {'title': '{"updated": "yes"}'}, expect_errors=True)
+        assert res.status_code == 404
+
+    def test_term_move(self, db, root_taxonomy, testapp, manager):
+        """Test moving a Taxonomy Term."""
+        t = Taxonomy(code='groot')
+        db.session.add(t)
+        db.session.commit()
+
+        term1 = manager.create('term1', {'en': 'Term1'}, '/root/')
+        term2 = manager.create('term2', {'en': 'Term1'}, '/groot/')
+
+        # Test move /root/term1 -> /groot/term2/term1
+        res = testapp.patch('/taxonomies/root/term1/', {'move_target': '/groot/term2/'})
+        jsonres = json.loads(res.body)
+        assert res.status_code == 200
+        moved = manager.get_term(t, 'term1')
+        assert moved is not None
+        assert moved.taxonomy == t
+        assert moved.is_descendant_of(term2)
+        assert moved.tree_path == '/groot/term2/term1'
+
+        # Test move subtree
+        res = testapp.patch('/taxonomies/groot/term2/', {'move_target': '/root/'})
+        assert res.status_code == 200
+
+        moved1 = manager.get_term(root_taxonomy, 'term2')
+        moved2 = manager.get_term(root_taxonomy, 'term1')
+
+        assert moved1.tree_path == '/root/term2'
+        assert moved2.tree_path == '/root/term2/term1'
+        assert moved1.taxonomy == root_taxonomy
+        assert moved2.taxonomy == root_taxonomy
+        assert moved2.is_descendant_of(moved1)
+
+        # Test move to invalid path fails
+        res = testapp.patch('/taxonomies/root/term2/', {'move_target': '/root/somethingbad/'}, expect_errors=True)
+        assert res.status_code == 400
+
+        # Test move from invalid source fails
+        res = testapp.patch('/taxonomies/root/somethingbad/', {'move_target': '/groot/'}, expect_errors=True)
+        assert res.status_code == 404

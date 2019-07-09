@@ -11,7 +11,7 @@ from werkzeug.exceptions import BadRequest
 
 from flask_taxonomies.extensions import db
 from flask_taxonomies.managers import TaxonomyManager
-from flask_taxonomies.models import TaxonomyTerm, Taxonomy
+from flask_taxonomies.models import Taxonomy, TaxonomyTerm
 
 blueprint = Blueprint('taxonomies', __name__, url_prefix='/taxonomies')
 
@@ -50,17 +50,23 @@ def pass_term(f):
 
 
 def json_validator(value: str):
+    """Validate JSON string."""
     try:
         json.loads(value)
     except JSONDecodeError as e:
         return abort(400, 'Invalid JSON: {}'.format(e))
 
 
-def slug_validator(value: str):
-    """Validate if slug exists."""
-    tax = TaxonomyTerm.get_by_slug(value)
+def target_path_validator(value: str):
+    """Validate target path."""
+    tax = None
+    try:
+        tax, term = TaxonomyManager.get_from_path(value)
+    except AttributeError:
+        abort(400, 'Target Path is invalid.')
+
     if not tax:
-        abort(400, 'Invalid slug passed: {}'.format(value))
+        abort(400, 'Invalid Taxonomy in Target Path')
 
 
 def jsonify_taxonomy(t: Taxonomy) -> dict:
@@ -134,6 +140,7 @@ def taxonomy_get_roots(taxonomy):
 def taxonomy_get_term(term):
     return jsonify(jsonify_taxonomy_term(term, drilldown=True))
 
+
 @blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("POST",))
 @use_kwargs(
     {
@@ -141,7 +148,7 @@ def taxonomy_get_term(term):
         'extra_data': fields.Str(required=False, empty_value='', validate=json_validator),
     }
 )
-def taxonomy_create_term(taxonomy_code, term_path, title, extra_data = None):
+def taxonomy_create_term(taxonomy_code, term_path, title, extra_data=None):
     taxonomy = None
     term = None
     try:
@@ -166,6 +173,7 @@ def taxonomy_create_term(taxonomy_code, term_path, title, extra_data = None):
     except AttributeError:
         abort(400, 'Invalid Taxonomy Term path provided.')
 
+
 @blueprint.route("/<string:taxonomy_code>/", methods=("DELETE",))
 @pass_taxonomy
 def taxonomy_delete(taxonomy):
@@ -176,6 +184,7 @@ def taxonomy_delete(taxonomy):
     response.headers = []
     return response
 
+
 @blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("DELETE",))
 @pass_term
 def taxonomy_delete_term(term):
@@ -184,45 +193,40 @@ def taxonomy_delete_term(term):
     response.status_code = 204
     response.headers = []
     return response
-#
-# @blueprint.route("/<string:slug>/", methods=("PATCH",))
-# @blueprint.route("/<path:taxonomy_path>/<string:slug>/", methods=("PATCH",))
-# @use_kwargs(
-#     {"title": fields.Str(required=False), "description": fields.Str(required=False)}
-# )
-# def taxonomy_patch(slug, title=False, description=False, taxonomy_path=None):
-#     """Update TaxonomyTerm entry on a given path."""
-#     slug_validator(slug)
-#     if taxonomy_path:
-#         slug_path_validator(taxonomy_path)
-#
-#     taxonomy = TaxonomyTerm.get_by_slug(slug)
-#     if title:
-#         taxonomy.title = title
-#     if description:
-#         taxonomy.description = description
-#
-#     db.session.add(taxonomy)
-#     db.session.commit()
-#
-#     return jsonify(jsonify_taxonomy(taxonomy))
-#
-#
-# @blueprint.route("/<string:slug>/move", methods=("POST",))
-# @blueprint.route("/<path:taxonomy_path>/<string:slug>/move", methods=("POST",))
-# @use_kwargs({"destination": fields.Str(required=True, validate=slug_validator)})
-# def taxonomy_move(slug, destination, taxonomy_path=None):
-#     """Move TaxonomyTerm tree to another tree."""
-#     slug_validator(slug)
-#     if taxonomy_path:
-#         slug_path_validator(taxonomy_path)
-#
-#     source: TaxonomyTerm = TaxonomyTerm.get_by_slug(slug)
-#     dest: TaxonomyTerm = TaxonomyTerm.get_by_slug(destination)
-#
-#     source.move_inside(dest.id)
-#
-#     db.session.add(source)
-#     db.session.commit()
-#
-#     return jsonify(jsonify_taxonomy(source))
+
+
+@blueprint.route("/<string:taxonomy_code>/", methods=("PATCH",))
+@use_kwargs(
+    {
+        'extra_data': fields.Str(required=True, empty_value=None, validate=json_validator),
+    }
+)
+@pass_taxonomy
+def taxonomy_update(taxonomy, extra_data):
+    taxonomy.update(json.loads(extra_data))
+
+    return jsonify(jsonify_taxonomy(taxonomy))
+
+
+@blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("PATCH",))
+@use_kwargs(
+    {
+        'title': fields.Str(required=False, empty_value=None, validate=json_validator),
+        'extra_data': fields.Str(required=False, empty_value=None, validate=json_validator),
+        'move_target': fields.Str(required=False, empty_value=None, validate=target_path_validator)
+    }
+)
+@pass_term
+def taxonomy_update_term(term, title=None, extra_data=None, move_target=None):
+    changes = {}
+    if title:
+        changes.update({'title': json.loads(title)})
+    if extra_data:
+        changes.update({'extra_data': json.loads(extra_data)})
+
+    term.update(**changes)
+
+    if move_target:
+        TaxonomyManager.move_tree(term.tree_path, move_target)
+
+    return jsonify(jsonify_taxonomy_term(term, drilldown=True))
