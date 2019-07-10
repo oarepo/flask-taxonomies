@@ -27,11 +27,13 @@ class TestTaxonomyAPI:
             "id": root_taxonomy.id,
             "code": root_taxonomy.code,
             "extra_data": root_taxonomy.extra_data,
+            "links": {"self": "http://localhost/taxonomies/root/"},
         } in jsonres
         assert {
             "id": additional.id,
             "code": additional.code,
             "extra_data": additional.extra_data,
+            "links": {"self": "http://localhost/taxonomies/additional/"},
         } in jsonres
 
     def test_create_taxonomy(self, testapp, root_taxonomy):

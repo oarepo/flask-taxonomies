@@ -71,7 +71,16 @@ def target_path_validator(value: str):
 
 def jsonify_taxonomy(t: Taxonomy) -> dict:
     """Prepare Taxonomy to be easily jsonified."""
-    return {"id": t.id, "code": t.code, "extra_data": t.extra_data}
+    return {
+        "id": t.id,
+        "code": t.code,
+        "extra_data": t.extra_data,
+        "links": {
+            "self": url_for(
+                "taxonomies.taxonomy_get_roots", taxonomy_code=t.code, _external=True
+            )
+        },
+    }
 
 
 def jsonify_taxonomy_term(t: TaxonomyTerm, drilldown: bool = False) -> dict:
