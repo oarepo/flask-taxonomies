@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """User models."""
+from sqlalchemy import asc
+from sqlalchemy.orm import relationship
 from sqlalchemy_mptt import BaseNestedSets
 
 from flask_taxonomies.compat import basestring
@@ -28,21 +30,66 @@ class SurrogatePK(object):
         return None
 
 
-class Taxonomy(SurrogatePK, db.Model, BaseNestedSets):
-    """Taxonomy adjacency list model."""
+class Taxonomy(SurrogatePK, db.Model):
+    """Taxonomy model."""
 
     __tablename__ = "taxonomy"
-    slug = db.Column(db.String(64), unique=True)
-    title = db.Column(db.JSON)
-    description = db.Column(db.String(256))
+    code = db.Column(db.String(64), unique=True)
+    extra_data = db.Column(db.JSON)
+    terms = relationship(
+        "TaxonomyTerm", cascade="all,delete", back_populates="taxonomy"
+    )
+
+    def __init__(self, code: str, extra_data: dict = None):
+        """Taxonomy constructor."""
+        self.code = code
+        self.extra_data = extra_data
+
+    def update(self, extra_data: dict = None):
+        """Update taxonomy extra_data."""
+        self.extra_data = extra_data
+        db.session.add(self)
+        db.session.commit()
 
     def __repr__(self):
         """Represent taxonomy instance as a unique string."""
-        return "<Taxonomy({slug})>".format(slug=self.slug)
+        return "<Taxonomy({code})>".format(code=self.code)
 
-    @classmethod
-    def get_by_slug(cls, slug):
-        """Get Taxonomy unique slug."""
-        if isinstance(slug, str):
-            return cls.query.filter(cls.slug == slug).first()
-        return None
+
+class TaxonomyTerm(SurrogatePK, db.Model, BaseNestedSets):
+    """TaxonomyTerm adjacency list model."""
+
+    __tablename__ = "taxonomy_term"
+    slug = db.Column(db.String(64), unique=False)
+    title = db.Column(db.JSON)
+    extra_data = db.Column(db.JSON)
+    taxonomy_id = db.Column(db.Integer, db.ForeignKey("taxonomy.id"))
+    taxonomy = relationship("Taxonomy", back_populates="terms")
+
+    def __repr__(self):
+        """Represent taxonomy term instance as a unique string."""
+        return "<TaxonomyTerm({slug}:{path})>".format(slug=self.slug, path=self.id)
+
+    def __init__(
+        self, slug: str, title: dict, taxonomy: Taxonomy, extra_data: dict = None
+    ):
+        """Taxonomy Term constructor."""
+        self.slug = slug
+        self.title = title
+        self.taxonomy = taxonomy
+        self.extra_data = extra_data
+
+    def update(self, title: dict = None, extra_data: dict = None):
+        """Update Taxonomy Term data."""
+        self.title = title
+        self.extra_data = extra_data
+        db.session.add(self)
+        db.session.commit()
+
+    @property
+    def tree_path(self) -> str:
+        """Get path in a taxonomy tree."""
+        return "/{code}/{path}".format(
+            code=self.taxonomy.code,
+            path="/".join([t.slug for t in self.path_to_root(order=asc).all()]),
+        )

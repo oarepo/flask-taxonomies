@@ -11,5 +11,5 @@ setup(
     license="MIT",
     author="Miroslav Bauer",
     author_email="bauer@cesnet.cz",
-    description="Taxonomy trees REST API for Flask Applications",
+    description="TaxonomyTerm trees REST API for Flask Applications",
 )

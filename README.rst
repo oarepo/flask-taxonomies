@@ -11,7 +11,7 @@ Flask Taxonomies
 .. image:: https://img.shields.io/coveralls/oarepo/flask-taxonomies.svg
         :target: https://coveralls.io/r/oarepo/flask-taxonomies
 
-Taxonomy trees REST API for Flask Applications
+TaxonomyTerm trees REST API for Flask Applications
 
 
 Quickstart
@@ -45,45 +45,81 @@ To deploy::
 In your production environment, make sure the ``FLASK_DEBUG`` environment
 variable is unset or is set to ``0``.
 
-Usage
+Python Usage
+------------
+
+    >>> from flask_taxonomies.managers import TaxonomyManager
+    >>> from flask_taxonomies.models import Taxonomy, TaxonomyTerm
+    >>> # To create Taxonomy:
+    >>> t = Taxonomy(code='taxcode')
+    >>> # To create TaxonomyTerm
+    >>> m = TaxonomyManager()
+    >>> term = m.create('slug', title={'en': 'Tax Term'}, path='/taxcode/taxterm', extra_data={})
+    >>> # To get taxonomy by code
+    >>> t = m.get_taxonomy('taxcode')
+    >>> # To list taxonomy top-level terms
+    >>> terms = list(m.get_taxonomy_roots(t))
+    >>> # To get term by taxonomy and slug
+    >>> term = m.get_term(t, 'taxcode')
+    >>> # To get term from taxonomy path
+    >>> t, term = manager.get_from_path('/taxcode/taxterm')
+    >>> # To move term to a different path
+    >>> m.move_tree('/taxcode/taxterm/', '/anothertax/otherterm/') # moves term subtree to '/anothertax/otherterm/taxterm/'
+    >>> # To delete term and its descendants
+    >>> m.delete_tree('/taxcode/taxterm/')
+    >>> # To update Taxonomy/TaxonomyTerm
+    >>> t.update(extra_data={'updated': true})
+    >>> # To delete Taxonomy (including all related terms) or a single TaxonomyTerm
+    >>> db.session.delete(t)
+
+REST API Usage
 -----
 
-Create taxonomies ::
+To list available taxonomies ::
+
+    curl -X GET http://localhost:5000/taxonomies/
+    > [{'code': ..., 'extra_data': ...}, ...]
+
+To create taxonomy ::
 
     curl -X POST \
-      http://localhost:5000/taxonomies/vehicle/ \
-      -d '{"title": "{\"en\": \"Vehicle\"}", "description": "Some Vehicle"}'
+      http://localhost:5000/taxonomies/ \
+      -d '{"code": "...", "extra_data": "{...}"}'
 
-    curl -X POST \
-      http://localhost:5000/taxonomies/vehicle/land-vehicle/ \
-      -d '{"title": "{\"en\": \"Land Vehicle\"}", "description": "Land Vehicle"}'
+To list top-level terms in a taxonomy ::
 
-    curl -X POST \
-      http://localhost:5000/taxonomies/car/ \
-      -d '{"title": "{\"en\": \"Vehicle\"}", "description": "Some Vehicle", "attach_to": "land-vehicle"}'
+    curl -X GET http://localhost:5000/taxonomies/<taxonomy-code>/
+    > [{'slug': ..., ...}, {'slug': ..., ...}, ...]
 
+To get Taxonomy Term details ::
 
-List taxonomies ::
+    curl -X GET http://localhost:5000/taxonomies/<taxonomy-code>/<taxonomy-term-path>/
+    > {'slug': ..., 'title': ..., 'extra_data', ..., 'children': [...], ...}
 
-    curl -X GET http://localhost:5000/taxonomies/car/
-    > [ { "description": "A Car", "id": 7, "label": "", "path": "vehicle/land-vehicle/car", "slug": "car", "title": "{\"en\": \"Car\"}" } ]
-
-    curl -X GET http://localhost:5000/taxonomies/vehicle/land-vehicle/
-    > [ { "children": [ { "description": "A Car", "id": 7, "label": "", "path": "vehicle/land-vehicle/car", "slug": "car", "title": "{\"en\": \"Car\"}" } ], "description": "Some Land Vehicle", "id": 6, "label": "", "path": "vehicle/land-vehicle", "slug": "land-vehicle", "title": "{\"en\": \"Land Vehicle\"}" } ]
-
-Update taxonomy entry ::
-
-    curl -X PATCH \
-      http://localhost:5000/taxonomies/vehicle/land-vehicle/ \
-      -d '{"description": "A Fancy Land vehicle"}'
-
-Delete taxonomy (or Taxonomy subtree) ::
+Delete taxonomy (including all its terms) ::
 
     curl -X DELETE \
-      http://localhost:5000/taxonomies/vehicle/land-vehicle/
+      http://localhost:5000/taxonomies/<taxonomy-code>
 
-Move taxonony (or whole subtree) to another tree (identified by slug) ::
+Delete taxonomy term (including all its childrens) ::
 
-    curl -X POST \
-        http://localhost:5000/taxonomies/vehicle/land-vehicle/car/move \
-        -d '{"destination":"road-vehicle"}'
+    curl -X DELETE \
+      http://localhost:5000/taxonomies/<taxonomy-code>/<taxonomy-term-path>/
+
+Update taxonomy extra data ::
+
+    curl -X PATCH \
+        http://localhost:5000/taxonomies/<taxonomy-code>/ \
+        -d '{"extra_data":"{...}"}'
+
+Update taxonomy term data ::
+
+    curl -X PATCH \
+        http://localhost:5000/taxonomies/<taxonomy-code>/<taxonomy-term-path>/ \
+        -d '{"title":"{...}", "extra_data":"{...}"}'
+
+Move taxonomy term (or whole term subtree) to another location ::
+
+    curl -X PATCH \
+        http://localhost:5000/taxonomies/<taxonomy-code>/<taxonomy-term-path>/ \
+        -d '{"move_target":"/<target-taxonomy-code>/<target-taxonomy-term-path>/"}'

@@ -6,6 +6,7 @@ from webtest import TestApp
 
 from flask_taxonomies.app import create_app
 from flask_taxonomies.extensions import db as _db
+from flask_taxonomies.managers import TaxonomyManager
 from flask_taxonomies.models import Taxonomy
 
 
@@ -19,6 +20,12 @@ def app():
     yield _app
 
     ctx.pop()
+
+
+@pytest.fixture
+def manager(app):
+    """Taxonomy Manager fixture."""
+    return TaxonomyManager
 
 
 @pytest.fixture
@@ -44,9 +51,7 @@ def db(app):
 @pytest.fixture
 def root_taxonomy(db):
     """Create root taxonomy element."""
-    root = Taxonomy(
-        slug="root", title='{"en": "Root"}', description="Taxonomy root term"
-    )
+    root = Taxonomy(code="root")
     db.session.add(root)
     db.session.commit()
     return root
