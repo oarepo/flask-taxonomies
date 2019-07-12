@@ -77,9 +77,9 @@ To create taxonomy ::
 
 To create a term in taxonomy ::
 
-    curl -X PUT \
-      http://localhost:5000/taxonomies/<taxonomy-code>/<taxonomy-term-path>/ \
-      -d '{"title": {"en": ..., ...} }
+    curl -X POST \
+      http://localhost:5000/taxonomies/<taxonomy-code>/<taxonomy-parent-term-path>/ \
+      -d '{"title": {"en": ..., ...}, "slug": "..."}
 
 To list top-level terms in a taxonomy ::
 

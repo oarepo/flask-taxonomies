@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 """TaxonomyTerm views."""
-import json
 from functools import wraps
-from json import JSONDecodeError
 
 from flask import Blueprint, abort, jsonify, url_for
 from invenio_db import db
+from slugify import slugify
 from sqlalchemy_mptt import mptt_sessionmaker
 from webargs import fields
 from webargs.flaskparser import use_kwargs
@@ -121,14 +120,17 @@ def taxonomy_create(code: str, extra_data: dict = None):
     if TaxonomyManager.get_taxonomy(code):
         raise BadRequest("Taxonomy with this code already exists.")
     else:
-        t = Taxonomy(code=code, extra_data=extra_data)
+        created = Taxonomy(code=code, extra_data=extra_data)
 
         session = mptt_sessionmaker(db.session)
-        session.add(t)
+        session.add(created)
         session.commit()
 
-        response = jsonify(jsonify_taxonomy(t))
+        created_dict = jsonify_taxonomy(created)
+
+        response = jsonify(created_dict)
         response.status_code = 201
+        response.headers['Location'] = created_dict['links']['self']
         return response
 
 
@@ -147,37 +149,40 @@ def taxonomy_get_term(term):
     return jsonify(jsonify_taxonomy_term(term, drilldown=True))
 
 
-@blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("PUT",))  # noqa
+@blueprint.route("/<string:taxonomy_code>/", methods=("POST",))
+@blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("POST",))  # noqa
+@pass_taxonomy
 @use_kwargs(
     {
         "title": fields.Dict(required=True),
+        "slug": fields.Str(required=True),
         "extra_data": fields.Dict(required=False, empty_value=None),
     }
 )
-def taxonomy_create_term(taxonomy_code, term_path, title, extra_data=None):
+def taxonomy_create_term(taxonomy, title, slug,
+                         term_path='', extra_data=None):
     """Create a Term inside a Taxonomy tree."""
-    taxonomy = None
     term = None
     try:
-        taxonomy, term = TaxonomyManager.get_from_path(
-            "/{}/{}".format(taxonomy_code, term_path)
-        )
+        _, term = TaxonomyManager.get_from_path(
+            "/{}/{}".format(taxonomy.code, term_path))
     except AttributeError:
-        taxonomy = TaxonomyManager.get_taxonomy(taxonomy_code)
+        abort(400, "Invalid Term path given.")
 
-    if not taxonomy:
-        abort(404, "Taxonomy does not exist, create it first.")
-    if term:
-        abort(400, "Term already exists on a path specified.")
+    full_path = "/{}/{}".format(taxonomy.code, term_path)
 
-    path, slug = "/{}".format(term_path).rstrip("/").rsplit("/", 1)
-    full_path = "/{}{}".format(taxonomy.code, path)
+    try:
+        created = TaxonomyManager.create(slug=slugify(slug),
+                                         title=title,
+                                         extra_data=extra_data,
+                                         path=full_path)
+    except ValueError:
+        abort(400, 'Term with this slug already exists on this path.')
 
-    created = TaxonomyManager.create(slug=slug,
-                                     title=title,
-                                     extra_data=extra_data,
-                                     path="{}".format(full_path))
-    response = jsonify(jsonify_taxonomy_term(created, drilldown=True))
+    created_dict = jsonify_taxonomy_term(created, drilldown=True)
+
+    response = jsonify(created_dict)
+    response.headers['Location'] = created_dict['links']['self']
     response.status_code = 201
     return response
 

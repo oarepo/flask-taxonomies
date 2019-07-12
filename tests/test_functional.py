@@ -42,8 +42,10 @@ class TestTaxonomyAPI:
                           json={"code": "new",
                                 "extra_data": {"extra": "new"}})
 
-        retrieved = Taxonomy.query.filter(Taxonomy.code == "new").first()
         assert res.status_code == 201
+        assert res.headers['Location'] == 'http://localhost/taxonomies/new/'
+
+        retrieved = Taxonomy.query.filter(Taxonomy.code == "new").first()
         assert retrieved is not None
         assert retrieved.extra_data == {"extra": "new"}
 
@@ -98,42 +100,44 @@ class TestTaxonomyAPI:
 
     def test_term_create(self, root_taxonomy, client, manager):
         """Test TaxonomyTerm creation."""
-        res = client.put("/taxonomies/{}/leaf1/".format(root_taxonomy.code),
-                         json={"title": {"en": "Leaf"}})
+        res = client.post("/taxonomies/{}/".format(root_taxonomy.code),
+                          json={"title": {"en": "Leaf"}, "slug": "leaf 1"})
         assert res.status_code == 201
-        assert res.json["slug"] == "leaf1"
+        assert res.json["slug"] == "leaf-1"
+        assert res.headers['location'] == 'http://localhost/taxonomies/{}/leaf-1/'.format(root_taxonomy.code)  # noqa
 
-        created = manager.get_term(root_taxonomy, "leaf1")
+        created = manager.get_term(root_taxonomy, "leaf-1")
         assert created.title == {"en": "Leaf"}
-        assert created.slug == "leaf1"
+        assert created.slug == "leaf-1"
         assert created.taxonomy == root_taxonomy
 
         # Test invalid path fails
-        res = client.put("/taxonomies/{}/top1/leaf1/"
-                         .format(root_taxonomy.code),
-                         json={"title": {"en": "Leaf"}})
+        res = client.post("/taxonomies/{}/top1/top2/"
+                          .format(root_taxonomy.code),
+                          json={"title": {"en": "Leaf"}, "slug": "leaf 1"})
         assert res.status_code == 400
 
         # Test create on nested path
-        manager.create("top1", {"en": "Top1"}, "/root/")
-        res = client.put("/taxonomies/{}/top1/leaf2/"
-                         .format(root_taxonomy.code),
-                         json={"title": {"en": "Leaf"}})
+        top1 = manager.create("top1", {"en": "Top1"}, "/root/")
+        res = client.post("/taxonomies/{}/top1/"
+                          .format(root_taxonomy.code),
+                          json={"title": {"en": "Leaf"}, "slug": "leaf 2"})
         assert res.status_code == 201
 
-        created = manager.get_term(root_taxonomy, "leaf2")
+        created = manager.get_term(root_taxonomy, "leaf-2")
         assert created.title == {"en": "Leaf"}
-        assert created.slug == "leaf2"
+        assert created.slug == "leaf-2"
         assert created.taxonomy == root_taxonomy
+        assert created.is_descendant_of(top1)
 
         # Test create duplicit slug fails
-        res = client.put("/taxonomies/{}/leaf2/".format(root_taxonomy.code),
-                         json={"title": {"en": "Leaf"}})
+        res = client.post("/taxonomies/{}/top1/".format(root_taxonomy.code),
+                          json={"title": {"en": "Leaf"}, "slug": "leaf 2"})
         assert res.status_code == 400
 
         # Test create in non-existent taxonomy fails
-        res = client.put("/taxonomies/none/leaf2/",
-                         json={"title": {"en": "Leaf"}})
+        res = client.post("/taxonomies/none/",
+                          json={"title": {"en": "Leaf"}, "slug": "leaf 1"})
         assert res.status_code == 404
 
     def test_taxonomy_delete(self, db, root_taxonomy,
