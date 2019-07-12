@@ -4,7 +4,8 @@ import os
 
 import pytest
 from flask import Flask
-from invenio_db import InvenioDB, db as _db
+from invenio_db import InvenioDB
+from invenio_db import db as _db
 from sqlalchemy_mptt import mptt_sessionmaker
 
 from flask_taxonomies.ext import FlaskTaxonomies
@@ -87,11 +88,13 @@ def root_taxonomy(db):
 
 @pytest.fixture
 def Taxonomy(db):
+    """Taxonomy fixture."""
     from flask_taxonomies.models import Taxonomy as _Taxonomy
     return _Taxonomy
 
 
 @pytest.fixture
 def TaxonomyTerm(db):
+    """Taxonomy Term fixture."""
     from flask_taxonomies.models import TaxonomyTerm as _TaxonomyTerm
     return _TaxonomyTerm

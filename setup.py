@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 """Setup module for flask taxonomy."""
+import os
 
 from setuptools import setup
+
+readme = open('README.rst').read()
 
 DATABASE = "postgresql"
 INVENIO_VERSION = "3.1.0"
@@ -30,9 +33,32 @@ tests_require = [
     'pytest-pep8>=1.0.6',
 ]
 
+extras_require = {
+    'postgresql': [
+        'invenio-db[postgresql]>=1.0.0b3',
+    ],
+    'mysql': [
+        'invenio-db[mysql]>=1.0.0b3',
+    ],
+    'sqlite': [
+        'invenio-db>=1.0.0b3',
+    ],
+    'tests': tests_require,
+}
+
+setup_requires = [
+    'pytest-runner>=2.7',
+]
+
+g = {}
+with open(os.path.join('flask_taxonomies', 'version.py'), 'rt') as fp:
+    exec(fp.read(), g)
+    version = g['__version__']
+
 setup(
     name="flask_taxonomies",
-    version="3.0.0",
+    long_description=readme,
+    version=version,
     url="https://github.com/oarepo/flask-taxonomies",
     license="MIT",
     author="Miroslav Bauer",
@@ -58,6 +84,8 @@ setup(
         ],
     },
     include_package_data=True,
+    setup_requires=setup_requires,
+    extras_require=extras_require,
     install_requires=install_requires,
     tests_require=tests_require,
     platforms='any',

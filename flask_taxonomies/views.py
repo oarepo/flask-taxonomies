@@ -19,7 +19,6 @@ blueprint = Blueprint("taxonomies", __name__, url_prefix="/taxonomies")
 
 def pass_taxonomy(f):
     """Decorate to retrieve a bucket."""
-
     @wraps(f)
     def decorate(*args, **kwargs):
         code = kwargs.pop("taxonomy_code")
@@ -33,7 +32,6 @@ def pass_taxonomy(f):
 
 def pass_term(f):
     """Decorate to retrieve a bucket."""
-
     @wraps(f)
     def decorate(*args, **kwargs):
         code = kwargs.pop("taxonomy_code")
@@ -192,7 +190,7 @@ def taxonomy_create_term(taxonomy_code, term_path, title, extra_data=None):
     response = jsonify(jsonify_taxonomy_term(created, drilldown=True))
     response.status_code = 201
     return response
-    
+
 
 @blueprint.route("/<string:taxonomy_code>/", methods=("DELETE",))
 @pass_taxonomy

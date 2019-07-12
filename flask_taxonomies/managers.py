@@ -8,6 +8,7 @@ from sqlalchemy_mptt import mptt_sessionmaker
 
 from flask_taxonomies.models import Taxonomy, TaxonomyTerm
 
+
 class TaxonomyManager(object):
     """Manager of Taxonomy tree db models."""
 
