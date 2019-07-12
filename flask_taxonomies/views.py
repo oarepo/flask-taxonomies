@@ -151,7 +151,7 @@ def taxonomy_get_term(term):
 @use_kwargs(
     {
         "title": fields.Dict(required=True),
-        "extra_data": fields.Dict(required=False, empty_value=""),
+        "extra_data": fields.Dict(required=False, empty_value=None),
     }
 )
 def taxonomy_create_term(taxonomy_code, term_path, title, extra_data=None):
