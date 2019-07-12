@@ -3,10 +3,10 @@
 from typing import Iterator, Optional
 
 from sqlalchemy import and_
+from sqlalchemy_mptt import mptt_sessionmaker
 
-from flask_taxonomies.extensions import db
 from flask_taxonomies.models import Taxonomy, TaxonomyTerm
-
+from .db import db
 
 class TaxonomyManager(object):
     """Manager of Taxonomy tree db models."""
@@ -31,8 +31,9 @@ class TaxonomyManager(object):
         if parent_term:
             TaxonomyManager.insert_term_under(t, parent_term)
 
-        db.session.add(t)
-        db.session.commit()
+        session = mptt_sessionmaker(db.session)
+        session.add(t)
+        session.commit()
 
         return t
 
@@ -43,8 +44,9 @@ class TaxonomyManager(object):
         if not term:
             raise AttributeError("Invalid TaxonomyTerm path.")
 
-        db.session.delete(term)
-        db.session.commit()
+        session = mptt_sessionmaker(db.session)
+        session.delete(term)
+        session.commit()
 
     @staticmethod
     def get_from_path(path: str) -> (Taxonomy, TaxonomyTerm):
@@ -117,5 +119,6 @@ class TaxonomyManager(object):
         else:
             sterm.move_inside(dtax.id)
 
-        db.session.add(sterm)
-        db.session.commit()
+        session = mptt_sessionmaker(db.session)
+        session.add(sterm)
+        session.commit()

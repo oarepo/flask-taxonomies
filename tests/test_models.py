@@ -2,14 +2,12 @@
 """Model unit tests."""
 import pytest
 
-from flask_taxonomies.models import Taxonomy, TaxonomyTerm
-
 
 @pytest.mark.usefixtures("db")
 class TestTaxonomy:
     """Taxonomy model tests."""
 
-    def test_create(self, db):
+    def test_create(self, db, Taxonomy):
         """Test create taxonomy."""
         tax = Taxonomy(code="code", extra_data={"extra": "data"})
         db.session.add(tax)
@@ -19,7 +17,7 @@ class TestTaxonomy:
         assert retrieved.code == "code"
         assert retrieved.extra_data == {"extra": "data"}
 
-    def test_get_terms(self, db, root_taxonomy):
+    def test_get_terms(self, db, root_taxonomy, TaxonomyTerm):
         """Get terms  listassocitated with this taxonomy."""
         leaf = TaxonomyTerm(slug="leaf", title={"en": "Leaf"}, taxonomy=root_taxonomy)
         db.session.add(leaf)
@@ -35,7 +33,7 @@ class TestTaxonomy:
         children = root_taxonomy.terms
         assert children == [leaf, nested]  #
 
-    def test_update_taxonomy(self, db, root_taxonomy):
+    def test_update_taxonomy(self, db, root_taxonomy, Taxonomy):
         """Update Taxonomy extra_data."""
 
         root_taxonomy.update(extra_data={"description": "updated"})
@@ -43,7 +41,7 @@ class TestTaxonomy:
         retrieved_root = Taxonomy.get_by_id(root_taxonomy.id)
         assert retrieved_root.extra_data == {"description": "updated"}
 
-    def test_delete_taxonomy(self, db, root_taxonomy, manager):
+    def test_delete_taxonomy(self, db, root_taxonomy, manager, Taxonomy, TaxonomyTerm):
         """Test deleting the whole Taxonomy."""
         leaf = TaxonomyTerm(
             slug="leaf",
@@ -73,7 +71,7 @@ class TestTaxonomy:
 class TestTaxonomyTerm:
     """TaxonomyTerm model tests."""
 
-    def test_get_by_id(self, db, root_taxonomy):
+    def test_get_by_id(self, db, root_taxonomy, TaxonomyTerm):
         """Get TaxonomyTerm Tree Items by ID."""
         leaf = TaxonomyTerm(slug="leaf", title={"en": "Leaf"}, taxonomy=root_taxonomy)
         db.session.add(leaf)
@@ -82,7 +80,7 @@ class TestTaxonomyTerm:
         retrieved_leaf = TaxonomyTerm.get_by_id((leaf.id))
         assert retrieved_leaf == leaf
 
-    def test_update_taxonomy_term(self, db, root_taxonomy):
+    def test_update_taxonomy_term(self, db, root_taxonomy, TaxonomyTerm):
         """Update TaxonomyTerm extra_data and name."""
         leaf = TaxonomyTerm(slug="leaf", title={"en": "Leaf"}, taxonomy=root_taxonomy)
         db.session.add(leaf)
@@ -94,7 +92,7 @@ class TestTaxonomyTerm:
         assert retrieved_root.extra_data == {"description": "updated"}
         assert retrieved_root.title == {"en": "newleaf"}
 
-    def test_term_tree_path(self, db, root_taxonomy):
+    def test_term_tree_path(self, db, root_taxonomy, TaxonomyTerm):
         """Test getting full path of a Term."""
         leaf = TaxonomyTerm(
             slug="leaf",
@@ -118,7 +116,7 @@ class TestTaxonomyTerm:
         assert leaf.tree_path == "/root/leaf"
         assert nested.tree_path == "/root/leaf/nested"
 
-    def test_delete_taxonomy_term(self, db, root_taxonomy):
+    def test_delete_taxonomy_term(self, db, root_taxonomy, TaxonomyTerm):
         """Delete single TaxonomyTerm term."""
         leaf = TaxonomyTerm(
             slug="leaf",

@@ -2,11 +2,9 @@
 """User models."""
 from sqlalchemy import asc
 from sqlalchemy.orm import relationship
-from sqlalchemy_mptt import BaseNestedSets
+from sqlalchemy_mptt import BaseNestedSets, mptt_sessionmaker
 
-from flask_taxonomies.compat import basestring
-from flask_taxonomies.extensions import db
-
+from .db import db
 
 # From Mike Bayer's "Building the app" talk
 # https://speakerdeck.com/zzzeek/building-the-app
@@ -22,7 +20,7 @@ class SurrogatePK(object):
         """Get record by ID."""
         if any(
             (
-                isinstance(record_id, basestring) and record_id.isdigit(),
+                isinstance(record_id, str) and record_id.isdigit(),
                 isinstance(record_id, (int, float)),
             )
         ):
@@ -48,8 +46,10 @@ class Taxonomy(SurrogatePK, db.Model):
     def update(self, extra_data: dict = None):
         """Update taxonomy extra_data."""
         self.extra_data = extra_data
-        db.session.add(self)
-        db.session.commit()
+
+        session = mptt_sessionmaker(db.session)
+        session.add(self)
+        session.commit()
 
     def __repr__(self):
         """Represent taxonomy instance as a unique string."""
@@ -83,8 +83,10 @@ class TaxonomyTerm(SurrogatePK, db.Model, BaseNestedSets):
         """Update Taxonomy Term data."""
         self.title = title
         self.extra_data = extra_data
-        db.session.add(self)
-        db.session.commit()
+
+        session = mptt_sessionmaker(db.session)
+        session.add(self)
+        session.commit()
 
     @property
     def tree_path(self) -> str:

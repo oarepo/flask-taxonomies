@@ -8,14 +8,12 @@ import json
 
 import pytest
 
-from flask_taxonomies.models import Taxonomy
-
 
 @pytest.mark.usefixtures("db")
 class TestTaxonomyAPI:
     """TaxonomyTerm functional test."""
 
-    def test_list_taxonomies(self, db, testapp, root_taxonomy):
+    def test_list_taxonomies(self, db, testapp, root_taxonomy, Taxonomy):
         """Test listing of taxonomies."""
         additional = Taxonomy(code="additional", extra_data={"extra": "data"})
         db.session.add(additional)
@@ -36,7 +34,7 @@ class TestTaxonomyAPI:
             "links": {"self": "http://localhost/taxonomies/additional/"},
         } in jsonres
 
-    def test_create_taxonomy(self, testapp, root_taxonomy):
+    def test_create_taxonomy(self, testapp, root_taxonomy, Taxonomy):
         """Test Taxonomy creation."""
 
         res = testapp.post(
@@ -150,7 +148,7 @@ class TestTaxonomyAPI:
         )
         assert res.status_code == 400
 
-    def test_taxonomy_delete(self, db, root_taxonomy, manager, testapp):
+    def test_taxonomy_delete(self, db, root_taxonomy, manager, testapp, Taxonomy):
         """Test deleting whole taxonomy."""
         t = Taxonomy(code="tbd")
         db.session.add(t)
@@ -222,7 +220,7 @@ class TestTaxonomyAPI:
         )
         assert res.status_code == 404
 
-    def test_term_move(self, db, root_taxonomy, testapp, manager):
+    def test_term_move(self, db, root_taxonomy, testapp, manager, Taxonomy):
         """Test moving a Taxonomy Term."""
         t = Taxonomy(code="groot")
         db.session.add(t)

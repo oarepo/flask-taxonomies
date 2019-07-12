@@ -5,8 +5,8 @@ import sys
 
 from flask import Flask, jsonify
 
-from flask_taxonomies import commands, views
-from flask_taxonomies.extensions import cache, db, debug_toolbar, migrate
+from examples import commands
+from examples.extensions import alembic, cache, db, debug_toolbar, taxonomies
 
 
 def create_app(config_object="flask_taxonomies.settings"):
@@ -31,13 +31,15 @@ def register_extensions(app):
     """Register Flask extensions."""
     cache.init_app(app)
     db.init_app(app)
-    migrate.init_app(app, db)
+    alembic.init_app(app)
+    taxonomies.init_app(app, db)
     debug_toolbar.init_app(app)
     return None
 
 
 def register_blueprints(app):
     """Register Flask blueprints."""
+    from flask_taxonomies import views
     app.register_blueprint(views.blueprint)
     return None
 

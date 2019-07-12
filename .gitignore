@@ -62,3 +62,4 @@ env/
 .pytest_cache/
 .venv/
 migrations/
+.dist/

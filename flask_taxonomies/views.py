@@ -5,13 +5,14 @@ from functools import wraps
 from json import JSONDecodeError
 
 from flask import Blueprint, abort, jsonify, url_for
+from sqlalchemy_mptt import mptt_sessionmaker
 from webargs import fields
 from webargs.flaskparser import use_kwargs
 from werkzeug.exceptions import BadRequest
 
-from flask_taxonomies.extensions import db
-from flask_taxonomies.managers import TaxonomyManager
-from flask_taxonomies.models import Taxonomy, TaxonomyTerm
+from .db import db
+from .managers import TaxonomyManager
+from .models import Taxonomy, TaxonomyTerm
 
 blueprint = Blueprint("taxonomies", __name__, url_prefix="/taxonomies")
 
@@ -102,7 +103,6 @@ def jsonify_taxonomy_term(t: TaxonomyTerm, drilldown: bool = False) -> dict:
         },
     }
     if drilldown:
-
         def _term_fields(term: TaxonomyTerm):
             return dict(slug=term.slug, path=term.tree_path)
 
@@ -135,8 +135,11 @@ def taxonomy_create(code: str, extra_data: dict = None):
         raise BadRequest("Taxonomy with this code already exists.")
     else:
         t = Taxonomy(code=code, extra_data=json.loads(extra_data))
-        db.session.add(t)
-        db.session.commit()
+
+        session = mptt_sessionmaker(db.session)
+        session.add(t)
+        session.commit()
+
         response = jsonify(jsonify_taxonomy(t))
         response.status_code = 201
         return response
@@ -201,8 +204,9 @@ def taxonomy_create_term(taxonomy_code, term_path, title, extra_data=None):
 @pass_taxonomy
 def taxonomy_delete(taxonomy):
     """Delete whole taxonomy tree."""
-    db.session.delete(taxonomy)
-    db.session.commit()
+    session = mptt_sessionmaker(db.session)
+    session.delete(taxonomy)
+    session.commit()
     response = jsonify()
     response.status_code = 204
     response.headers = []

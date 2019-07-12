@@ -2,14 +2,12 @@
 """Model unit tests."""
 import pytest
 
-from flask_taxonomies.models import Taxonomy, TaxonomyTerm
-
 
 @pytest.mark.usefixtures("db")
 class TestTaxonomyManager:
     """Taxonomy manager tests."""
 
-    def test_create_term(self, db, root_taxonomy, manager):
+    def test_create_term(self, db, root_taxonomy, manager, Taxonomy, TaxonomyTerm):
         """Taxonomy Term creation tests."""
 
         # Test create valid term
@@ -67,7 +65,7 @@ class TestTaxonomyManager:
         assert created.id != subleaf.id
         assert created.taxonomy == different
 
-    def test_get_taxonomy(self, root_taxonomy, manager):
+    def test_get_taxonomy(self, root_taxonomy, manager, Taxonomy):
         """Test get Taxonomy by codename."""
         retrieved = manager.get_taxonomy("root")
 
@@ -97,7 +95,7 @@ class TestTaxonomyManager:
         assert topterm in roots
         assert anothertopterm in roots
 
-    def test_get_term(self, db, root_taxonomy, manager):
+    def test_get_term(self, db, root_taxonomy, manager, Taxonomy, TaxonomyTerm):
         """Test get terms associtated by taxonomy and slug."""
         leaf = TaxonomyTerm(slug="leaf", title={"en": "Leaf"}, taxonomy=root_taxonomy)
         db.session.add(leaf)
@@ -126,7 +124,7 @@ class TestTaxonomyManager:
         retrieved = manager.get_term(root_taxonomy, "notterm")
         assert retrieved is None
 
-    def test_get_from_path(self, db, root_taxonomy, manager):
+    def test_get_from_path(self, db, root_taxonomy, manager, Taxonomy, TaxonomyTerm):
         """Test get taxonomy and term by its path in a taxonomy tree."""
         leaf = TaxonomyTerm(slug="leaf", title={"en": "Leaf"}, taxonomy=root_taxonomy)
         db.session.add(leaf)
@@ -178,7 +176,7 @@ class TestTaxonomyManager:
         assert term == created
         assert term != leaf
 
-    def test_move_tree(self, db, root_taxonomy, manager):
+    def test_move_tree(self, db, root_taxonomy, manager, Taxonomy, TaxonomyTerm):
         """Test moving a tree into another tree."""
         manufacturer = Taxonomy(code="manufacturer")
         item = TaxonomyTerm(slug="item", title={"en": "Item"}, taxonomy=root_taxonomy)
@@ -221,7 +219,7 @@ class TestTaxonomyManager:
         with pytest.raises(AttributeError):
             manager.move_tree("/manufacturer/vehicle/", "/dump/")
 
-    def test_delete_tree(self, db, root_taxonomy, manager):
+    def test_delete_tree(self, db, root_taxonomy, manager, TaxonomyTerm):
         """Test deleting existing TaxonomyTerm tree."""
         vehicle = TaxonomyTerm(
             slug="vehicle", title={"en": "Vehicle"}, taxonomy=root_taxonomy
