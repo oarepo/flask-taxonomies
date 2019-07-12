@@ -20,7 +20,7 @@ tests_require = [
     'pytest>=4.6.3',
     'factory-boy>=2.12.0',
     'pdbpp>=0.10.0',
-    'pydocstyle<4.0.0',
+    'pydocstyle>=1.0.0,<4.0.0',
     'check-manifest>=0.25',
     'coverage>=4.0',
     'isort>=4.3.3',
