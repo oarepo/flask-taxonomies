@@ -1,0 +1,41 @@
+# -*- coding: utf-8 -*-
+import pytest
+# Check manifest will not automatically add these two files:
+include .dockerignore
+include .editorconfig
+include .tx/config
+prune docs/_build
+recursive-include flask_taxonomies *.po *.pot *.mo *.json
+recursive-include flask_taxonomies/alembic *.py
+
+include *.md
+include *.py
+include *.rst
+include *.sh
+include *.test
+include *.yml
+include LICENSE
+include pytest.ini
+
+recursive-include docs *.png
+recursive-include docs *.yml
+recursive-include docs *.py
+recursive-include docs *.rst
+
+include requirements.txt
+
+exclude .licensevars
+exclude tests
+exclude examples
+recursive-exclude tests *
+exclude .coveragerc
+exclude requirements-doc.txt
+
+# added by check_manifest.py
+include *.txt
+include Dockerfile
+recursive-include examples *.py
+recursive-include requirements *.txt
+
+# added by check_manifest.py
+recursive-include flask_taxonomies *.py

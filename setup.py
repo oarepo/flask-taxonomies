@@ -6,7 +6,6 @@ from setuptools import setup, find_packages
 setup(
     name="flask_taxonomies",
     version="2.0.0",
-    packages=find_packages(),
     url="https://github.com/oarepo/flask-taxonomies",
     license="MIT",
     author="Miroslav Bauer",
@@ -21,7 +20,7 @@ setup(
             'flask_taxonomies = flask_taxonomies:alembic',
         ]
     },
-    include_package_data=True,
+    include_package_data=False,
     platforms='any',
     classifiers=[
         'Environment :: Web Environment',
