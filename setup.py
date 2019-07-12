@@ -1,7 +1,17 @@
 # -*- coding: utf-8 -*-
 """Setup module for flask taxonomy."""
 
-from setuptools import setup, find_packages
+from setuptools import setup
+
+DATABASE = "postgresql"
+INVENIO_VERSION = "3.1.0"
+
+install_requires = [
+    'webargs>=5.3.2',
+    'sqlalchemy_mptt>=0.2.4',
+    'invenio[{db},base]~={version}'.format(
+        db=DATABASE, version=INVENIO_VERSION)
+]
 
 setup(
     name="flask_taxonomies",
@@ -19,9 +29,19 @@ setup(
         ],
         'invenio_db.alembic': [
             'flask_taxonomies = flask_taxonomies:alembic',
-        ]
+        ],
+        'invenio_base.api_blueprints': [
+            'flask_taxonomies = flask_taxonomies.views:blueprint',
+        ],
+        'invenio_base.apps': [
+            'flask_taxonomies = flask_taxonomies.ext:FlaskTaxonomies',
+        ],
+        'invenio_base.api_apps': [
+            'flask_taxonomies = flask_taxonomies.ext:FlaskTaxonomies',
+        ],
     },
     include_package_data=True,
+    install_requires=install_requires,
     platforms='any',
     classifiers=[
         'Environment :: Web Environment',

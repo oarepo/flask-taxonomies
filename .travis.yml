@@ -2,7 +2,7 @@
 dist: xenial
 language: python
 env:
-- FLASK_APP=autoapp.py FLASK_DEBUG=1 FLASK_ENV=development DATABASE_URL=sqlite:////tmp/dev.db SECRET_KEY=not-so-secret
+- FLASK_APP=ext.py FLASK_DEBUG=1 FLASK_ENV=development DATABASE_URL=sqlite:////tmp/dev.db SECRET_KEY=not-so-secret
 python:
   - 3.6
   - 3.7
