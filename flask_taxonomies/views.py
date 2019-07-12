@@ -18,7 +18,6 @@ blueprint = Blueprint("taxonomies", __name__, url_prefix="/taxonomies")
 
 def pass_taxonomy(f):
     """Decorate to retrieve a bucket."""
-
     @wraps(f)
     def decorate(*args, **kwargs):
         code = kwargs.pop("taxonomy_code")
@@ -32,7 +31,6 @@ def pass_taxonomy(f):
 
 def pass_term(f):
     """Decorate to retrieve a bucket."""
-
     @wraps(f)
     def decorate(*args, **kwargs):
         code = kwargs.pop("taxonomy_code")
@@ -96,9 +94,14 @@ def jsonify_taxonomy_term(t: TaxonomyTerm, drilldown: bool = False) -> dict:
         def _term_fields(term: TaxonomyTerm):
             return dict(slug=term.slug, path=term.tree_path)
 
-        result.update(
-            {"children": t.drilldown_tree(json=True, json_fields=_term_fields)}
-        )
+        # First drilldown tree element is always reference to self -> strip it
+        try:
+            children = t.drilldown_tree(json=True,
+                                     json_fields=_term_fields)[0]['children']
+        except KeyError:
+            children = []
+
+        result.update({"children": children})
 
     return result
 

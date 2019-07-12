@@ -93,6 +93,13 @@ class TestTaxonomyAPI:
         assert res.json["path"] == "/root/top1/leaf1"
         assert len(res.json["children"]) == 1
 
+        # Test get parent/child details
+        res = client.get("/taxonomies/{}/top1/"
+                         .format(root_taxonomy.code))
+        assert len(res.json['children']) == 1
+        assert 'children' in res.json['children'][0]
+        assert res.json['children'][0]['children'][0]['slug'] == 'leafeaf'
+
         # Test get nonexistent path
         res = client.get("/taxonomies/{}/top1/nope/"
                          .format(root_taxonomy.code))
