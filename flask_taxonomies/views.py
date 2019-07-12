@@ -112,7 +112,7 @@ def jsonify_taxonomy_term(t: TaxonomyTerm, drilldown: bool = False) -> dict:
         # First drilldown tree element is always reference to self -> strip it
         try:
             children = t.drilldown_tree(json=True,
-                                        json_fields=_term_fields)[0]['children']
+                                        json_fields=_term_fields)[0]['children']  # noqa
         except KeyError:
             children = []
 
