@@ -26,9 +26,9 @@ env:
     - POSTGRESQL_SQLALCHEMY_DATABASE_URI="postgresql+psycopg2://postgres@localhost:5432/invenio"
     - MYSQL_SQLALCHEMY_DATABASE_URI="mysql://root@localhost/invenio"
   matrix:
-    - REQUIREMENTS=release EXTRAS=all,postgresql SQLALCHEMY_DATABASE_URI=$POSTGRESQL_SQLALCHEMY_DATABASE_URI
-    - REQUIREMENTS=release EXTRAS=all,sqlite
-    - REQUIREMENTS=release EXTRAS=all,mysql SQLALCHEMY_DATABASE_URI=$MYSQL_SQLALCHEMY_DATABASE_URI
+    - REQUIREMENTS=release EXTRAS=all,postgresql,tests SQLALCHEMY_DATABASE_URI=$POSTGRESQL_SQLALCHEMY_DATABASE_URI
+    - REQUIREMENTS=release EXTRAS=all,sqlite,tests
+    - REQUIREMENTS=release EXTRAS=all,mysql,tests SQLALCHEMY_DATABASE_URI=$MYSQL_SQLALCHEMY_DATABASE_URI
 
 python:
   - "3.6"
