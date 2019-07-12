@@ -12,6 +12,7 @@ setup(
     author_email="bauer@cesnet.cz",
     description="Taxonomy Term trees REST API for Flask Applications",
     zip_safe=False,
+    packages=['flask_taxonomies'],
     entry_points={
         'invenio_db.models': [
             'flask_taxonomies = flask_taxonomies.models',
@@ -20,7 +21,7 @@ setup(
             'flask_taxonomies = flask_taxonomies:alembic',
         ]
     },
-    include_package_data=False,
+    include_package_data=True,
     platforms='any',
     classifiers=[
         'Environment :: Web Environment',

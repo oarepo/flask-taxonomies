@@ -63,3 +63,5 @@ env/
 .venv/
 migrations/
 .dist/
+
+dist/
