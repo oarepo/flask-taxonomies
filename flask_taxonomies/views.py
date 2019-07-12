@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """TaxonomyTerm views."""
 from functools import wraps
+from urllib.parse import urlsplit
 
 from flask import Blueprint, abort, jsonify, url_for
 from invenio_db import db
@@ -14,6 +15,20 @@ from .managers import TaxonomyManager
 from .models import Taxonomy, TaxonomyTerm
 
 blueprint = Blueprint("taxonomies", __name__, url_prefix="/taxonomies")
+
+
+def url_to_path(url):
+    """
+    Convert schema URL to path.
+    :param url: The target URL.
+    :returns: The target path
+    """
+    parts = urlsplit(url)
+    path = parts.path
+    if parts.path.startswith(blueprint.url_prefix):
+        return path[len(blueprint.url_prefix):]
+    else:
+        abort(400, 'Invalid URL passed.')
 
 
 def pass_taxonomy(f):
@@ -47,11 +62,11 @@ def pass_term(f):
     return decorate
 
 
-def target_path_validator(value: str):
+def target_path_validator(value):
     """Validate target path."""
-    tax = None
+    path = url_to_path(value)
     try:
-        tax, term = TaxonomyManager.get_from_path(value)
+        TaxonomyManager.get_from_path(path)
     except AttributeError:
         abort(400, "Target Path is invalid.")
 
@@ -97,7 +112,7 @@ def jsonify_taxonomy_term(t: TaxonomyTerm, drilldown: bool = False) -> dict:
         # First drilldown tree element is always reference to self -> strip it
         try:
             children = t.drilldown_tree(json=True,
-                                     json_fields=_term_fields)[0]['children']
+                                        json_fields=_term_fields)[0]['children']
         except KeyError:
             children = []
 
@@ -162,7 +177,7 @@ def taxonomy_get_term(term):
         "title": fields.Dict(required=True),
         "slug": fields.Str(required=True),
         "extra_data": fields.Dict(required=False, empty_value=None),
-        "move_target": fields.Str(required=False,
+        "move_target": fields.URL(required=False,
                                   empty_value=None,
                                   validate=target_path_validator),
     }
@@ -180,7 +195,8 @@ def taxonomy_create_term(taxonomy, title, slug,
     full_path = "/{}/{}".format(taxonomy.code, term_path)
 
     if taxonomy and term and move_target:
-        TaxonomyManager.move_tree(term.tree_path, move_target)
+        target_path = url_to_path(move_target)
+        TaxonomyManager.move_tree(term.tree_path, target_path)
         moved = jsonify_taxonomy_term(term, drilldown=True)
         response = jsonify(moved)
         response.headers['Location'] = moved['links']['self']
@@ -191,15 +207,15 @@ def taxonomy_create_term(taxonomy, title, slug,
                                          title=title,
                                          extra_data=extra_data,
                                          path=full_path)
+
+        created_dict = jsonify_taxonomy_term(created, drilldown=True)
+
+        response = jsonify(created_dict)
+        response.headers['Location'] = created_dict['links']['self']
+        response.status_code = 201
+        return response
     except ValueError:
         abort(400, 'Term with this slug already exists on this path.')
-
-    created_dict = jsonify_taxonomy_term(created, drilldown=True)
-
-    response = jsonify(created_dict)
-    response.headers['Location'] = created_dict['links']['self']
-    response.status_code = 201
-    return response
 
 
 @blueprint.route("/<string:taxonomy_code>/", methods=("DELETE",))

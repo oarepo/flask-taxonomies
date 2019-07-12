@@ -227,7 +227,7 @@ class TestTaxonomyAPI:
         res = client.post("/taxonomies/root/term1/",
                           json={"title": {},
                                 "slug": "whatever",
-                                "move_target": "/groot/term2/"})
+                                "move_target": "http://localhost/taxonomies/groot/term2/"})  # noqa
         assert res.status_code == 200
         moved = manager.get_term(t, "term1")
         assert moved is not None
@@ -239,7 +239,7 @@ class TestTaxonomyAPI:
         res = client.post("/taxonomies/groot/term2/",
                           json={"title": {},
                                 "slug": "whatever",
-                                "move_target": "/root/"})
+                                "move_target": "http://localhost/taxonomies/root/"})  # noqa
         assert res.status_code == 200
 
         moved1 = manager.get_term(root_taxonomy, "term2")
@@ -255,12 +255,19 @@ class TestTaxonomyAPI:
         res = client.post("/taxonomies/root/term2/",
                           json={"title": term2.title,
                                 "slug": term2.slug,
-                                "move_target": "/root/somethingbad/"})
+                                "move_target": "http://localhost/taxonomies/root/somethingbad/"})  # noqa
+        assert res.status_code == 400
+
+        # Test move to invalid url prefix fails
+        res = client.post("/taxonomies/root/term2/",
+                          json={"title": term2.title,
+                                "slug": term2.slug,
+                                "move_target": "http://localhost/taxi/root/somethinggood/"})  # noqa
         assert res.status_code == 400
 
         # Test move from invalid source fails
         res = client.post("/taxonomies/root/somethingbad/",
                           json={"title": {},
                                 "slug": "whatever",
-                                "move_target": "/groot/"})
+                                "move_target": "http://localhost/taxonomies/groot/"})  # noqa
         assert res.status_code == 400
