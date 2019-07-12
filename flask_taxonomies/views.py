@@ -37,7 +37,7 @@ def pass_term(f):
         code = kwargs.pop("taxonomy_code")
         path = kwargs.pop("term_path")
         try:
-            _, term = TaxonomyManager.get_from_path("/{}/{}".format(code, path))
+            _, term = TaxonomyManager.get_from_path("/{}/{}".format(code, path))  # noqa
         except AttributeError:
             term = None
 
@@ -73,7 +73,9 @@ def jsonify_taxonomy(t: Taxonomy) -> dict:
         "extra_data": t.extra_data,
         "links": {
             "self": url_for(
-                "taxonomies.taxonomy_get_roots", taxonomy_code=t.code, _external=True
+                "taxonomies.taxonomy_get_roots",
+                taxonomy_code=t.code,
+                _external=True
             )
         },
     }
@@ -155,7 +157,7 @@ def taxonomy_get_term(term):
     return jsonify(jsonify_taxonomy_term(term, drilldown=True))
 
 
-@blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("POST",))
+@blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("POST",))  # noqa
 @use_kwargs(
     {
         "title": fields.Str(required=True, validate=json_validator),
@@ -184,9 +186,10 @@ def taxonomy_create_term(taxonomy_code, term_path, title, extra_data=None):
     full_path = "/{}{}".format(taxonomy.code, path)
 
     title = json.loads(title)
-    created = TaxonomyManager.create(
-        slug=slug, title=title, extra_data=extra_data, path="{}".format(full_path)
-    )
+    created = TaxonomyManager.create(slug=slug,
+                                     title=title,
+                                     extra_data=extra_data,
+                                     path="{}".format(full_path))
     response = jsonify(jsonify_taxonomy_term(created, drilldown=True))
     response.status_code = 201
     return response
@@ -205,7 +208,7 @@ def taxonomy_delete(taxonomy):
     return response
 
 
-@blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("DELETE",))
+@blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("DELETE",))  # noqa
 @pass_term
 def taxonomy_delete_term(term):
     """Delete a Term subtree in a Taxonomy."""
@@ -218,7 +221,9 @@ def taxonomy_delete_term(term):
 
 @blueprint.route("/<string:taxonomy_code>/", methods=("PATCH",))
 @use_kwargs(
-    {"extra_data": fields.Str(required=True, empty_value=None, validate=json_validator)}
+    {"extra_data": fields.Str(required=True,
+                              empty_value=None,
+                              validate=json_validator)}
 )
 @pass_taxonomy
 def taxonomy_update(taxonomy, extra_data):
@@ -228,16 +233,18 @@ def taxonomy_update(taxonomy, extra_data):
     return jsonify(jsonify_taxonomy(taxonomy))
 
 
-@blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("PATCH",))
+@blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("PATCH",))  # noqa
 @use_kwargs(
     {
-        "title": fields.Str(required=False, empty_value=None, validate=json_validator),
-        "extra_data": fields.Str(
-            required=False, empty_value=None, validate=json_validator
-        ),
-        "move_target": fields.Str(
-            required=False, empty_value=None, validate=target_path_validator
-        ),
+        "title": fields.Str(required=False,
+                            empty_value=None,
+                            validate=json_validator),
+        "extra_data": fields.Str(required=False,
+                                 empty_value=None,
+                                 validate=json_validator),
+        "move_target": fields.Str(required=False,
+                                  empty_value=None,
+                                  validate=target_path_validator),
     }
 )
 @pass_term

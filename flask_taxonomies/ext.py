@@ -20,4 +20,5 @@ class FlaskTaxonomies(object):
         """Initialize configuration."""
         for k in dir(config):
             if k.startswith('TAXONOMIES_'):
-                app.config.setdefault(k, getattr(config, k))  # pragma: no cover
+                app.config.setdefault(k,
+                                      getattr(config, k))  # pragma: no cover

@@ -13,7 +13,8 @@ class TaxonomyManager(object):
     """Manager of Taxonomy tree db models."""
 
     @staticmethod
-    def create(slug: str, title: dict, path: str, extra_data=None) -> TaxonomyTerm:
+    def create(slug: str, title: dict,
+               path: str, extra_data=None) -> TaxonomyTerm:
         """Create TaxonomyTerm on a given path."""
         taxonomy, parent_term = TaxonomyManager.get_from_path(path)
         if not taxonomy:
@@ -64,7 +65,8 @@ class TaxonomyManager(object):
             term = TaxonomyManager.get_term(taxonomy=taxonomy, slug=slug)
             if not term:
                 raise AttributeError(
-                    "TaxonomyTerm path {path} does not exist.".format(path=parts)
+                    "TaxonomyTerm path {path} does not exist."
+                    .format(path=parts)
                 )
 
         return (taxonomy, term)

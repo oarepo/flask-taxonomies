@@ -9,7 +9,10 @@ from sqlalchemy_mptt import BaseNestedSets, mptt_sessionmaker
 # From Mike Bayer's "Building the app" talk
 # https://speakerdeck.com/zzzeek/building-the-app
 class SurrogatePK(object):
-    """A mixin that adds a surrogate integer 'primary key' column named ``id`` to any declarative-mapped class."""
+    """
+    A mixin that adds a surrogate integer 'primary key' column.
+    Named ``id`` to any declarative-mapped class.
+    """
 
     __table_args__ = {"extend_existing": True}
 
@@ -68,11 +71,11 @@ class TaxonomyTerm(SurrogatePK, db.Model, BaseNestedSets):
 
     def __repr__(self):
         """Represent taxonomy term instance as a unique string."""
-        return "<TaxonomyTerm({slug}:{path})>".format(slug=self.slug, path=self.id)
+        return "<TaxonomyTerm({slug}:{path})>"\
+            .format(slug=self.slug, path=self.id)
 
-    def __init__(
-            self, slug: str, title: dict, taxonomy: Taxonomy, extra_data: dict = None
-    ):
+    def __init__(self, slug: str, title: dict,
+                 taxonomy: Taxonomy, extra_data: dict = None):
         """Taxonomy Term constructor."""
         self.slug = slug
         self.title = title
@@ -93,5 +96,5 @@ class TaxonomyTerm(SurrogatePK, db.Model, BaseNestedSets):
         """Get path in a taxonomy tree."""
         return "/{code}/{path}".format(
             code=self.taxonomy.code,
-            path="/".join([t.slug for t in self.path_to_root(order=asc).all()]),
+            path="/".join([t.slug for t in self.path_to_root(order=asc).all()]),  # noqa
         )
