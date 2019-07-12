@@ -57,7 +57,6 @@ with open(os.path.join('flask_taxonomies', 'version.py'), 'rt') as fp:
 
 setup(
     name="flask_taxonomies",
-    long_description=readme,
     version=version,
     url="https://github.com/oarepo/flask-taxonomies",
     license="MIT",

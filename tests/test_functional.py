@@ -39,8 +39,8 @@ class TestTaxonomyAPI:
         """Test Taxonomy creation."""
 
         res = client.post("/taxonomies/",
-                          data={"code": "new",
-                                "extra_data": '{"extra": "new"}'})
+                          json={"code": "new",
+                                "extra_data": {"extra": "new"}})
 
         retrieved = Taxonomy.query.filter(Taxonomy.code == "new").first()
         assert res.status_code == 201
@@ -49,11 +49,11 @@ class TestTaxonomyAPI:
 
         # Test putting invalid exxtra data fails
         res = client.post("/taxonomies/",
-                          data={"code": "bad", "extra_data": "{'extra': }"})
-        assert res.status_code == 400
+                          json={"code": "bad", "extra_data": "{'extra'}"})
+        assert res.status_code == 422
 
         # Test duplicit create fails
-        res = client.post("/taxonomies/", data={"code": root_taxonomy.code})
+        res = client.post("/taxonomies/", json={"code": root_taxonomy.code})
         assert res.status_code == 400
 
     def test_list_taxonomy_roots(self, client, root_taxonomy, manager):
@@ -99,7 +99,7 @@ class TestTaxonomyAPI:
     def test_term_create(self, root_taxonomy, client, manager):
         """Test TaxonomyTerm creation."""
         res = client.post("/taxonomies/{}/leaf1/".format(root_taxonomy.code),
-                          data={"title": '{"en": "Leaf"}'})
+                          json={"title": {"en": "Leaf"}})
         assert res.status_code == 201
         assert res.json["slug"] == "leaf1"
 
@@ -111,14 +111,14 @@ class TestTaxonomyAPI:
         # Test invalid path fails
         res = client.post("/taxonomies/{}/top1/leaf1/"
                           .format(root_taxonomy.code),
-                          data={"title": '{"en": "Leaf"}'})
+                          json={"title": {"en": "Leaf"}})
         assert res.status_code == 400
 
         # Test create on nested path
         manager.create("top1", {"en": "Top1"}, "/root/")
         res = client.post("/taxonomies/{}/top1/leaf2/"
                           .format(root_taxonomy.code),
-                          data={"title": '{"en": "Leaf"}'})
+                          json={"title": {"en": "Leaf"}})
         assert res.status_code == 201
 
         created = manager.get_term(root_taxonomy, "leaf2")
@@ -128,12 +128,12 @@ class TestTaxonomyAPI:
 
         # Test create duplicit slug fails
         res = client.post("/taxonomies/{}/leaf2/".format(root_taxonomy.code),
-                          data={"title": '{"en": "Leaf"}'})
+                          json={"title": {"en": "Leaf"}})
         assert res.status_code == 400
 
         # Test create in non-existent taxonomy fails
         res = client.post("/taxonomies/none/leaf2/",
-                          data={"title": '{"en": "Leaf"}'})
+                          json={"title": {"en": "Leaf"}})
         assert res.status_code == 404
 
     def test_taxonomy_delete(self, db, root_taxonomy,
@@ -170,14 +170,14 @@ class TestTaxonomyAPI:
     def test_taxomomy_update(self, root_taxonomy, client, manager):
         """Test updating a taxonomy."""
         res = client.patch("/taxonomies/root/",
-                           data={"extra_data": '{"updated": "yes"}'})
+                           json={"extra_data": {"updated": "yes"}})
         assert res.status_code == 200
         assert res.json["extra_data"] == {"updated": "yes"}
         assert manager.get_taxonomy("root").extra_data == {"updated": "yes"}
 
         # Test update invalid taxonomy fails
         res = client.patch("/taxonomies/nope/",
-                           data={"extra_data": '{"updated": "yes"}'})
+                           json={"extra_data": {"updated": "yes"}})
         assert res.status_code == 404
 
     def test_term_update(self, root_taxonomy, client, manager):
@@ -185,14 +185,14 @@ class TestTaxonomyAPI:
         manager.create("term1", {"en": "Term1"}, "/root/")
 
         res = client.patch("/taxonomies/root/term1/",
-                           data={"extra_data": '{"updated": "yes"}'})
+                           json={"extra_data": {"updated": "yes"}})
         assert res.status_code == 200
         assert res.json["extra_data"] == {"updated": "yes"}
         assert manager.get_term(root_taxonomy, "term1") \
                       .extra_data == {"updated": "yes"}
 
         res = client.patch("/taxonomies/root/term1/",
-                           data={"title": '{"updated": "yes"}'})
+                           json={"title": {"updated": "yes"}})
         assert res.status_code == 200
         assert res.json["title"] == {"updated": "yes"}
         assert manager.get_term(root_taxonomy, "term1") \
@@ -200,7 +200,7 @@ class TestTaxonomyAPI:
 
         # Test update invalid term fails
         res = client.patch("/taxonomies/root/nope/",
-                           data={"title": '{"updated": "yes"}'})
+                           json={"title": {"updated": "yes"}})
         assert res.status_code == 404
 
     def test_term_move(self, db, root_taxonomy, client, manager, Taxonomy):

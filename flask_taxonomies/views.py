@@ -48,14 +48,6 @@ def pass_term(f):
     return decorate
 
 
-def json_validator(value: str):
-    """Validate JSON string."""
-    try:
-        json.loads(value)
-    except JSONDecodeError as e:
-        return abort(400, "Invalid JSON: {}".format(e))
-
-
 def target_path_validator(value: str):
     """Validate target path."""
     tax = None
@@ -121,9 +113,7 @@ def taxonomy_list():
 @use_kwargs(
     {
         "code": fields.Str(required=True),
-        "extra_data": fields.Str(
-            required=False, empty_value="", validate=json_validator
-        ),
+        "extra_data": fields.Dict(required=False, empty_value=None),
     }
 )
 def taxonomy_create(code: str, extra_data: dict = None):
@@ -131,7 +121,7 @@ def taxonomy_create(code: str, extra_data: dict = None):
     if TaxonomyManager.get_taxonomy(code):
         raise BadRequest("Taxonomy with this code already exists.")
     else:
-        t = Taxonomy(code=code, extra_data=json.loads(extra_data))
+        t = Taxonomy(code=code, extra_data=extra_data)
 
         session = mptt_sessionmaker(db.session)
         session.add(t)
@@ -160,10 +150,8 @@ def taxonomy_get_term(term):
 @blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("POST",))  # noqa
 @use_kwargs(
     {
-        "title": fields.Str(required=True, validate=json_validator),
-        "extra_data": fields.Str(
-            required=False, empty_value="", validate=json_validator
-        ),
+        "title": fields.Dict(required=True),
+        "extra_data": fields.Dict(required=False, empty_value=""),
     }
 )
 def taxonomy_create_term(taxonomy_code, term_path, title, extra_data=None):
@@ -185,7 +173,6 @@ def taxonomy_create_term(taxonomy_code, term_path, title, extra_data=None):
     path, slug = "/{}".format(term_path).rstrip("/").rsplit("/", 1)
     full_path = "/{}{}".format(taxonomy.code, path)
 
-    title = json.loads(title)
     created = TaxonomyManager.create(slug=slug,
                                      title=title,
                                      extra_data=extra_data,
@@ -221,14 +208,12 @@ def taxonomy_delete_term(term):
 
 @blueprint.route("/<string:taxonomy_code>/", methods=("PATCH",))
 @use_kwargs(
-    {"extra_data": fields.Str(required=True,
-                              empty_value=None,
-                              validate=json_validator)}
+    {"extra_data": fields.Dict(required=True, empty_value=None)}
 )
 @pass_taxonomy
 def taxonomy_update(taxonomy, extra_data):
     """Update Taxonomy."""
-    taxonomy.update(json.loads(extra_data))
+    taxonomy.update(extra_data)
 
     return jsonify(jsonify_taxonomy(taxonomy))
 
@@ -236,12 +221,8 @@ def taxonomy_update(taxonomy, extra_data):
 @blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("PATCH",))  # noqa
 @use_kwargs(
     {
-        "title": fields.Str(required=False,
-                            empty_value=None,
-                            validate=json_validator),
-        "extra_data": fields.Str(required=False,
-                                 empty_value=None,
-                                 validate=json_validator),
+        "title": fields.Dict(required=False, empty_value=None),
+        "extra_data": fields.Dict(required=False, empty_value=None),
         "move_target": fields.Str(required=False,
                                   empty_value=None,
                                   validate=target_path_validator),
@@ -252,9 +233,9 @@ def taxonomy_update_term(term, title=None, extra_data=None, move_target=None):
     """Update Term in Taxonomy."""
     changes = {}
     if title:
-        changes.update({"title": json.loads(title)})
+        changes.update({"title": title})
     if extra_data:
-        changes.update({"extra_data": json.loads(extra_data)})
+        changes.update({"extra_data": extra_data})
 
     term.update(**changes)
 
