@@ -7,6 +7,7 @@ from flask import Flask
 from invenio_db import InvenioDB
 from invenio_db import db as _db
 from sqlalchemy_mptt import mptt_sessionmaker
+from sqlalchemy_utils import database_exists, create_database
 
 from flask_taxonomies.ext import FlaskTaxonomies
 from flask_taxonomies.views import blueprint
@@ -65,6 +66,9 @@ def client(app):
 def db(app):
     """Create database for the tests."""
     with app.app_context():
+        if not database_exists(str(_db.engine.url)) and \
+                app.config['SQLALCHEMY_DATABASE_URI'] != 'sqlite://':
+            create_database(_db.engine.url)
         _db.create_all()
 
     yield _db
