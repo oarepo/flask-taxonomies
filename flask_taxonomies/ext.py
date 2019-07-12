@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """Extension module for Flask Taxonomies."""
-import flask_taxonomies.db
+from flask_taxonomies import config
 
 
 class FlaskTaxonomies(object):
-    """App for Flask Taxonomies."""
+    """App Extension for Flask Taxonomies."""
 
     def __init__(self, app=None, db=None):
         """Extension initialization."""
@@ -13,5 +13,11 @@ class FlaskTaxonomies(object):
 
     def init_app(self, app, db=None):
         """Flask application initialization."""
-        if db:
-            flask_taxonomies.db.db = db
+        self.init_config(app)
+        app.extensions['flask-taxonomies'] = self
+
+    def init_config(self, app):
+        """Initialize configuration."""
+        for k in dir(config):
+            if k.startswith('TAXONOMIES_'):
+                app.config.setdefault(k, getattr(config, k))  # pragma: no cover

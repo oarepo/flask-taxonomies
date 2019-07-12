@@ -1,23 +1,49 @@
 # -*- coding: utf-8 -*-
 """Defines fixtures available to all tests."""
+import os
 
 import pytest
+from flask import Flask
+from invenio_db import InvenioDB, db as _db
 from sqlalchemy_mptt import mptt_sessionmaker
-from webtest import TestApp
 
-from examples.app import create_app
+from flask_taxonomies.ext import FlaskTaxonomies
+from flask_taxonomies.views import blueprint
 
 
-@pytest.fixture
-def app():
-    """Create application for the tests."""
-    _app = create_app("tests.settings")
-    ctx = _app.test_request_context()
-    ctx.push()
+@pytest.fixture()
+def base_app():
+    """Flask application fixture."""
+    app_ = Flask('testapp')
+    app_.config.update(
+        TESTING=True,
+        SQLALCHEMY_TRACK_MODIFICATIONS=True,
+        SQLALCHEMY_DATABASE_URI=os.environ.get(
+            'SQLALCHEMY_DATABASE_URI',
+            'sqlite:///:memory:'),
+        SERVER_NAME='localhost',
+        SECURITY_PASSWORD_SALT='TEST_SECURITY_PASSWORD_SALT',
+        SECRET_KEY='TEST_SECRET_KEY',
+        FILES_REST_MULTIPART_CHUNKSIZE_MIN=2,
+        FILES_REST_MULTIPART_CHUNKSIZE_MAX=20,
+        FILES_REST_MULTIPART_MAX_PARTS=100,
+        FILES_REST_TASK_WAIT_INTERVAL=0.1,
+        FILES_REST_TASK_WAIT_MAX_SECONDS=1,
+    )
 
-    yield _app
+    InvenioDB(app_)
 
-    ctx.pop()
+    return app_
+
+
+@pytest.fixture()
+def app(base_app):
+    """Flask application fixture."""
+    FlaskTaxonomies(base_app)
+    base_app.register_blueprint(blueprint)
+
+    with base_app.app_context():
+        return base_app
 
 
 @pytest.fixture
@@ -27,17 +53,16 @@ def manager(app):
     return TaxonomyManager
 
 
-@pytest.fixture
-def testapp(app):
-    """Create Webtest app."""
-    return TestApp(app)
+@pytest.yield_fixture()
+def client(app):
+    """Get test client."""
+    with app.test_client() as client:
+        yield client
 
 
 @pytest.fixture
 def db(app):
     """Create database for the tests."""
-    from flask_taxonomies.db import db as _db
-    _db.app = app
     with app.app_context():
         _db.create_all()
 

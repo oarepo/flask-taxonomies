@@ -19,13 +19,15 @@ class TestTaxonomy:
 
     def test_get_terms(self, db, root_taxonomy, TaxonomyTerm):
         """Get terms  listassocitated with this taxonomy."""
-        leaf = TaxonomyTerm(slug="leaf", title={"en": "Leaf"}, taxonomy=root_taxonomy)
+        leaf = TaxonomyTerm(slug="leaf",
+                            title={"en": "Leaf"},
+                            taxonomy=root_taxonomy)
         db.session.add(leaf)
         db.session.commit()
 
-        nested = TaxonomyTerm(
-            slug="nested", title={"en": "Leaf"}, taxonomy=root_taxonomy
-        )
+        nested = TaxonomyTerm(slug="nested",
+                              title={"en": "Leaf"},
+                              taxonomy=root_taxonomy)
         nested.parent = leaf
         db.session.add(nested)
         db.session.commit()
@@ -41,7 +43,8 @@ class TestTaxonomy:
         retrieved_root = Taxonomy.get_by_id(root_taxonomy.id)
         assert retrieved_root.extra_data == {"description": "updated"}
 
-    def test_delete_taxonomy(self, db, root_taxonomy, manager, Taxonomy, TaxonomyTerm):
+    def test_delete_taxonomy(self, db, root_taxonomy, manager,
+                             Taxonomy, TaxonomyTerm):
         """Test deleting the whole Taxonomy."""
         leaf = TaxonomyTerm(
             slug="leaf",
@@ -73,20 +76,29 @@ class TestTaxonomyTerm:
 
     def test_get_by_id(self, db, root_taxonomy, TaxonomyTerm):
         """Get TaxonomyTerm Tree Items by ID."""
-        leaf = TaxonomyTerm(slug="leaf", title={"en": "Leaf"}, taxonomy=root_taxonomy)
+        leaf = TaxonomyTerm(slug="leaf",
+                            title={"en": "Leaf"},
+                            taxonomy=root_taxonomy)
         db.session.add(leaf)
         db.session.commit()
 
         retrieved_leaf = TaxonomyTerm.get_by_id((leaf.id))
         assert retrieved_leaf == leaf
 
+        # Test get invalid id
+        retrieved_leaf = TaxonomyTerm.get_by_id(('hello123'))
+        assert retrieved_leaf is None
+
     def test_update_taxonomy_term(self, db, root_taxonomy, TaxonomyTerm):
         """Update TaxonomyTerm extra_data and name."""
-        leaf = TaxonomyTerm(slug="leaf", title={"en": "Leaf"}, taxonomy=root_taxonomy)
+        leaf = TaxonomyTerm(slug="leaf",
+                            title={"en": "Leaf"},
+                            taxonomy=root_taxonomy)
         db.session.add(leaf)
         db.session.commit()
 
-        leaf.update(extra_data={"description": "updated"}, title={"en": "newleaf"})
+        leaf.update(extra_data={"description": "updated"},
+                    title={"en": "newleaf"})
 
         retrieved_root = TaxonomyTerm.get_by_id(root_taxonomy.id)
         assert retrieved_root.extra_data == {"description": "updated"}

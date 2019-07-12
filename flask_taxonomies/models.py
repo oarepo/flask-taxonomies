@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """User models."""
+from invenio_db import db
 from sqlalchemy import asc
 from sqlalchemy.orm import relationship
 from sqlalchemy_mptt import BaseNestedSets, mptt_sessionmaker
 
-from .db import db
 
 # From Mike Bayer's "Building the app" talk
 # https://speakerdeck.com/zzzeek/building-the-app
@@ -71,7 +71,7 @@ class TaxonomyTerm(SurrogatePK, db.Model, BaseNestedSets):
         return "<TaxonomyTerm({slug}:{path})>".format(slug=self.slug, path=self.id)
 
     def __init__(
-        self, slug: str, title: dict, taxonomy: Taxonomy, extra_data: dict = None
+            self, slug: str, title: dict, taxonomy: Taxonomy, extra_data: dict = None
     ):
         """Taxonomy Term constructor."""
         self.slug = slug

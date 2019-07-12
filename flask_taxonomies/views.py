@@ -5,12 +5,12 @@ from functools import wraps
 from json import JSONDecodeError
 
 from flask import Blueprint, abort, jsonify, url_for
+from invenio_db import db
 from sqlalchemy_mptt import mptt_sessionmaker
 from webargs import fields
 from webargs.flaskparser import use_kwargs
 from werkzeug.exceptions import BadRequest
 
-from .db import db
 from .managers import TaxonomyManager
 from .models import Taxonomy, TaxonomyTerm
 
@@ -65,9 +65,6 @@ def target_path_validator(value: str):
         tax, term = TaxonomyManager.get_from_path(value)
     except AttributeError:
         abort(400, "Target Path is invalid.")
-
-    if not tax:
-        abort(400, "Invalid Taxonomy in Target Path")
 
 
 def jsonify_taxonomy(t: Taxonomy) -> dict:
@@ -188,17 +185,14 @@ def taxonomy_create_term(taxonomy_code, term_path, title, extra_data=None):
     path, slug = "/{}".format(term_path).rstrip("/").rsplit("/", 1)
     full_path = "/{}{}".format(taxonomy.code, path)
 
-    try:
-        title = json.loads(title)
-        created = TaxonomyManager.create(
-            slug=slug, title=title, extra_data=extra_data, path="{}".format(full_path)
-        )
-        response = jsonify(jsonify_taxonomy_term(created, drilldown=True))
-        response.status_code = 201
-        return response
-    except AttributeError:
-        abort(400, "Invalid Taxonomy Term path provided.")
-
+    title = json.loads(title)
+    created = TaxonomyManager.create(
+        slug=slug, title=title, extra_data=extra_data, path="{}".format(full_path)
+    )
+    response = jsonify(jsonify_taxonomy_term(created, drilldown=True))
+    response.status_code = 201
+    return response
+    
 
 @blueprint.route("/<string:taxonomy_code>/", methods=("DELETE",))
 @pass_taxonomy

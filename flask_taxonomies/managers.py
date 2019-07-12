@@ -2,11 +2,11 @@
 """Managers module for database models."""
 from typing import Iterator, Optional
 
+from invenio_db import db
 from sqlalchemy import and_
 from sqlalchemy_mptt import mptt_sessionmaker
 
 from flask_taxonomies.models import Taxonomy, TaxonomyTerm
-from .db import db
 
 class TaxonomyManager(object):
     """Manager of Taxonomy tree db models."""

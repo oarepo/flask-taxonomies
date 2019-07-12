@@ -13,6 +13,23 @@ install_requires = [
         db=DATABASE, version=INVENIO_VERSION)
 ]
 
+tests_require = [
+    'pytest>=4.6.3',
+    'factory-boy>=2.12.0',
+    'pdbpp>=0.10.0',
+    'pydocstyle<4.0.0',
+    'check-manifest>=0.25',
+    'coverage>=4.0',
+    'isort>=4.3.3',
+    'mock>=2.0.0',
+    'pytest-cache>=1.0',
+    'pytest-invenio>=1.0.2,<1.1.0',
+    'pytest-mock>=1.6.0',
+    'pytest-cov>=1.8.0',
+    'pytest-random-order>=0.5.4',
+    'pytest-pep8>=1.0.6',
+]
+
 setup(
     name="flask_taxonomies",
     version="3.0.0",
@@ -20,7 +37,7 @@ setup(
     license="MIT",
     author="Miroslav Bauer",
     author_email="bauer@cesnet.cz",
-    description="Taxonomy Term trees REST API for Flask Applications",
+    description="Taxonomy Term trees REST API for Invenio Applications",
     zip_safe=False,
     packages=['flask_taxonomies'],
     entry_points={
@@ -42,6 +59,7 @@ setup(
     },
     include_package_data=True,
     install_requires=install_requires,
+    tests_require=tests_require,
     platforms='any',
     classifiers=[
         'Environment :: Web Environment',

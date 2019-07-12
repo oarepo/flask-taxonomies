@@ -15,7 +15,7 @@ Flask Taxonomies
         :target: https://pypi.org/pypi/flask-taxonomies
 
 
-TaxonomyTerm trees REST API for Flask Applications
+TaxonomyTerm trees REST API for Invenio Applications
 
 
 Quickstart
@@ -25,29 +25,14 @@ Run the following commands to bootstrap your environment ::
 
     git clone https://github.com/oarepo/flask_taxonomies
     cd flask_taxonomies
-    pip install -r requirements/dev.txt
+    pip install -e .
 
 Once you have installed your DBMS, run the following to create your app's
 database tables and perform the initial migration ::
 
-    flask db init
-    flask db migrate
-    flask db upgrade
-    flask run
-
-
-Deployment
-----------
-
-To deploy::
-
-    export FLASK_ENV=production
-    export FLASK_DEBUG=0
-    export DATABASE_URL="<YOUR DATABASE URL>"
-    flask run       # start the flask server
-
-In your production environment, make sure the ``FLASK_DEBUG`` environment
-variable is unset or is set to ``0``.
+    invenio db init create
+    invenio alembic upgrade heads
+    invenio run
 
 Python Usage
 ------------
