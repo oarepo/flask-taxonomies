@@ -75,6 +75,12 @@ To create taxonomy ::
       http://localhost:5000/taxonomies/ \
       -d '{"code": "...", "extra_data": "{...}"}'
 
+To create a term in taxonomy ::
+
+    curl -X PUT \
+      http://localhost:5000/taxonomies/<taxonomy-code>/<taxonomy-term-path>/ \
+      -d '{"title": {"en": ..., ...} }
+
 To list top-level terms in a taxonomy ::
 
     curl -X GET http://localhost:5000/taxonomies/<taxonomy-code>/

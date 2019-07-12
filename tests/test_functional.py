@@ -98,8 +98,8 @@ class TestTaxonomyAPI:
 
     def test_term_create(self, root_taxonomy, client, manager):
         """Test TaxonomyTerm creation."""
-        res = client.post("/taxonomies/{}/leaf1/".format(root_taxonomy.code),
-                          json={"title": {"en": "Leaf"}})
+        res = client.put("/taxonomies/{}/leaf1/".format(root_taxonomy.code),
+                         json={"title": {"en": "Leaf"}})
         assert res.status_code == 201
         assert res.json["slug"] == "leaf1"
 
@@ -109,16 +109,16 @@ class TestTaxonomyAPI:
         assert created.taxonomy == root_taxonomy
 
         # Test invalid path fails
-        res = client.post("/taxonomies/{}/top1/leaf1/"
-                          .format(root_taxonomy.code),
-                          json={"title": {"en": "Leaf"}})
+        res = client.put("/taxonomies/{}/top1/leaf1/"
+                         .format(root_taxonomy.code),
+                         json={"title": {"en": "Leaf"}})
         assert res.status_code == 400
 
         # Test create on nested path
         manager.create("top1", {"en": "Top1"}, "/root/")
-        res = client.post("/taxonomies/{}/top1/leaf2/"
-                          .format(root_taxonomy.code),
-                          json={"title": {"en": "Leaf"}})
+        res = client.put("/taxonomies/{}/top1/leaf2/"
+                         .format(root_taxonomy.code),
+                         json={"title": {"en": "Leaf"}})
         assert res.status_code == 201
 
         created = manager.get_term(root_taxonomy, "leaf2")
@@ -127,13 +127,13 @@ class TestTaxonomyAPI:
         assert created.taxonomy == root_taxonomy
 
         # Test create duplicit slug fails
-        res = client.post("/taxonomies/{}/leaf2/".format(root_taxonomy.code),
-                          json={"title": {"en": "Leaf"}})
+        res = client.put("/taxonomies/{}/leaf2/".format(root_taxonomy.code),
+                         json={"title": {"en": "Leaf"}})
         assert res.status_code == 400
 
         # Test create in non-existent taxonomy fails
-        res = client.post("/taxonomies/none/leaf2/",
-                          json={"title": {"en": "Leaf"}})
+        res = client.put("/taxonomies/none/leaf2/",
+                         json={"title": {"en": "Leaf"}})
         assert res.status_code == 404
 
     def test_taxonomy_delete(self, db, root_taxonomy,

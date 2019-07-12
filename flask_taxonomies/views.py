@@ -147,7 +147,7 @@ def taxonomy_get_term(term):
     return jsonify(jsonify_taxonomy_term(term, drilldown=True))
 
 
-@blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("POST",))  # noqa
+@blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("PUT",))  # noqa
 @use_kwargs(
     {
         "title": fields.Dict(required=True),
