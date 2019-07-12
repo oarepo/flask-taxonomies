@@ -7,7 +7,7 @@ from flask import Flask
 from invenio_db import InvenioDB
 from invenio_db import db as _db
 from sqlalchemy_mptt import mptt_sessionmaker
-from sqlalchemy_utils import database_exists, create_database
+from sqlalchemy_utils import create_database, database_exists
 
 from flask_taxonomies.ext import FlaskTaxonomies
 from flask_taxonomies.views import blueprint
