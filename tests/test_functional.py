@@ -217,8 +217,10 @@ class TestTaxonomyAPI:
         term2 = manager.create("term2", {"en": "Term1"}, "/groot/")
 
         # Test move /root/term1 -> /groot/term2/term1
-        res = client.patch("/taxonomies/root/term1/",
-                           data={"move_target": "/groot/term2/"})
+        res = client.post("/taxonomies/root/term1/",
+                          json={"title": {},
+                                "slug": "whatever",
+                                "move_target": "/groot/term2/"})
         assert res.status_code == 200
         moved = manager.get_term(t, "term1")
         assert moved is not None
@@ -227,8 +229,10 @@ class TestTaxonomyAPI:
         assert moved.tree_path == "/groot/term2/term1"
 
         # Test move subtree
-        res = client.patch("/taxonomies/groot/term2/",
-                           data={"move_target": "/root/"})
+        res = client.post("/taxonomies/groot/term2/",
+                          json={"title": {},
+                                "slug": "whatever",
+                                "move_target": "/root/"})
         assert res.status_code == 200
 
         moved1 = manager.get_term(root_taxonomy, "term2")
@@ -241,11 +245,15 @@ class TestTaxonomyAPI:
         assert moved2.is_descendant_of(moved1)
 
         # Test move to invalid path fails
-        res = client.patch("/taxonomies/root/term2/",
-                           data={"move_target": "/root/somethingbad/"})
+        res = client.post("/taxonomies/root/term2/",
+                          json={"title": term2.title,
+                                "slug": term2.slug,
+                                "move_target": "/root/somethingbad/"})
         assert res.status_code == 400
 
         # Test move from invalid source fails
-        res = client.patch("/taxonomies/root/somethingbad/",
-                           data={"move_target": "/groot/"})
-        assert res.status_code == 404
+        res = client.post("/taxonomies/root/somethingbad/",
+                          json={"title": {},
+                                "slug": "whatever",
+                                "move_target": "/groot/"})
+        assert res.status_code == 400

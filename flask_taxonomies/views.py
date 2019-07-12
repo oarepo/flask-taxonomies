@@ -18,6 +18,7 @@ blueprint = Blueprint("taxonomies", __name__, url_prefix="/taxonomies")
 
 def pass_taxonomy(f):
     """Decorate to retrieve a bucket."""
+
     @wraps(f)
     def decorate(*args, **kwargs):
         code = kwargs.pop("taxonomy_code")
@@ -31,6 +32,7 @@ def pass_taxonomy(f):
 
 def pass_term(f):
     """Decorate to retrieve a bucket."""
+
     @wraps(f)
     def decorate(*args, **kwargs):
         code = kwargs.pop("taxonomy_code")
@@ -157,10 +159,13 @@ def taxonomy_get_term(term):
         "title": fields.Dict(required=True),
         "slug": fields.Str(required=True),
         "extra_data": fields.Dict(required=False, empty_value=None),
+        "move_target": fields.Str(required=False,
+                                  empty_value=None,
+                                  validate=target_path_validator),
     }
 )
 def taxonomy_create_term(taxonomy, title, slug,
-                         term_path='', extra_data=None):
+                         term_path='', extra_data=None, move_target=None):
     """Create a Term inside a Taxonomy tree."""
     term = None
     try:
@@ -170,6 +175,13 @@ def taxonomy_create_term(taxonomy, title, slug,
         abort(400, "Invalid Term path given.")
 
     full_path = "/{}/{}".format(taxonomy.code, term_path)
+
+    if taxonomy and term and move_target:
+        TaxonomyManager.move_tree(term.tree_path, move_target)
+        moved = jsonify_taxonomy_term(term, drilldown=True)
+        response = jsonify(moved)
+        response.headers['Location'] = moved['links']['self']
+        return response
 
     try:
         created = TaxonomyManager.create(slug=slugify(slug),
@@ -228,13 +240,10 @@ def taxonomy_update(taxonomy, extra_data):
     {
         "title": fields.Dict(required=False, empty_value=None),
         "extra_data": fields.Dict(required=False, empty_value=None),
-        "move_target": fields.Str(required=False,
-                                  empty_value=None,
-                                  validate=target_path_validator),
     }
 )
 @pass_term
-def taxonomy_update_term(term, title=None, extra_data=None, move_target=None):
+def taxonomy_update_term(term, title=None, extra_data=None):
     """Update Term in Taxonomy."""
     changes = {}
     if title:
@@ -243,8 +252,5 @@ def taxonomy_update_term(term, title=None, extra_data=None, move_target=None):
         changes.update({"extra_data": extra_data})
 
     term.update(**changes)
-
-    if move_target:
-        TaxonomyManager.move_tree(term.tree_path, move_target)
 
     return jsonify(jsonify_taxonomy_term(term, drilldown=True))
