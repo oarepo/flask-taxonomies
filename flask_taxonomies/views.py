@@ -54,7 +54,6 @@ def pass_taxonomy(f):
 
 def pass_taxonomy_extra_data(f):
     """Decorate to retrieve extra data for a taxonomy."""
-
     @wraps(f)
     def decorate(*args, **kwargs):
         extra = {**request.json}
@@ -70,7 +69,6 @@ def pass_taxonomy_extra_data(f):
 
 def pass_term_extra_data(f):
     """Decorate to retrieve extra data for a term."""
-
     @wraps(f)
     def decorate(*args, **kwargs):
         extra = {**request.json}
