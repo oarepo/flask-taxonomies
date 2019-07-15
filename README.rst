@@ -115,6 +115,7 @@ Update taxonomy term data ::
 
 Move taxonomy term (or whole term subtree) to another location ::
 
-    curl -X PATCH \
+    curl -X POST \
         http://localhost:5000/taxonomies/<taxonomy-code>/<taxonomy-term-path>/ \
-        -d '{"move_target":"/<target-taxonomy-code>/<target-taxonomy-term-path>/"}'
+        -d '{"move_target":"http://localhost:5000/taxonomies/<taxonomy-code>/<taxonomy-destination-path>", \
+             "title": {}, "slug": "..."}'

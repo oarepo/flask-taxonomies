@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 """TaxonomyTerm views."""
 from functools import wraps
+from urllib.parse import urlsplit
 
 from flask import Blueprint, abort, jsonify, url_for, make_response
+from flask import request
 from invenio_db import db
 from slugify import slugify
 from sqlalchemy_mptt import mptt_sessionmaker
@@ -16,8 +18,23 @@ from .models import Taxonomy, TaxonomyTerm
 blueprint = Blueprint("taxonomies", __name__, url_prefix="/taxonomies")
 
 
+def url_to_path(url):
+    """
+    Convert schema URL to path.
+    :param url: The target URL.
+    :returns: The target path
+    """
+    parts = urlsplit(url)
+    path = parts.path
+    if parts.path.startswith(blueprint.url_prefix):
+        return path[len(blueprint.url_prefix):]
+    else:
+        abort(400, 'Invalid URL passed.')
+
+
 def pass_taxonomy(f):
     """Decorate to retrieve a bucket."""
+
     @wraps(f)
     def decorate(*args, **kwargs):
         code = kwargs.pop("taxonomy_code")
@@ -29,8 +46,43 @@ def pass_taxonomy(f):
     return decorate
 
 
+def pass_taxonomy_extra_data(f):
+    """Decorate to retrieve extra data for a taxonomy."""
+
+    @wraps(f)
+    def decorate(*args, **kwargs):
+        extra = {**request.json}
+        try:
+            extra.pop('code')
+        except KeyError:
+            pass
+        request.json['extra_data'] = extra
+        return f(extra_data=extra, *args, **kwargs)
+
+    return decorate
+
+
+def pass_term_extra_data(f):
+    """Decorate to retrieve extra data for a term."""
+
+    @wraps(f)
+    def decorate(*args, **kwargs):
+        extra = {**request.json}
+        try:
+            extra.pop('slug')
+            extra.pop('title')
+            extra.pop('move_target')
+        except KeyError:
+            pass
+        request.json['extra_data'] = extra
+        return f(extra_data=extra, *args, **kwargs)
+
+    return decorate
+
+
 def pass_term(f):
     """Decorate to retrieve a bucket."""
+
     @wraps(f)
     def decorate(*args, **kwargs):
         code = kwargs.pop("taxonomy_code")
@@ -47,11 +99,11 @@ def pass_term(f):
     return decorate
 
 
-def target_path_validator(value: str):
+def target_path_validator(value):
     """Validate target path."""
-    tax = None
+    path = url_to_path(value)
     try:
-        tax, term = TaxonomyManager.get_from_path(value)
+        TaxonomyManager.get_from_path(path)
     except AttributeError:
         abort(400, "Target Path is invalid.")
 
@@ -59,9 +111,9 @@ def target_path_validator(value: str):
 def jsonify_taxonomy(t: Taxonomy) -> dict:
     """Prepare Taxonomy to be easily jsonified."""
     return {
+        **(t.extra_data or {}),
         "id": t.id,
         "code": t.code,
-        "extra_data": t.extra_data,
         "links": {
             "self": url_for(
                 "taxonomies.taxonomy_get_roots",
@@ -75,10 +127,10 @@ def jsonify_taxonomy(t: Taxonomy) -> dict:
 def jsonify_taxonomy_term(t: TaxonomyTerm, drilldown: bool = False) -> dict:
     """Prepare TaxonomyTerm to be easily jsonified."""
     result = {
+        **(t.extra_data or {}),
         "id": t.id,
         "slug": t.slug,
         "title": t.title,
-        "extra_data": t.extra_data,
         "path": t.tree_path,
         "links": {
             # TODO: replace with Term detail route
@@ -94,9 +146,14 @@ def jsonify_taxonomy_term(t: TaxonomyTerm, drilldown: bool = False) -> dict:
         def _term_fields(term: TaxonomyTerm):
             return dict(slug=term.slug, path=term.tree_path)
 
-        result.update(
-            {"children": t.drilldown_tree(json=True, json_fields=_term_fields)}
-        )
+        # First drilldown tree element is always reference to self -> strip it
+        try:
+            children = t.drilldown_tree(json=True,
+                                        json_fields=_term_fields)[0]['children']  # noqa
+        except KeyError:
+            children = []
+
+        result.update({"children": children})
 
     return result
 
@@ -109,10 +166,11 @@ def taxonomy_list():
 
 
 @blueprint.route("/", methods=("POST",))
+@pass_taxonomy_extra_data
 @use_kwargs(
     {
         "code": fields.Str(required=True),
-        "extra_data": fields.Dict(required=False, empty_value=None),
+        "extra_data": fields.Dict()
     }
 )
 def taxonomy_create(code: str, extra_data: dict = None):
@@ -152,15 +210,19 @@ def taxonomy_get_term(term):
 @blueprint.route("/<string:taxonomy_code>/", methods=("POST",))
 @blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("POST",))  # noqa
 @pass_taxonomy
+@pass_term_extra_data
 @use_kwargs(
     {
         "title": fields.Dict(required=True),
         "slug": fields.Str(required=True),
-        "extra_data": fields.Dict(required=False, empty_value=None),
+        "extra_data": fields.Dict(),
+        "move_target": fields.URL(required=False,
+                                  empty_value=None,
+                                  validate=target_path_validator),
     }
 )
 def taxonomy_create_term(taxonomy, title, slug,
-                         term_path='', extra_data=None):
+                         term_path='', extra_data=None, move_target=None):
     """Create a Term inside a Taxonomy tree."""
     term = None
     try:
@@ -171,20 +233,28 @@ def taxonomy_create_term(taxonomy, title, slug,
 
     full_path = "/{}/{}".format(taxonomy.code, term_path)
 
+    if taxonomy and term and move_target:
+        target_path = url_to_path(move_target)
+        TaxonomyManager.move_tree(term.tree_path, target_path)
+        moved = jsonify_taxonomy_term(term, drilldown=True)
+        response = jsonify(moved)
+        response.headers['Location'] = moved['links']['self']
+        return response
+
     try:
         created = TaxonomyManager.create(slug=slugify(slug),
                                          title=title,
                                          extra_data=extra_data,
                                          path=full_path)
+
+        created_dict = jsonify_taxonomy_term(created, drilldown=True)
+
+        response = jsonify(created_dict)
+        response.headers['Location'] = created_dict['links']['self']
+        response.status_code = 201
+        return response
     except ValueError:
         abort(400, 'Term with this slug already exists on this path.')
-
-    created_dict = jsonify_taxonomy_term(created, drilldown=True)
-
-    response = jsonify(created_dict)
-    response.headers['Location'] = created_dict['links']['self']
-    response.status_code = 201
-    return response
 
 
 @blueprint.route("/<string:taxonomy_code>/", methods=("DELETE",))
@@ -210,8 +280,9 @@ def taxonomy_delete_term(term):
 
 
 @blueprint.route("/<string:taxonomy_code>/", methods=("PATCH",))
+@pass_taxonomy_extra_data
 @use_kwargs(
-    {"extra_data": fields.Dict(required=True, empty_value=None)}
+    {"extra_data": fields.Dict(empty_value={})}
 )
 @pass_taxonomy
 def taxonomy_update(taxonomy, extra_data):
@@ -222,27 +293,22 @@ def taxonomy_update(taxonomy, extra_data):
 
 
 @blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("PATCH",))  # noqa
+@pass_term_extra_data
 @use_kwargs(
     {
         "title": fields.Dict(required=False, empty_value=None),
-        "extra_data": fields.Dict(required=False, empty_value=None),
-        "move_target": fields.Str(required=False,
-                                  empty_value=None,
-                                  validate=target_path_validator),
+        "extra_data": fields.Dict(empty_value={}),
     }
 )
 @pass_term
-def taxonomy_update_term(term, title=None, extra_data=None, move_target=None):
+def taxonomy_update_term(term, title=None, extra_data=None):
     """Update Term in Taxonomy."""
     changes = {}
     if title:
-        changes.update({"title": title})
+        changes["title"] = title
     if extra_data:
-        changes.update({"extra_data": extra_data})
+        changes["extra_data"] = extra_data
 
     term.update(**changes)
-
-    if move_target:
-        TaxonomyManager.move_tree(term.tree_path, move_target)
 
     return jsonify(jsonify_taxonomy_term(term, drilldown=True))

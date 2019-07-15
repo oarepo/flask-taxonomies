@@ -24,13 +24,12 @@ class TestTaxonomyAPI:
         assert {
                    "id": root_taxonomy.id,
                    "code": root_taxonomy.code,
-                   "extra_data": root_taxonomy.extra_data,
                    "links": {"self": "http://localhost/taxonomies/root/"},
                } in jsonres
         assert {
                    "id": additional.id,
                    "code": additional.code,
-                   "extra_data": additional.extra_data,
+                   "extra": "data",
                    "links": {
                        "self": "http://localhost/taxonomies/additional/"},
                } in jsonres
@@ -39,8 +38,7 @@ class TestTaxonomyAPI:
         """Test Taxonomy creation."""
 
         res = client.post("/taxonomies/",
-                          json={"code": "new",
-                                "extra_data": {"extra": "new"}})
+                          json={"code": "new", "extra": "new"})
 
         assert res.status_code == 201
         assert res.headers['Location'] == 'http://localhost/taxonomies/new/'
@@ -48,11 +46,6 @@ class TestTaxonomyAPI:
         retrieved = Taxonomy.query.filter(Taxonomy.code == "new").first()
         assert retrieved is not None
         assert retrieved.extra_data == {"extra": "new"}
-
-        # Test putting invalid exxtra data fails
-        res = client.post("/taxonomies/",
-                          json={"code": "bad", "extra_data": "{'extra'}"})
-        assert res.status_code == 422
 
         # Test duplicit create fails
         res = client.post("/taxonomies/", json={"code": root_taxonomy.code})
@@ -92,6 +85,13 @@ class TestTaxonomyAPI:
         assert res.json["slug"] == "leaf1"
         assert res.json["path"] == "/root/top1/leaf1"
         assert len(res.json["children"]) == 1
+
+        # Test get parent/child details
+        res = client.get("/taxonomies/{}/top1/"
+                         .format(root_taxonomy.code))
+        assert len(res.json['children']) == 1
+        assert 'children' in res.json['children'][0]
+        assert res.json['children'][0]['children'][0]['slug'] == 'leafeaf'
 
         # Test get nonexistent path
         res = client.get("/taxonomies/{}/top1/nope/"
@@ -174,14 +174,14 @@ class TestTaxonomyAPI:
     def test_taxomomy_update(self, root_taxonomy, client, manager):
         """Test updating a taxonomy."""
         res = client.patch("/taxonomies/root/",
-                           json={"extra_data": {"updated": "yes"}})
+                           json={"updated": "yes"})
         assert res.status_code == 200
-        assert res.json["extra_data"] == {"updated": "yes"}
+        assert res.json["updated"] == "yes"
         assert manager.get_taxonomy("root").extra_data == {"updated": "yes"}
 
         # Test update invalid taxonomy fails
         res = client.patch("/taxonomies/nope/",
-                           json={"extra_data": {"updated": "yes"}})
+                           json={"updated": "yes"})
         assert res.status_code == 404
 
     def test_term_update(self, root_taxonomy, client, manager):
@@ -189,9 +189,9 @@ class TestTaxonomyAPI:
         manager.create("term1", {"en": "Term1"}, "/root/")
 
         res = client.patch("/taxonomies/root/term1/",
-                           json={"extra_data": {"updated": "yes"}})
+                           json={"updated": "yes"})
         assert res.status_code == 200
-        assert res.json["extra_data"] == {"updated": "yes"}
+        assert res.json["updated"] == "yes"
         assert manager.get_term(root_taxonomy, "term1") \
                       .extra_data == {"updated": "yes"}
 
@@ -217,8 +217,10 @@ class TestTaxonomyAPI:
         term2 = manager.create("term2", {"en": "Term1"}, "/groot/")
 
         # Test move /root/term1 -> /groot/term2/term1
-        res = client.patch("/taxonomies/root/term1/",
-                           data={"move_target": "/groot/term2/"})
+        res = client.post("/taxonomies/root/term1/",
+                          json={"title": {},
+                                "slug": "whatever",
+                                "move_target": "http://localhost/taxonomies/groot/term2/"})  # noqa
         assert res.status_code == 200
         moved = manager.get_term(t, "term1")
         assert moved is not None
@@ -227,8 +229,10 @@ class TestTaxonomyAPI:
         assert moved.tree_path == "/groot/term2/term1"
 
         # Test move subtree
-        res = client.patch("/taxonomies/groot/term2/",
-                           data={"move_target": "/root/"})
+        res = client.post("/taxonomies/groot/term2/",
+                          json={"title": {},
+                                "slug": "whatever",
+                                "move_target": "http://localhost/taxonomies/root/"})  # noqa
         assert res.status_code == 200
 
         moved1 = manager.get_term(root_taxonomy, "term2")
@@ -241,11 +245,22 @@ class TestTaxonomyAPI:
         assert moved2.is_descendant_of(moved1)
 
         # Test move to invalid path fails
-        res = client.patch("/taxonomies/root/term2/",
-                           data={"move_target": "/root/somethingbad/"})
+        res = client.post("/taxonomies/root/term2/",
+                          json={"title": term2.title,
+                                "slug": term2.slug,
+                                "move_target": "http://localhost/taxonomies/root/somethingbad/"})  # noqa
+        assert res.status_code == 400
+
+        # Test move to invalid url prefix fails
+        res = client.post("/taxonomies/root/term2/",
+                          json={"title": term2.title,
+                                "slug": term2.slug,
+                                "move_target": "http://localhost/taxi/root/somethinggood/"})  # noqa
         assert res.status_code == 400
 
         # Test move from invalid source fails
-        res = client.patch("/taxonomies/root/somethingbad/",
-                           data={"move_target": "/groot/"})
-        assert res.status_code == 404
+        res = client.post("/taxonomies/root/somethingbad/",
+                          json={"title": {},
+                                "slug": "whatever",
+                                "move_target": "http://localhost/taxonomies/groot/"})  # noqa
+        assert res.status_code == 400
