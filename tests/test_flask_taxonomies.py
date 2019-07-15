@@ -9,6 +9,8 @@ import pytest
 from flask import Flask
 
 from flask_taxonomies import FlaskTaxonomies
+from flask_taxonomies.ext import _FlaskTaxonomiesState
+from flask_taxonomies.proxies import current_flask_taxonomies
 
 
 def test_version():
@@ -28,6 +30,17 @@ def test_init():
     assert 'flask-taxonomies' not in app.extensions
     ext.init_app(app)
     assert 'flask-taxonomies' in app.extensions
+
+
+def test_state():
+    app = Flask('testapp')
+    ext = FlaskTaxonomies(app)
+    ext.init_app(app)
+
+    state = app.extensions['flask-taxonomies']
+
+    assert isinstance(state, _FlaskTaxonomiesState)
+    assert callable(state.permission_factory)
 
 
 def test_alembic(app, db):

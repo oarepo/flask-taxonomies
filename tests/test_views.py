@@ -8,6 +8,7 @@ import json
 
 import pytest
 from flask_security import AnonymousUser
+from invenio_access import ActionUsers
 
 from tests.testutils import login_user
 
@@ -135,6 +136,7 @@ class TestTaxonomyAPI:
     def test_term_create(self, root_taxonomy, client,
                          manager, permissions):
         """Test TaxonomyTerm creation."""
+        login_user(client, permissions['terms'])
         res = client.post("/taxonomies/{}/".format(root_taxonomy.code),
                           json={"title": {"en": "Leaf"}, "slug": "leaf 1"})
         assert res.status_code == 201
@@ -177,13 +179,13 @@ class TestTaxonomyAPI:
 
         # Test access forbidden for user without permission
         login_user(client, permissions['taxonomies'])
-        res = client.post("/taxonomies/{}/nope/"
+        res = client.post("/taxonomies/{}/"
                           .format(root_taxonomy.code),
-                          json={"title": {"en": "Leaf"}})
+                          json={"title": {"en": "Leaf"}, "slug": "noperm"})
         assert res.status_code == 403
 
     def test_taxonomy_delete(self, db, root_taxonomy,
-                             manager, client, Taxonomy):
+                             manager, client, Taxonomy, permissions):
         """Test deleting whole taxonomy."""
         t = Taxonomy(code="tbd")
         db.session.add(t)
@@ -192,6 +194,11 @@ class TestTaxonomyAPI:
         manager.create("top1", {"en": "Top1"}, "/tbd/")
         manager.create("leaf1", {"en": "Leaf1"}, "/tbd/top1/")
 
+        # Test unauthenticated delete fails
+        res = client.delete("/taxonomies/tbd/")
+        assert res.status_code == 401
+
+        login_user(client, permissions['taxonomies'])
         res = client.delete("/taxonomies/tbd/")
         assert res.status_code == 204
         assert manager.get_taxonomy("tbd") is None
@@ -202,8 +209,14 @@ class TestTaxonomyAPI:
         res = client.delete("/taxonomies/nope/")
         assert res.status_code == 404
 
-    def test_term_delete(self, root_taxonomy, manager, client):
+        # Test access forbidden for user without permission
+        login_user(client, permissions['terms'])
+        res = client.delete("/taxonomies/root/")
+        assert res.status_code == 403
+
+    def test_term_delete(self, root_taxonomy, manager, client, permissions):
         """Test deleting whole term and a subtree."""
+        login_user(client, permissions['terms'])
         manager.create("top1", {"en": "Top1"}, "/root/")
         manager.create("leaf1", {"en": "Leaf1"}, "/root/top1/")
         manager.create("top2", {"en": "Top2"}, "/root/")
@@ -213,8 +226,15 @@ class TestTaxonomyAPI:
         assert manager.get_term(root_taxonomy, "top1") is None
         assert manager.get_term(root_taxonomy, "top2") is not None
 
-    def test_taxomomy_update(self, root_taxonomy, client, manager):
+        # Test access forbidden for user without permission
+        login_user(client, permissions['noperms'])
+        res = client.delete("/taxonomies/root/top2/")
+        assert res.status_code == 403
+
+    def test_taxomomy_update(self, root_taxonomy, client,
+                             manager, permissions):
         """Test updating a taxonomy."""
+        login_user(client, permissions['root-taxo'])
         res = client.patch("/taxonomies/root/",
                            json={"updated": "yes"})
         assert res.status_code == 200
@@ -226,8 +246,15 @@ class TestTaxonomyAPI:
                            json={"updated": "yes"})
         assert res.status_code == 404
 
-    def test_term_update(self, root_taxonomy, client, manager):
+        # Test access forbidden for user without permission
+        login_user(client, permissions['noperms'])
+        res = client.patch("/taxonomies/root/",
+                           json={"updated": "yes"})
+        assert res.status_code == 403
+
+    def test_term_update(self, root_taxonomy, client, manager, permissions):
         """Test updating a term."""
+        login_user(client, permissions['terms'])
         manager.create("term1", {"en": "Term1"}, "/root/")
 
         res = client.patch("/taxonomies/root/term1/",
@@ -249,7 +276,14 @@ class TestTaxonomyAPI:
                            json={"title": {"updated": "yes"}})
         assert res.status_code == 404
 
-    def test_term_move(self, db, root_taxonomy, client, manager, Taxonomy):
+        # Test access forbidden for user without permission
+        login_user(client, permissions['root-taxo'])
+        res = client.patch("/taxonomies/root/term1/",
+                           json={"updated": "yes"})
+        assert res.status_code == 403
+
+    def test_term_move(self, db, root_taxonomy, client, manager,
+                       Taxonomy, permissions):
         """Test moving a Taxonomy Term."""
         t = Taxonomy(code="groot")
         db.session.add(t)
@@ -258,7 +292,8 @@ class TestTaxonomyAPI:
         manager.create("term1", {"en": "Term1"}, "/root/")
         term2 = manager.create("term2", {"en": "Term1"}, "/groot/")
 
-        # Test move /root/term1 -> /groot/term2/term1
+        # Allow user terms to move term1
+        login_user(client, permissions['terms'])
         res = client.post("/taxonomies/root/term1/",
                           json={"title": {},
                                 "slug": "whatever",

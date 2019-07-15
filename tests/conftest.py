@@ -4,7 +4,7 @@ import os
 
 import pytest
 from flask import Flask
-from invenio_access import InvenioAccess, ActionUsers
+from invenio_access import ActionUsers, InvenioAccess
 from invenio_accounts import InvenioAccounts
 from invenio_accounts.testutils import create_test_user
 from invenio_db import InvenioDB
@@ -13,10 +13,17 @@ from sqlalchemy_mptt import mptt_sessionmaker
 from sqlalchemy_utils import create_database, database_exists
 
 from flask_taxonomies.ext import FlaskTaxonomies
-from flask_taxonomies.permissions import taxonomy_update_all,\
-    taxonomy_create_all, taxonomy_read_all, taxonomy_delete_all,\
-    taxonomy_term_move_all, taxonomy_term_delete_all,\
-    taxonomy_term_read_all, taxonomy_term_update_all, taxonomy_term_create_all
+from flask_taxonomies.permissions import (
+    taxonomy_create_all,
+    taxonomy_delete_all,
+    taxonomy_read_all,
+    taxonomy_term_create_all,
+    taxonomy_term_delete_all,
+    taxonomy_term_move_all,
+    taxonomy_term_read_all,
+    taxonomy_term_update_all,
+    taxonomy_update_all,
+)
 from flask_taxonomies.views import blueprint
 
 

@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 """TaxonomyTerm views."""
-from urllib.parse import urlsplit
-
-
 from functools import wraps
+from urllib.parse import urlsplit
 
 from flask import Blueprint, abort, jsonify, make_response, request, url_for
 from flask_login import current_user
@@ -14,9 +12,13 @@ from webargs import fields
 from webargs.flaskparser import use_kwargs
 from werkzeug.exceptions import BadRequest
 
-from flask_taxonomies.permissions import permission_taxonomy_read_all, permission_taxonomy_create_all, \
-    permission_term_create_all
+from flask_taxonomies.permissions import (
+    permission_taxonomy_create_all,
+    permission_taxonomy_read_all,
+    permission_term_create_all,
+)
 from flask_taxonomies.proxies import current_permission_factory
+
 from .managers import TaxonomyManager
 from .models import Taxonomy, TaxonomyTerm
 
@@ -39,7 +41,6 @@ def url_to_path(url):
 
 def pass_taxonomy(f):
     """Decorate to retrieve a bucket."""
-
     @wraps(f)
     def decorate(*args, **kwargs):
         code = kwargs.pop("taxonomy_code")
@@ -87,7 +88,6 @@ def pass_term_extra_data(f):
 
 def pass_term(f):
     """Decorate to retrieve a bucket."""
-
     @wraps(f)
     def decorate(*args, **kwargs):
         code = kwargs.pop("taxonomy_code")
@@ -113,40 +113,56 @@ def target_path_validator(value):
         abort(400, "Target Path is invalid.")
 
 
-def check_permission(permission, hidden=True):
-    """Check if permission is allowed.
+def check_permission(permission):
+    """
+    Check if permission is allowed.
     If permission fails then the connection is aborted.
     :param permission: The permission to check.
-    :param hidden: Determine if a 404 error (``True``) or 401/403 error
-        (``False``) should be returned if the permission is rejected (i.e.
-        hide or reveal the existence of a particular object).
     """
     if permission is not None and not permission.can():
-        if hidden:
-            abort(404)
-        else:
-            if current_user.is_authenticated:
-                abort(403,
-                      'You do not have a permission for this action')
-            abort(401)
+        if current_user.is_authenticated:
+            abort(403,
+                  'You do not have a permission for this action')
+        abort(401)
 
 
-def need_permissions(object_getter, action, hidden=True):
-    """Get permission for an action or abort.
+def need_permissions(object_getter, action):
+    """
+    Get permission for an action or abort.
     :param object_getter: The function used to retrieve the object and pass it
         to the permission factory.
     :param action: The action needed.
-    :param hidden: Determine which kind of error to return. (Default: ``True``)
     """
-
     def decorator_builder(f):
         @wraps(f)
         def decorate(*args, **kwargs):
             check_permission(current_permission_factory(
                 object_getter(*args, **kwargs),
-                action(*args, **kwargs) if callable(action) else action,
+                action(*args, **kwargs) if callable(action) else action))
+            return f(*args, **kwargs)
 
-            ), hidden=hidden)
+        return decorate
+
+    return decorator_builder
+
+
+def need_move_permissions(object_getter, action):
+    """Get permission to move a Term if trying to move."""
+    def decorator_builder(f):
+        @wraps(f)
+        def decorate(*args, **kwargs):
+            taxonomy, term_path, move_target = object_getter(*args, **kwargs)
+            if move_target:
+                try:
+                    _, term = TaxonomyManager \
+                        .get_from_path('/{}/{}'
+                                       .format(taxonomy.code,
+                                               term_path))
+                    check_permission(
+                        current_permission_factory(term, action))
+                    check_permission(permission_term_create_all)
+                except AttributeError:
+                    pass
             return f(*args, **kwargs)
 
         return decorate
@@ -243,8 +259,7 @@ def taxonomy_create(code: str, extra_data: dict = None):
 @pass_taxonomy
 @need_permissions(
     lambda taxonomy: taxonomy,
-    'taxonomy-read',
-    hidden=False
+    'taxonomy-read'
 )
 def taxonomy_get_roots(taxonomy):
     """Get top-level terms in a Taxonomy."""
@@ -256,8 +271,7 @@ def taxonomy_get_roots(taxonomy):
 @pass_term
 @need_permissions(
     lambda term: term,
-    'taxonomy-term-read',
-    hidden=False
+    'taxonomy-term-read'
 )
 def taxonomy_get_term(term):
     """Get Taxonomy Term detail."""
@@ -279,6 +293,12 @@ def taxonomy_get_term(term):
     }
 )
 @permission_term_create_all.require(http_exception=403)
+@need_move_permissions(
+    lambda **kwargs: (kwargs.get('taxonomy'),
+                      kwargs.get('term_path'),
+                      kwargs.get('move_target')),
+    'taxonomy-term-move'
+)
 def taxonomy_create_term(taxonomy, title, slug,
                          term_path='', extra_data=None, move_target=None):
     """Create a Term inside a Taxonomy tree."""
@@ -319,8 +339,7 @@ def taxonomy_create_term(taxonomy, title, slug,
 @pass_taxonomy
 @need_permissions(
     lambda taxonomy: taxonomy,
-    'taxonomy-delete',
-    hidden=False
+    'taxonomy-delete'
 )
 def taxonomy_delete(taxonomy):
     """Delete whole taxonomy tree."""
@@ -336,8 +355,7 @@ def taxonomy_delete(taxonomy):
 @pass_term
 @need_permissions(
     lambda term: term,
-    'taxonomy-term-delete',
-    hidden=False
+    'taxonomy-term-delete'
 )
 def taxonomy_delete_term(term):
     """Delete a Term subtree in a Taxonomy."""
@@ -355,8 +373,7 @@ def taxonomy_delete_term(term):
 @pass_taxonomy
 @need_permissions(
     lambda taxonomy, extra_data: taxonomy,
-    'taxonomy-update',
-    hidden=False
+    'taxonomy-update'
 )
 def taxonomy_update(taxonomy, extra_data):
     """Update Taxonomy."""
@@ -367,17 +384,16 @@ def taxonomy_update(taxonomy, extra_data):
 
 @blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("PATCH",))  # noqa
 @pass_term_extra_data
+@pass_term
 @use_kwargs(
     {
-        "title": fields.Dict(required=False, empty_value=None),
+        "title": fields.Dict(required=False, empty_value={}),
         "extra_data": fields.Dict(empty_value={}),
     }
 )
-@pass_term
 @need_permissions(
-    lambda term, title, extra_data, move_target: term,
-    'taxonomy-term-update',
-    hidden=False
+    lambda **kwargs,: kwargs.get('term'),
+    'taxonomy-term-update'
 )
 def taxonomy_update_term(term, title=None, extra_data=None):
     """Update Term in Taxonomy."""

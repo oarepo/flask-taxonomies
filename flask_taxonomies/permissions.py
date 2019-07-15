@@ -1,13 +1,11 @@
 # -*- coding: utf-8 -*-
 """Taxonomy permissions."""
-from functools import partial
 #
 # Action needs
 #
 from invenio_access import Permission, action_factory
 
 from flask_taxonomies.models import Taxonomy, TaxonomyTerm
-
 
 TaxonomyCreate = action_factory('taxonomy-create', True)
 """Action needed: Taxonomy create."""
@@ -92,7 +90,8 @@ _action2need_map = {
 
 
 def permission_factory(obj, action):
-    """Get default permission factory.
+    """
+    Get default permission factory.
 
     :param obj: An instance of :class:`invenio_files_rest.models.Bucket` or
         :class:`invenio_files_rest.models.ObjectVersion` or
@@ -105,7 +104,7 @@ def permission_factory(obj, action):
     need_class = _action2need_map[action]
 
     if obj is None:
-        return Permission(need_class(None))
+        return Permission(need_class(None))  # pragma: nocover
 
     arg = None
     if isinstance(obj, Taxonomy):
@@ -113,6 +112,6 @@ def permission_factory(obj, action):
     elif isinstance(obj, TaxonomyTerm):
         arg = str(obj.tree_path)
     else:
-        raise RuntimeError('Unknown object')
+        raise RuntimeError('Unknown object')  # pragma: nocover
 
     return Permission(need_class(arg))

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""TaxonomyTerm proxies."""
+"""Taxonomy proxies."""
 
 from flask import current_app
 from werkzeug.local import LocalProxy
