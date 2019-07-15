@@ -3,7 +3,7 @@
 from functools import wraps
 from urllib.parse import urlsplit
 
-from flask import Blueprint, abort, jsonify, url_for
+from flask import Blueprint, abort, jsonify, request, url_for
 from invenio_db import db
 from slugify import slugify
 from sqlalchemy_mptt import mptt_sessionmaker
@@ -44,6 +44,38 @@ def pass_taxonomy(f):
     return decorate
 
 
+def pass_taxonomy_extra_data(f):
+    """Decorate to retrieve extra data for a taxonomy."""
+    @wraps(f)
+    def decorate(*args, **kwargs):
+        extra = {**request.json}
+        try:
+            extra.pop('code')
+        except KeyError:
+            pass
+        request.json['extra_data'] = extra
+        return f(extra_data=extra, *args, **kwargs)
+
+    return decorate
+
+
+def pass_term_extra_data(f):
+    """Decorate to retrieve extra data for a term."""
+    @wraps(f)
+    def decorate(*args, **kwargs):
+        extra = {**request.json}
+        try:
+            extra.pop('slug')
+            extra.pop('title')
+            extra.pop('move_target')
+        except KeyError:
+            pass
+        request.json['extra_data'] = extra
+        return f(extra_data=extra, *args, **kwargs)
+
+    return decorate
+
+
 def pass_term(f):
     """Decorate to retrieve a bucket."""
     @wraps(f)
@@ -74,9 +106,9 @@ def target_path_validator(value):
 def jsonify_taxonomy(t: Taxonomy) -> dict:
     """Prepare Taxonomy to be easily jsonified."""
     return {
+        **(t.extra_data or {}),
         "id": t.id,
         "code": t.code,
-        "extra_data": t.extra_data,
         "links": {
             "self": url_for(
                 "taxonomies.taxonomy_get_roots",
@@ -90,10 +122,10 @@ def jsonify_taxonomy(t: Taxonomy) -> dict:
 def jsonify_taxonomy_term(t: TaxonomyTerm, drilldown: bool = False) -> dict:
     """Prepare TaxonomyTerm to be easily jsonified."""
     result = {
+        **(t.extra_data or {}),
         "id": t.id,
         "slug": t.slug,
         "title": t.title,
-        "extra_data": t.extra_data,
         "path": t.tree_path,
         "links": {
             # TODO: replace with Term detail route
@@ -129,10 +161,11 @@ def taxonomy_list():
 
 
 @blueprint.route("/", methods=("POST",))
+@pass_taxonomy_extra_data
 @use_kwargs(
     {
         "code": fields.Str(required=True),
-        "extra_data": fields.Dict(required=False, empty_value=None),
+        "extra_data": fields.Dict()
     }
 )
 def taxonomy_create(code: str, extra_data: dict = None):
@@ -172,11 +205,12 @@ def taxonomy_get_term(term):
 @blueprint.route("/<string:taxonomy_code>/", methods=("POST",))
 @blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("POST",))  # noqa
 @pass_taxonomy
+@pass_term_extra_data
 @use_kwargs(
     {
         "title": fields.Dict(required=True),
         "slug": fields.Str(required=True),
-        "extra_data": fields.Dict(required=False, empty_value=None),
+        "extra_data": fields.Dict(),
         "move_target": fields.URL(required=False,
                                   empty_value=None,
                                   validate=target_path_validator),
@@ -243,8 +277,9 @@ def taxonomy_delete_term(term):
 
 
 @blueprint.route("/<string:taxonomy_code>/", methods=("PATCH",))
+@pass_taxonomy_extra_data
 @use_kwargs(
-    {"extra_data": fields.Dict(required=True, empty_value=None)}
+    {"extra_data": fields.Dict(empty_value={})}
 )
 @pass_taxonomy
 def taxonomy_update(taxonomy, extra_data):
@@ -255,10 +290,11 @@ def taxonomy_update(taxonomy, extra_data):
 
 
 @blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("PATCH",))  # noqa
+@pass_term_extra_data
 @use_kwargs(
     {
         "title": fields.Dict(required=False, empty_value=None),
-        "extra_data": fields.Dict(required=False, empty_value=None),
+        "extra_data": fields.Dict(empty_value={}),
     }
 )
 @pass_term
@@ -266,9 +302,9 @@ def taxonomy_update_term(term, title=None, extra_data=None):
     """Update Term in Taxonomy."""
     changes = {}
     if title:
-        changes.update({"title": title})
+        changes["title"] = title
     if extra_data:
-        changes.update({"extra_data": extra_data})
+        changes["extra_data"] = extra_data
 
     term.update(**changes)
 

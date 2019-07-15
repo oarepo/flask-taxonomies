@@ -24,13 +24,12 @@ class TestTaxonomyAPI:
         assert {
                    "id": root_taxonomy.id,
                    "code": root_taxonomy.code,
-                   "extra_data": root_taxonomy.extra_data,
                    "links": {"self": "http://localhost/taxonomies/root/"},
                } in jsonres
         assert {
                    "id": additional.id,
                    "code": additional.code,
-                   "extra_data": additional.extra_data,
+                   "extra": "data",
                    "links": {
                        "self": "http://localhost/taxonomies/additional/"},
                } in jsonres
@@ -39,8 +38,7 @@ class TestTaxonomyAPI:
         """Test Taxonomy creation."""
 
         res = client.post("/taxonomies/",
-                          json={"code": "new",
-                                "extra_data": {"extra": "new"}})
+                          json={"code": "new", "extra": "new"})
 
         assert res.status_code == 201
         assert res.headers['Location'] == 'http://localhost/taxonomies/new/'
@@ -48,11 +46,6 @@ class TestTaxonomyAPI:
         retrieved = Taxonomy.query.filter(Taxonomy.code == "new").first()
         assert retrieved is not None
         assert retrieved.extra_data == {"extra": "new"}
-
-        # Test putting invalid exxtra data fails
-        res = client.post("/taxonomies/",
-                          json={"code": "bad", "extra_data": "{'extra'}"})
-        assert res.status_code == 422
 
         # Test duplicit create fails
         res = client.post("/taxonomies/", json={"code": root_taxonomy.code})
@@ -181,14 +174,14 @@ class TestTaxonomyAPI:
     def test_taxomomy_update(self, root_taxonomy, client, manager):
         """Test updating a taxonomy."""
         res = client.patch("/taxonomies/root/",
-                           json={"extra_data": {"updated": "yes"}})
+                           json={"updated": "yes"})
         assert res.status_code == 200
-        assert res.json["extra_data"] == {"updated": "yes"}
+        assert res.json["updated"] == "yes"
         assert manager.get_taxonomy("root").extra_data == {"updated": "yes"}
 
         # Test update invalid taxonomy fails
         res = client.patch("/taxonomies/nope/",
-                           json={"extra_data": {"updated": "yes"}})
+                           json={"updated": "yes"})
         assert res.status_code == 404
 
     def test_term_update(self, root_taxonomy, client, manager):
@@ -196,9 +189,9 @@ class TestTaxonomyAPI:
         manager.create("term1", {"en": "Term1"}, "/root/")
 
         res = client.patch("/taxonomies/root/term1/",
-                           json={"extra_data": {"updated": "yes"}})
+                           json={"updated": "yes"})
         assert res.status_code == 200
-        assert res.json["extra_data"] == {"updated": "yes"}
+        assert res.json["updated"] == "yes"
         assert manager.get_term(root_taxonomy, "term1") \
                       .extra_data == {"updated": "yes"}
 
