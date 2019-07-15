@@ -390,7 +390,7 @@ def taxonomy_update(taxonomy, extra_data):
     }
 )
 @need_permissions(
-    lambda **kwargs,: kwargs.get('term'),
+    lambda **kwargs: kwargs.get('term'),
     'taxonomy-term-update'
 )
 def taxonomy_update_term(term, title=None, extra_data=None):
