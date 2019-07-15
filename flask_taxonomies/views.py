@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 """TaxonomyTerm views."""
-from functools import wraps
 from urllib.parse import urlsplit
 
-from flask import Blueprint, abort, jsonify, url_for, make_response
-from flask import request
+
+from functools import wraps
+
+from flask import Blueprint, abort, jsonify, make_response, request, url_for
+from flask_login import current_user
 from invenio_db import db
 from slugify import slugify
 from sqlalchemy_mptt import mptt_sessionmaker
@@ -12,6 +14,9 @@ from webargs import fields
 from webargs.flaskparser import use_kwargs
 from werkzeug.exceptions import BadRequest
 
+from flask_taxonomies.permissions import permission_taxonomy_read_all, permission_taxonomy_create_all, \
+    permission_term_create_all
+from flask_taxonomies.proxies import current_permission_factory
 from .managers import TaxonomyManager
 from .models import Taxonomy, TaxonomyTerm
 
@@ -108,6 +113,47 @@ def target_path_validator(value):
         abort(400, "Target Path is invalid.")
 
 
+def check_permission(permission, hidden=True):
+    """Check if permission is allowed.
+    If permission fails then the connection is aborted.
+    :param permission: The permission to check.
+    :param hidden: Determine if a 404 error (``True``) or 401/403 error
+        (``False``) should be returned if the permission is rejected (i.e.
+        hide or reveal the existence of a particular object).
+    """
+    if permission is not None and not permission.can():
+        if hidden:
+            abort(404)
+        else:
+            if current_user.is_authenticated:
+                abort(403,
+                      'You do not have a permission for this action')
+            abort(401)
+
+
+def need_permissions(object_getter, action, hidden=True):
+    """Get permission for an action or abort.
+    :param object_getter: The function used to retrieve the object and pass it
+        to the permission factory.
+    :param action: The action needed.
+    :param hidden: Determine which kind of error to return. (Default: ``True``)
+    """
+
+    def decorator_builder(f):
+        @wraps(f)
+        def decorate(*args, **kwargs):
+            check_permission(current_permission_factory(
+                object_getter(*args, **kwargs),
+                action(*args, **kwargs) if callable(action) else action,
+
+            ), hidden=hidden)
+            return f(*args, **kwargs)
+
+        return decorate
+
+    return decorator_builder
+
+
 def jsonify_taxonomy(t: Taxonomy) -> dict:
     """Prepare Taxonomy to be easily jsonified."""
     return {
@@ -133,7 +179,6 @@ def jsonify_taxonomy_term(t: TaxonomyTerm, drilldown: bool = False) -> dict:
         "title": t.title,
         "path": t.tree_path,
         "links": {
-            # TODO: replace with Term detail route
             "self": url_for(
                 "taxonomies.taxonomy_get_term",
                 taxonomy_code=t.taxonomy.code,
@@ -159,6 +204,7 @@ def jsonify_taxonomy_term(t: TaxonomyTerm, drilldown: bool = False) -> dict:
 
 
 @blueprint.route("/", methods=("GET",))
+@permission_taxonomy_read_all.require(http_exception=403)
 def taxonomy_list():
     """List all available taxonomies."""
     taxonomies = Taxonomy.query.all()
@@ -173,6 +219,7 @@ def taxonomy_list():
         "extra_data": fields.Dict()
     }
 )
+@permission_taxonomy_create_all.require(http_exception=403)
 def taxonomy_create(code: str, extra_data: dict = None):
     """Create a new Taxonomy."""
     if TaxonomyManager.get_taxonomy(code):
@@ -194,6 +241,11 @@ def taxonomy_create(code: str, extra_data: dict = None):
 
 @blueprint.route("/<string:taxonomy_code>/", methods=("GET",))
 @pass_taxonomy
+@need_permissions(
+    lambda taxonomy: taxonomy,
+    'taxonomy-read',
+    hidden=False
+)
 def taxonomy_get_roots(taxonomy):
     """Get top-level terms in a Taxonomy."""
     roots = TaxonomyManager.get_taxonomy_roots(taxonomy)
@@ -202,6 +254,11 @@ def taxonomy_get_roots(taxonomy):
 
 @blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("GET",))
 @pass_term
+@need_permissions(
+    lambda term: term,
+    'taxonomy-term-read',
+    hidden=False
+)
 def taxonomy_get_term(term):
     """Get Taxonomy Term detail."""
     return jsonify(jsonify_taxonomy_term(term, drilldown=True))
@@ -221,6 +278,7 @@ def taxonomy_get_term(term):
                                   validate=target_path_validator),
     }
 )
+@permission_term_create_all.require(http_exception=403)
 def taxonomy_create_term(taxonomy, title, slug,
                          term_path='', extra_data=None, move_target=None):
     """Create a Term inside a Taxonomy tree."""
@@ -259,6 +317,11 @@ def taxonomy_create_term(taxonomy, title, slug,
 
 @blueprint.route("/<string:taxonomy_code>/", methods=("DELETE",))
 @pass_taxonomy
+@need_permissions(
+    lambda taxonomy: taxonomy,
+    'taxonomy-delete',
+    hidden=False
+)
 def taxonomy_delete(taxonomy):
     """Delete whole taxonomy tree."""
     session = mptt_sessionmaker(db.session)
@@ -271,6 +334,11 @@ def taxonomy_delete(taxonomy):
 
 @blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("DELETE",))  # noqa
 @pass_term
+@need_permissions(
+    lambda term: term,
+    'taxonomy-term-delete',
+    hidden=False
+)
 def taxonomy_delete_term(term):
     """Delete a Term subtree in a Taxonomy."""
     TaxonomyManager.delete_tree(term.tree_path)
@@ -285,6 +353,11 @@ def taxonomy_delete_term(term):
     {"extra_data": fields.Dict(empty_value={})}
 )
 @pass_taxonomy
+@need_permissions(
+    lambda taxonomy, extra_data: taxonomy,
+    'taxonomy-update',
+    hidden=False
+)
 def taxonomy_update(taxonomy, extra_data):
     """Update Taxonomy."""
     taxonomy.update(extra_data)
@@ -301,6 +374,11 @@ def taxonomy_update(taxonomy, extra_data):
     }
 )
 @pass_term
+@need_permissions(
+    lambda term, title, extra_data, move_target: term,
+    'taxonomy-term-update',
+    hidden=False
+)
 def taxonomy_update_term(term, title=None, extra_data=None):
     """Update Term in Taxonomy."""
     changes = {}

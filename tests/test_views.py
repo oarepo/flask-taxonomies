@@ -7,14 +7,20 @@
 import json
 
 import pytest
+from flask_security import AnonymousUser
+
+from tests.testutils import login_user
 
 
 @pytest.mark.usefixtures("db")
 class TestTaxonomyAPI:
     """TaxonomyTerm functional test."""
 
-    def test_list_taxonomies(self, db, client, root_taxonomy, Taxonomy):
+    def test_list_taxonomies(self, db, client, root_taxonomy,
+                             Taxonomy, permissions):
         """Test listing of taxonomies."""
+        login_user(client, permissions['taxonomies'])
+
         additional = Taxonomy(code="additional", extra_data={"extra": "data"})
         db.session.add(additional)
         db.session.commit()
@@ -34,9 +40,17 @@ class TestTaxonomyAPI:
                        "self": "http://localhost/taxonomies/additional/"},
                } in jsonres
 
-    def test_create_taxonomy(self, client, root_taxonomy, Taxonomy):
-        """Test Taxonomy creation."""
+        # Test access forbidden for user without permission
+        login_user(client, permissions['noperms'])
+        res = client.get("/taxonomies/")
+        jsonres = res.json
+        assert jsonres is None
+        assert res.status_code == 403
 
+    def test_create_taxonomy(self, client, root_taxonomy,
+                             Taxonomy, permissions):
+        """Test Taxonomy creation."""
+        login_user(client, permissions['taxonomies'])
         res = client.post("/taxonomies/",
                           json={"code": "new", "extra": "new"})
 
@@ -51,8 +65,15 @@ class TestTaxonomyAPI:
         res = client.post("/taxonomies/", json={"code": root_taxonomy.code})
         assert res.status_code == 400
 
-    def test_list_taxonomy_roots(self, client, root_taxonomy, manager):
+        # Test access forbidden for user without permission
+        login_user(client, permissions['root-taxo'])
+        res = client.post("/taxonomies/", json={"code": "no-root"})
+        assert res.status_code == 403
+
+    def test_list_taxonomy_roots(self, client, root_taxonomy,
+                                 manager, permissions):
         """Test listing of top-level taxonomy terms."""
+        login_user(client, permissions['root-taxo'])
 
         # Test empty taxonomy
         res = client.get("/taxonomies/{}/".format(root_taxonomy.code))
@@ -74,8 +95,15 @@ class TestTaxonomyAPI:
         res = client.get("/taxonomies/blah/")
         assert res.status_code == 404
 
-    def test_get_taxonomy_term(self, client, root_taxonomy, manager):
+        # Test access forbidden for user without permission
+        login_user(client, permissions['noperms'])
+        res = client.get("/taxonomies/{}/".format(root_taxonomy.code))
+        assert res.status_code == 403
+
+    def test_get_taxonomy_term(self, client, root_taxonomy,
+                               manager, permissions):
         """Test getting Term details."""
+        login_user(client, permissions['terms'])
         manager.create("top1", {"en": "Top1"}, "/root/")
         manager.create("leaf1", {"en": "Leaf1"}, "/root/top1/")
         manager.create("leafeaf", {"en": "LeafOfLeaf"}, "/root/top1/leaf1")
@@ -98,7 +126,14 @@ class TestTaxonomyAPI:
                          .format(root_taxonomy.code))
         assert res.status_code == 404
 
-    def test_term_create(self, root_taxonomy, client, manager):
+        # Test access forbidden for user without permission
+        login_user(client, permissions['root-taxo'])
+        res = client.get("/taxonomies/{}/top1/leaf1/"
+                         .format(root_taxonomy.code))
+        assert res.status_code == 403
+
+    def test_term_create(self, root_taxonomy, client,
+                         manager, permissions):
         """Test TaxonomyTerm creation."""
         res = client.post("/taxonomies/{}/".format(root_taxonomy.code),
                           json={"title": {"en": "Leaf"}, "slug": "leaf 1"})
@@ -139,6 +174,13 @@ class TestTaxonomyAPI:
         res = client.post("/taxonomies/none/",
                           json={"title": {"en": "Leaf"}, "slug": "leaf 1"})
         assert res.status_code == 404
+
+        # Test access forbidden for user without permission
+        login_user(client, permissions['taxonomies'])
+        res = client.post("/taxonomies/{}/nope/"
+                          .format(root_taxonomy.code),
+                          json={"title": {"en": "Leaf"}})
+        assert res.status_code == 403
 
     def test_taxonomy_delete(self, db, root_taxonomy,
                              manager, client, Taxonomy):

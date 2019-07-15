@@ -14,7 +14,8 @@ install_requires = [
     'webargs>=5.3.2',
     'sqlalchemy_mptt>=0.2.4',
     'invenio[{db},base]~={version}'.format(
-        db=DATABASE, version=INVENIO_VERSION)
+        db=DATABASE, version=INVENIO_VERSION),
+    'invenio-access>=1.1.0'
 ]
 
 tests_require = [
@@ -81,6 +82,28 @@ setup(
         ],
         'invenio_base.api_apps': [
             'flask_taxonomies = flask_taxonomies.ext:FlaskTaxonomies',
+        ],
+        'invenio_access.actions': [
+            # Taxonomy related permissions
+            'taxonomy_create_all'
+            ' = flask_taxonomies.permissions:taxonomy_create_all',
+            'taxonomy_read_all'
+            ' = flask_taxonomies.permissions:taxonomy_read_all',
+            'taxonomy_update_all'
+            ' = flask_taxonomies.permissions:taxonomy_update_all',
+            'taxonomy_delete_all'
+            ' = flask_taxonomies.permissions:taxonomy_delete_all',
+            # Taxonomy term related permissions.
+            'taxonomy_term_create_all'
+            ' = flask_taxonomies.permissions:taxonomy_term_create_all',
+            'taxonomy_term_read_all'
+            ' = flask_taxonomies.permissions:taxonomy_term_read_all',
+            'taxonomy_term_update_all'
+            ' = flask_taxonomies.permissions:taxonomy_term_update_all',
+            'taxonomy_term_delete_all'
+            ' = flask_taxonomies.permissions:taxonomy_term_delete_all',
+            'taxonomy_term_move_all'
+            ' = flask_taxonomies.permissions:taxonomy_term_move_all',
         ],
     },
     include_package_data=True,
