@@ -11,3 +11,4 @@ exclude pytest.ini
 exclude *.yml
 exclude run-tests.sh
 exclude tests
+include *.rst
