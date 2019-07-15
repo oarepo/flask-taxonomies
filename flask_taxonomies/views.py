@@ -2,7 +2,7 @@
 """TaxonomyTerm views."""
 from functools import wraps
 
-from flask import Blueprint, abort, jsonify, url_for
+from flask import Blueprint, abort, jsonify, url_for, make_response
 from invenio_db import db
 from slugify import slugify
 from sqlalchemy_mptt import mptt_sessionmaker
@@ -194,9 +194,8 @@ def taxonomy_delete(taxonomy):
     session = mptt_sessionmaker(db.session)
     session.delete(taxonomy)
     session.commit()
-    response = jsonify()
+    response = make_response()
     response.status_code = 204
-    response.headers = []
     return response
 
 
@@ -205,9 +204,8 @@ def taxonomy_delete(taxonomy):
 def taxonomy_delete_term(term):
     """Delete a Term subtree in a Taxonomy."""
     TaxonomyManager.delete_tree(term.tree_path)
-    response = jsonify()
+    response = make_response()
     response.status_code = 204
-    response.headers = []
     return response
 
 
