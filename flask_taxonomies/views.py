@@ -212,11 +212,30 @@ def taxonomy_get_roots(taxonomy):
     drilldown = (
             request.args.get('drilldown') or accepts[0].params.get('drilldown')
     )
-    roots = TaxonomyManager.get_taxonomy_roots(taxonomy)
     do_drilldown = drilldown in {'true', '1'}
-    return jsonify([
-        jsonify_taxonomy_term(taxonomy.code, t,
-                              drilldown=do_drilldown) for t in roots])
+    if not do_drilldown:
+        roots = TaxonomyManager.get_taxonomy_roots(taxonomy)
+        return jsonify([
+            jsonify_taxonomy_term(taxonomy.code, t) for t in roots])
+    ret = []
+    stack = []
+    for item in taxonomy.terms:
+        while item.level-2 < len(stack):
+            stack.pop()
+
+        item_json = jsonify_taxonomy_term(taxonomy.code, item)
+
+        if item.level == 2:
+            # just under the single root
+            ret.append(item_json)
+        else:
+            # append to parent element
+            if 'children' not in stack[-1]:
+                stack[-1]['children'] = []
+            stack[-1]['children'].append(item_json)
+
+        stack.append(item_json)
+    return jsonify(ret)
 
 
 @blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("GET",))
