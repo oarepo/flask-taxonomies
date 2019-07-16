@@ -203,6 +203,7 @@ def taxonomy_create(code: str, extra_data: dict = None):
 @pass_taxonomy
 def taxonomy_get_roots(taxonomy):
     """Get top-level terms in a Taxonomy."""
+    # default for drilldown on taxonomy is False
     accepts = accept.parse(request.headers.get("Accept", "application/json; drilldown=false"))
     drilldown = request.args.get('drilldown') or accepts[0].params.get('drilldown')
     roots = TaxonomyManager.get_taxonomy_roots(taxonomy)
@@ -214,7 +215,10 @@ def taxonomy_get_roots(taxonomy):
 @pass_term
 def taxonomy_get_term(term):
     """Get Taxonomy Term detail."""
-    return jsonify(jsonify_taxonomy_term(term, drilldown=True))
+    # default for drilldown on taxonomy term is True
+    accepts = accept.parse(request.headers.get("Accept", "application/json; drilldown=true"))
+    drilldown = request.args.get('drilldown') or accepts[0].params.get('drilldown', 'true')
+    return jsonify(jsonify_taxonomy_term(term, drilldown=drilldown in {'true', '1'}))
 
 
 @blueprint.route("/<string:taxonomy_code>/", methods=("POST",))
