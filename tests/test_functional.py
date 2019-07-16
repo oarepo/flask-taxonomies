@@ -15,8 +15,8 @@ class TestTaxonomyAPI:
 
     def test_list_taxonomies(self, db, client, root_taxonomy, Taxonomy):
         """Test listing of taxonomies."""
-        additional = Taxonomy(code="additional", extra_data={"extra": "data"})
-        db.session.add(additional)
+        additional = Taxonomy.create(db.session, code="additional",
+                                     extra_data={"extra": "data"})
         db.session.commit()
 
         res = client.get("/taxonomies/")
@@ -109,7 +109,7 @@ class TestTaxonomyAPI:
         created = manager.get_term(root_taxonomy, "leaf-1")
         assert created.title == {"en": "Leaf"}
         assert created.slug == "leaf-1"
-        assert created.taxonomy == root_taxonomy
+        assert created.tree_id == root_taxonomy.root.tree_id
 
         # Test invalid path fails
         res = client.post("/taxonomies/{}/top1/top2/"
@@ -127,7 +127,7 @@ class TestTaxonomyAPI:
         created = manager.get_term(root_taxonomy, "leaf-2")
         assert created.title == {"en": "Leaf"}
         assert created.slug == "leaf-2"
-        assert created.taxonomy == root_taxonomy
+        assert created.tree_id == root_taxonomy.root.tree_id
         assert created.is_descendant_of(top1)
 
         # Test create duplicit slug fails
@@ -143,8 +143,7 @@ class TestTaxonomyAPI:
     def test_taxonomy_delete(self, db, root_taxonomy,
                              manager, client, Taxonomy):
         """Test deleting whole taxonomy."""
-        t = Taxonomy(code="tbd")
-        db.session.add(t)
+        t = Taxonomy.create(db.session, code="tbd")
         db.session.commit()
 
         manager.create("top1", {"en": "Top1"}, "/tbd/")
@@ -209,8 +208,7 @@ class TestTaxonomyAPI:
 
     def test_term_move(self, db, root_taxonomy, client, manager, Taxonomy):
         """Test moving a Taxonomy Term."""
-        t = Taxonomy(code="groot")
-        db.session.add(t)
+        t = Taxonomy.create(db.session, code="groot")
         db.session.commit()
 
         manager.create("term1", {"en": "Term1"}, "/root/")
@@ -224,7 +222,7 @@ class TestTaxonomyAPI:
         assert res.status_code == 200
         moved = manager.get_term(t, "term1")
         assert moved is not None
-        assert moved.taxonomy == t
+        assert moved.tree_id == t.root.tree_id
         assert moved.is_descendant_of(term2)
         assert moved.tree_path == "/groot/term2/term1"
 

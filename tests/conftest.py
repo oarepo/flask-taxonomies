@@ -81,11 +81,9 @@ def db(app):
 @pytest.fixture
 def root_taxonomy(db):
     """Create root taxonomy element."""
-    from flask_taxonomies.models import Taxonomy
-    root = Taxonomy(code="root")
-
+    from flask_taxonomies.models import Taxonomy, TaxonomyTerm
     session = mptt_sessionmaker(db.session)
-    session.add(root)
+    root = Taxonomy.create(session, code="root")
     session.commit()
     return root
 

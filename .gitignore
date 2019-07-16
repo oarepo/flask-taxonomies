@@ -66,3 +66,5 @@ migrations/
 .dist/
 
 dist/
+
+\.envrc

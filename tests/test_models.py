@@ -7,10 +7,10 @@ import pytest
 class TestTaxonomy:
     """Taxonomy model tests."""
 
-    def test_create(self, db, Taxonomy):
+    def test_create(self, db, Taxonomy, TaxonomyTerm):
         """Test create taxonomy."""
-        tax = Taxonomy(code="code", extra_data={"extra": "data"})
-        db.session.add(tax)
+        tax = Taxonomy.create(session=db.session, code="code",
+                              extra_data={"extra": "data"})
         db.session.commit()
 
         retrieved = Taxonomy.get_by_id(tax.id)
@@ -20,19 +20,19 @@ class TestTaxonomy:
     def test_get_terms(self, db, root_taxonomy, TaxonomyTerm):
         """Get terms  listassocitated with this taxonomy."""
         leaf = TaxonomyTerm(slug="leaf",
-                            title={"en": "Leaf"},
-                            taxonomy=root_taxonomy)
+                            title={"en": "Leaf"})
         db.session.add(leaf)
+
+        root_taxonomy.append(leaf)
         db.session.commit()
 
         nested = TaxonomyTerm(slug="nested",
-                              title={"en": "Leaf"},
-                              taxonomy=root_taxonomy)
+                              title={"en": "Leaf"})
         nested.parent = leaf
         db.session.add(nested)
         db.session.commit()
 
-        children = root_taxonomy.terms
+        children = list(root_taxonomy.terms)
         assert children == [leaf, nested]  #
 
     def test_update_taxonomy(self, db, root_taxonomy, Taxonomy):
@@ -50,14 +50,14 @@ class TestTaxonomy:
             slug="leaf",
             title={"en": "Leaf"},
             extra_data={"description": "TaxonomyTerm leaf term"},
-            taxonomy=root_taxonomy,
         )
+        root_taxonomy.append(leaf)
         leaf2 = TaxonomyTerm(
-            slug="leaf",
+            slug="leaf2",
             title={"en": "Leaf"},
-            extra_data={"description": "TaxonomyTerm leaf term"},
-            taxonomy=root_taxonomy,
+            extra_data={"description": "TaxonomyTerm leaf2 term"},
         )
+        root_taxonomy.append(leaf2)
         db.session.add(leaf)
         db.session.add(leaf2)
         db.session.commit()
@@ -77,8 +77,8 @@ class TestTaxonomyTerm:
     def test_get_by_id(self, db, root_taxonomy, TaxonomyTerm):
         """Get TaxonomyTerm Tree Items by ID."""
         leaf = TaxonomyTerm(slug="leaf",
-                            title={"en": "Leaf"},
-                            taxonomy=root_taxonomy)
+                            title={"en": "Leaf"})
+        root_taxonomy.append(leaf)
         db.session.add(leaf)
         db.session.commit()
 
@@ -92,15 +92,15 @@ class TestTaxonomyTerm:
     def test_update_taxonomy_term(self, db, root_taxonomy, TaxonomyTerm):
         """Update TaxonomyTerm extra_data and name."""
         leaf = TaxonomyTerm(slug="leaf",
-                            title={"en": "Leaf"},
-                            taxonomy=root_taxonomy)
+                            title={"en": "Leaf"})
+        root_taxonomy.append(leaf)
         db.session.add(leaf)
         db.session.commit()
 
         leaf.update(extra_data={"description": "updated"},
                     title={"en": "newleaf"})
 
-        retrieved_root = TaxonomyTerm.get_by_id(root_taxonomy.id)
+        retrieved_root = TaxonomyTerm.get_by_id(leaf.id)
         assert retrieved_root.extra_data == {"description": "updated"}
         assert retrieved_root.title == {"en": "newleaf"}
 
@@ -110,8 +110,8 @@ class TestTaxonomyTerm:
             slug="leaf",
             title={"en": "Leaf"},
             extra_data={"description": "TaxonomyTerm leaf term"},
-            taxonomy=root_taxonomy,
         )
+        root_taxonomy.append(leaf)
         db.session.add(leaf)
         db.session.commit()
 
@@ -119,9 +119,8 @@ class TestTaxonomyTerm:
             slug="nested",
             title={"en": "Nested"},
             extra_data={"description": "Nested TaxonomyTerm"},
-            taxonomy=root_taxonomy,
+            parent=leaf
         )
-        nested.parent = leaf
         db.session.add(nested)
         db.session.commit()
 
@@ -134,8 +133,8 @@ class TestTaxonomyTerm:
             slug="leaf",
             title={"en": "Leaf"},
             extra_data={"description": "TaxonomyTerm leaf term"},
-            taxonomy=root_taxonomy,
         )
+        root_taxonomy.append(leaf)
         db.session.add(leaf)
         db.session.commit()
 

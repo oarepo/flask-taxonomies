@@ -20,18 +20,8 @@ class TaxonomyManager(object):
         if not taxonomy:
             raise AttributeError("Invalid Taxonomy path.")
 
-        for term in taxonomy.terms:
-            if term.slug == slug:
-                raise ValueError(
-                    "Slug {slug} already exists within {tax}.".format(
-                        slug=slug, tax=taxonomy
-                    )
-                )
-
-        t = TaxonomyTerm(slug, title, taxonomy, extra_data)
-
-        if parent_term:
-            TaxonomyManager.insert_term_under(t, parent_term)
+        t = TaxonomyTerm(slug, title, extra_data,
+                         parent=parent_term or taxonomy.root)
 
         session = mptt_sessionmaker(db.session)
         session.add(t)
@@ -65,8 +55,8 @@ class TaxonomyManager(object):
             term = TaxonomyManager.get_term(taxonomy=taxonomy, slug=slug)
             if not term:
                 raise AttributeError(
-                    "TaxonomyTerm path {path} does not exist."
-                    .format(path=parts)
+                    "TaxonomyTerm path {path} "
+                    "does not exist.".format(path=parts)
                 )
 
         return (taxonomy, term)
@@ -79,13 +69,16 @@ class TaxonomyManager(object):
     @staticmethod
     def get_taxonomy_roots(taxonomy: Taxonomy) -> Iterator:
         """Return a list of top-level TaxonomyTerms."""
-        return filter(lambda t: t.parent is None, taxonomy.terms)
+        return taxonomy.root.children
 
     @staticmethod
     def get_term(taxonomy: Taxonomy, slug: str) -> Optional[TaxonomyTerm]:
         """Get TaxonomyTerm by its slug or None if not found."""
         return TaxonomyTerm.query.filter(
-            and_(TaxonomyTerm.slug == slug, TaxonomyTerm.taxonomy == taxonomy)
+            and_(
+                TaxonomyTerm.slug == slug,
+                TaxonomyTerm.tree_id == taxonomy.root.tree_id
+            )
         ).first()
 
     @staticmethod

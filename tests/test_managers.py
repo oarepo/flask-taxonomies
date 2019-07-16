@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Model unit tests."""
 import pytest
+from sqlalchemy.exc import IntegrityError
 
 
 @pytest.mark.usefixtures("db")
@@ -22,7 +23,7 @@ class TestTaxonomyManager:
         assert isinstance(created, TaxonomyTerm)
         assert created.slug == "child"
         assert created.extra_data["extra"] == "data"
-        assert created.taxonomy == root_taxonomy
+        assert created.parent.root_of == root_taxonomy
 
         # Test create term on non-existing path fails
         with pytest.raises(AttributeError):
@@ -38,30 +39,29 @@ class TestTaxonomyManager:
 
         # Test create nested term
         leaf = TaxonomyTerm(slug="leaf",
-                            title={"en": "Leaf"},
-                            taxonomy=root_taxonomy)
+                            title={"en": "Leaf"})
+        root_taxonomy.append(leaf)
         db.session.add(leaf)
         db.session.commit()
 
         subleaf = manager.create(
             slug="subleaf", title={"en": "Leaf"}, path="/root/leaf/"
         )
-        db.session.add(subleaf)
-        db.session.commit()
 
         assert subleaf.slug == "subleaf"
-        assert subleaf.taxonomy == root_taxonomy
+        assert subleaf.tree_id == root_taxonomy.root.tree_id
         assert subleaf.is_descendant_of(leaf)
+        assert subleaf.is_descendant_of(root_taxonomy.root)
 
         # Test create duplicit term in same taxonomy fails
-        with pytest.raises(ValueError):
+        with pytest.raises(IntegrityError):
             manager.create(slug="subleaf",
                            title={"en": "Leaf"},
                            path="/root/leaf/")
+        db.session.rollback()
 
         # Test create duplicit term in different taxonomy
-        different = Taxonomy(code="different")
-        db.session.add(different)
+        different = Taxonomy.create(db.session, code="different")
         db.session.commit()
 
         created = manager.create(
@@ -70,7 +70,7 @@ class TestTaxonomyManager:
 
         assert created.slug == subleaf.slug
         assert created.id != subleaf.id
-        assert created.taxonomy == different
+        assert created.tree_id == different.root.tree_id
 
     def test_get_taxonomy(self, root_taxonomy, manager, Taxonomy):
         """Test get Taxonomy by codename."""
@@ -108,8 +108,8 @@ class TestTaxonomyManager:
                       Taxonomy, TaxonomyTerm):
         """Test get terms associtated by taxonomy and slug."""
         leaf = TaxonomyTerm(slug="leaf",
-                            title={"en": "Leaf"},
-                            taxonomy=root_taxonomy)
+                            title={"en": "Leaf"})
+        root_taxonomy.append(leaf)
         db.session.add(leaf)
         db.session.commit()
 
@@ -118,13 +118,13 @@ class TestTaxonomyManager:
         assert retrieved == leaf
 
         # Test duplicit slug get
-        second_taxonomy = Taxonomy(code="second")
-        db.session.add(second_taxonomy)
+        second_taxonomy = Taxonomy.create(db.session, code="second")
         db.session.commit()
 
         dup_leaf = TaxonomyTerm(
-            slug="leaf", title={"en": "Leaf"}, taxonomy=second_taxonomy
+            slug="leaf", title={"en": "Leaf"}
         )
+        second_taxonomy.append(dup_leaf)
         db.session.add(dup_leaf)
         db.session.commit()
 
@@ -140,22 +140,20 @@ class TestTaxonomyManager:
                            Taxonomy, TaxonomyTerm):
         """Test get taxonomy and term by its path in a taxonomy tree."""
         leaf = TaxonomyTerm(slug="leaf",
-                            title={"en": "Leaf"},
-                            taxonomy=root_taxonomy)
+                            title={"en": "Leaf"})
+        root_taxonomy.append(leaf)
         db.session.add(leaf)
         db.session.commit()
 
         subleaf = TaxonomyTerm(slug="subleaf",
                                title={"en": "Leaf"},
-                               taxonomy=root_taxonomy)
-        subleaf.parent = leaf
+                               parent=leaf)
         db.session.add(leaf)
         db.session.commit()
 
         subsubleaf = TaxonomyTerm(slug="subsubleaf",
                                   title={"en": "Leaf"},
-                                  taxonomy=root_taxonomy)
-        subsubleaf.parent = subleaf
+                                  parent=subleaf)
         db.session.add(leaf)
         db.session.commit()
 
@@ -180,8 +178,7 @@ class TestTaxonomyManager:
         assert term == subsubleaf
 
         # Test get duplicit term
-        different = Taxonomy(code="different")
-        db.session.add(different)
+        different = Taxonomy.create(db.session, code="different")
         db.session.commit()
 
         created = manager.create(slug="leaf",
@@ -196,13 +193,14 @@ class TestTaxonomyManager:
     def test_move_tree(self, db, root_taxonomy, manager,
                        Taxonomy, TaxonomyTerm):
         """Test moving a tree into another tree."""
-        manufacturer = Taxonomy(code="manufacturer")
+        manufacturer = Taxonomy.create(db.session, code="manufacturer")
+        root_taxonomy.append(manufacturer)
         item = TaxonomyTerm(slug="item",
-                            title={"en": "Item"},
-                            taxonomy=root_taxonomy)
+                            title={"en": "Item"})
+        root_taxonomy.append(item)
         vehicle = TaxonomyTerm(slug="vehicle",
-                               title={"en": "Vehicle"},
-                               taxonomy=root_taxonomy)
+                               title={"en": "Vehicle"})
+        root_taxonomy.append(vehicle)
 
         db.session.add(manufacturer)
         db.session.add(item)
@@ -210,15 +208,15 @@ class TestTaxonomyManager:
         db.session.commit()
 
         car = TaxonomyTerm(slug="car",
-                           title={"en": "car"},
-                           taxonomy=root_taxonomy)
+                           title={"en": "car"})
+        root_taxonomy.append(car)
         car.parent = vehicle
         db.session.add(car)
         db.session.commit()
 
         suv = TaxonomyTerm(slug="suv",
-                           title={"en": "SUV"},
-                           taxonomy=root_taxonomy)
+                           title={"en": "SUV"})
+        root_taxonomy.append(suv)
         suv.parent = car
         db.session.add(suv)
         db.session.commit()
@@ -250,22 +248,20 @@ class TestTaxonomyManager:
     def test_delete_tree(self, db, root_taxonomy, manager, TaxonomyTerm):
         """Test deleting existing TaxonomyTerm tree."""
         vehicle = TaxonomyTerm(slug="vehicle",
-                               title={"en": "Vehicle"},
-                               taxonomy=root_taxonomy)
+                               title={"en": "Vehicle"})
+        root_taxonomy.append(vehicle)
         db.session.add(vehicle)
         db.session.commit()
 
         car = TaxonomyTerm(slug="car",
                            title={"en": "car"},
-                           taxonomy=root_taxonomy)
-        car.parent = vehicle
+                           parent=vehicle)
         db.session.add(car)
         db.session.commit()
 
         suv = TaxonomyTerm(slug="suv",
                            title={"en": "SUV"},
-                           taxonomy=root_taxonomy)
-        suv.parent = car
+                           parent=car)
         db.session.add(suv)
         db.session.commit()
 

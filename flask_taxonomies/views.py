@@ -8,6 +8,7 @@ from flask import Blueprint, abort, jsonify, url_for, make_response
 from flask import request
 from invenio_db import db
 from slugify import slugify
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy_mptt import mptt_sessionmaker
 from webargs import fields
 from webargs.flaskparser import use_kwargs
@@ -90,13 +91,14 @@ def pass_term(f):
         code = kwargs.pop("taxonomy_code")
         path = kwargs.pop("term_path")
         try:
-            _, term = TaxonomyManager.get_from_path("/{}/{}".format(code, path))  # noqa
+            taxonomy, term = TaxonomyManager.get_from_path("/{}/{}".format(code, path))  # noqa
         except AttributeError:
             term = None
+            taxonomy = None
 
         if not term:
             abort(404, "Taxonomy Term does not exist on a specified path.")
-        return f(term=term, *args, **kwargs)
+        return f(taxonomy=taxonomy, term=term, *args, **kwargs)
 
     return decorate
 
@@ -126,7 +128,9 @@ def jsonify_taxonomy(t: Taxonomy) -> dict:
     }
 
 
-def jsonify_taxonomy_term(t: TaxonomyTerm, drilldown: bool = False) -> dict:
+def jsonify_taxonomy_term(taxonomy_code: str,
+                          t: TaxonomyTerm,
+                          drilldown: bool = False) -> dict:
     """Prepare TaxonomyTerm to be easily jsonified."""
     result = {
         **(t.extra_data or {}),
@@ -138,7 +142,7 @@ def jsonify_taxonomy_term(t: TaxonomyTerm, drilldown: bool = False) -> dict:
             # TODO: replace with Term detail route
             "self": url_for(
                 "taxonomies.taxonomy_get_term",
-                taxonomy_code=t.taxonomy.code,
+                taxonomy_code=taxonomy_code,
                 term_path=("".join(t.tree_path.split("/", 2)[2:])),
                 _external=True,
             )
@@ -146,13 +150,13 @@ def jsonify_taxonomy_term(t: TaxonomyTerm, drilldown: bool = False) -> dict:
     }
     if drilldown:
         def _term_fields(term: TaxonomyTerm):
-            return jsonify_taxonomy_term(term)          # no drilldown here
-            # return dict(slug=term.slug, path=term.tree_path)
+            # no drilldown here
+            return jsonify_taxonomy_term(taxonomy_code, term)
 
         # First drilldown tree element is always reference to self -> strip it
         try:
-            children = t.drilldown_tree(json=True,
-                                        json_fields=_term_fields)[0]['children']  # noqa
+            children = t.drilldown_tree(
+                json=True, json_fields=_term_fields)[0]['children']  # noqa
         except KeyError:
             children = []
 
@@ -185,10 +189,8 @@ def taxonomy_create(code: str, extra_data: dict = None):
     if TaxonomyManager.get_taxonomy(code):
         raise BadRequest("Taxonomy with this code already exists.")
     else:
-        created = Taxonomy(code=code, extra_data=extra_data)
-
         session = mptt_sessionmaker(db.session)
-        session.add(created)
+        created = Taxonomy.create(session, code=code, extra_data=extra_data)
         session.commit()
 
         created_dict = jsonify_taxonomy(created)
@@ -204,21 +206,33 @@ def taxonomy_create(code: str, extra_data: dict = None):
 def taxonomy_get_roots(taxonomy):
     """Get top-level terms in a Taxonomy."""
     # default for drilldown on taxonomy is False
-    accepts = accept.parse(request.headers.get("Accept", "application/json; drilldown=false"))
-    drilldown = request.args.get('drilldown') or accepts[0].params.get('drilldown')
+    accepts = accept.parse(
+        request.headers.get("Accept",
+                            "application/json; drilldown=false"))
+    drilldown = (
+            request.args.get('drilldown') or accepts[0].params.get('drilldown')
+    )
     roots = TaxonomyManager.get_taxonomy_roots(taxonomy)
-    return jsonify(
-        [jsonify_taxonomy_term(t, drilldown=drilldown in {'true', '1'}) for t in roots])
+    do_drilldown = drilldown in {'true', '1'}
+    return jsonify([
+        jsonify_taxonomy_term(taxonomy.code, t,
+                              drilldown=do_drilldown) for t in roots])
 
 
 @blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("GET",))
 @pass_term
-def taxonomy_get_term(term):
+def taxonomy_get_term(taxonomy, term):
     """Get Taxonomy Term detail."""
     # default for drilldown on taxonomy term is True
-    accepts = accept.parse(request.headers.get("Accept", "application/json; drilldown=true"))
-    drilldown = request.args.get('drilldown') or accepts[0].params.get('drilldown', 'true')
-    return jsonify(jsonify_taxonomy_term(term, drilldown=drilldown in {'true', '1'}))
+    accepts = accept.parse(
+        request.headers.get("Accept", "application/json; drilldown=true"))
+    drilldown = (
+        request.args.get('drilldown') or
+        accepts[0].params.get('drilldown', 'true')
+    )
+    do_drilldown = drilldown in {'true', '1'}
+    return jsonify(
+        jsonify_taxonomy_term(taxonomy.code, term, drilldown=do_drilldown))
 
 
 @blueprint.route("/<string:taxonomy_code>/", methods=("POST",))
@@ -250,7 +264,7 @@ def taxonomy_create_term(taxonomy, title, slug,
     if taxonomy and term and move_target:
         target_path = url_to_path(move_target)
         TaxonomyManager.move_tree(term.tree_path, target_path)
-        moved = jsonify_taxonomy_term(term, drilldown=True)
+        moved = jsonify_taxonomy_term(taxonomy.code, term, drilldown=True)
         response = jsonify(moved)
         response.headers['Location'] = moved['links']['self']
         return response
@@ -261,13 +275,15 @@ def taxonomy_create_term(taxonomy, title, slug,
                                          extra_data=extra_data,
                                          path=full_path)
 
-        created_dict = jsonify_taxonomy_term(created, drilldown=True)
+        created_dict = \
+            jsonify_taxonomy_term(taxonomy.code, created, drilldown=True)
 
         response = jsonify(created_dict)
         response.headers['Location'] = created_dict['links']['self']
         response.status_code = 201
         return response
-    except ValueError:
+    except IntegrityError:
+        db.session.rollback()
         abort(400, 'Term with this slug already exists on this path.')
 
 
@@ -285,7 +301,7 @@ def taxonomy_delete(taxonomy):
 
 @blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("DELETE",))  # noqa
 @pass_term
-def taxonomy_delete_term(term):
+def taxonomy_delete_term(taxonomy, term):
     """Delete a Term subtree in a Taxonomy."""
     TaxonomyManager.delete_tree(term.tree_path)
     response = make_response()
@@ -315,7 +331,7 @@ def taxonomy_update(taxonomy, extra_data):
     }
 )
 @pass_term
-def taxonomy_update_term(term, title=None, extra_data=None):
+def taxonomy_update_term(taxonomy, term, title=None, extra_data=None):
     """Update Term in Taxonomy."""
     changes = {}
     if title:
@@ -325,4 +341,5 @@ def taxonomy_update_term(term, title=None, extra_data=None):
 
     term.update(**changes)
 
-    return jsonify(jsonify_taxonomy_term(term, drilldown=True))
+    return jsonify(
+        jsonify_taxonomy_term(taxonomy.code, term, drilldown=True))
