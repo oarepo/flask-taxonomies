@@ -3,6 +3,7 @@
 from functools import wraps
 from urllib.parse import urlsplit
 
+import accept
 from flask import Blueprint, abort, jsonify, url_for, make_response
 from flask import request
 from invenio_db import db
@@ -11,6 +12,7 @@ from sqlalchemy_mptt import mptt_sessionmaker
 from webargs import fields
 from webargs.flaskparser import use_kwargs
 from werkzeug.exceptions import BadRequest
+from werkzeug.http import parse_accept_header
 
 from .managers import TaxonomyManager
 from .models import Taxonomy, TaxonomyTerm
@@ -144,7 +146,8 @@ def jsonify_taxonomy_term(t: TaxonomyTerm, drilldown: bool = False) -> dict:
     }
     if drilldown:
         def _term_fields(term: TaxonomyTerm):
-            return dict(slug=term.slug, path=term.tree_path)
+            return jsonify_taxonomy_term(term)          # no drilldown here
+            # return dict(slug=term.slug, path=term.tree_path)
 
         # First drilldown tree element is always reference to self -> strip it
         try:
@@ -154,6 +157,10 @@ def jsonify_taxonomy_term(t: TaxonomyTerm, drilldown: bool = False) -> dict:
             children = []
 
         result.update({"children": children})
+    else:
+        descendants_count = (t.right - t.left - 1) / 2
+        if descendants_count:
+            result["descendants_count"] = descendants_count
 
     return result
 
@@ -196,8 +203,11 @@ def taxonomy_create(code: str, extra_data: dict = None):
 @pass_taxonomy
 def taxonomy_get_roots(taxonomy):
     """Get top-level terms in a Taxonomy."""
+    accepts = accept.parse(request.headers.get("Accept", "application/json; drilldown=false"))
+    drilldown = request.args.get('drilldown') or accepts[0].params.get('drilldown')
     roots = TaxonomyManager.get_taxonomy_roots(taxonomy)
-    return jsonify([jsonify_taxonomy_term(t) for t in roots])
+    return jsonify(
+        [jsonify_taxonomy_term(t, drilldown=drilldown in {'true', '1'}) for t in roots])
 
 
 @blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("GET",))

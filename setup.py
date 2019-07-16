@@ -14,7 +14,8 @@ install_requires = [
     'webargs>=5.3.2',
     'sqlalchemy_mptt>=0.2.4',
     'invenio[{db},base]~={version}'.format(
-        db=DATABASE, version=INVENIO_VERSION)
+        db=DATABASE, version=INVENIO_VERSION),
+    'accept>=0.1.0'
 ]
 
 tests_require = [
