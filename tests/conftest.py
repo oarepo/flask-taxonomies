@@ -100,3 +100,20 @@ def TaxonomyTerm(db):
     """Taxonomy Term fixture."""
     from flask_taxonomies.models import TaxonomyTerm as _TaxonomyTerm
     return _TaxonomyTerm
+
+
+@pytest.fixture
+def filled_taxonomy(request, db, root_taxonomy, TaxonomyTerm):
+    def _generate(parent, lengths, prefix, separator):
+        if not lengths:
+            return
+        session = mptt_sessionmaker(db.session)
+        for i in range(1, 1 + lengths[0]):
+            title = f'{prefix}{i}'
+            t = TaxonomyTerm(slug=title, title={'en': title}, parent=parent)
+            session.add(t)
+            session.commit()
+            _generate(t, lengths[1:], prefix + separator, separator)
+
+    _generate(root_taxonomy.root, request.param, 'node-', '-')
+    return root_taxonomy

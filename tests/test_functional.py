@@ -5,8 +5,15 @@
 # """
 """Functional unit tests using WebTest."""
 import json
+import time
 
 import pytest
+
+
+# import logging
+#
+# logging.basicConfig()
+# logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
 
 @pytest.mark.usefixtures("db")
@@ -80,7 +87,7 @@ class TestTaxonomyAPI:
         manager.create("leaf1", {"en": "Leaf1"}, "/root/top1/")
         manager.create("leafeaf", {"en": "LeafOfLeaf"}, "/root/top1/leaf1")
 
-        res = client.get("/taxonomies/{}/top1/leaf1/"
+        res = client.get("/taxonomies/{}/top1/leaf1/?drilldown=1"
                          .format(root_taxonomy.code))
         assert res.json["slug"] == "leaf1"
         assert res.json["path"] == "/root/top1/leaf1"
@@ -191,15 +198,15 @@ class TestTaxonomyAPI:
                            json={"updated": "yes"})
         assert res.status_code == 200
         assert res.json["updated"] == "yes"
-        assert manager.get_term(root_taxonomy, "term1") \
-                      .extra_data == {"updated": "yes"}
+        assert manager.get_term(root_taxonomy, "term1"). \
+            extra_data == {"updated": "yes"}
 
         res = client.patch("/taxonomies/root/term1/",
                            json={"title": {"updated": "yes"}})
         assert res.status_code == 200
         assert res.json["title"] == {"updated": "yes"}
-        assert manager.get_term(root_taxonomy, "term1") \
-                      .title == {"updated": "yes"}
+        assert manager.get_term(root_taxonomy, "term1"). \
+            title == {"updated": "yes"}
 
         # Test update invalid term fails
         res = client.patch("/taxonomies/root/nope/",
@@ -262,3 +269,16 @@ class TestTaxonomyAPI:
                                 "slug": "whatever",
                                 "move_target": "http://localhost/taxonomies/groot/"})  # noqa
         assert res.status_code == 400
+
+    @pytest.mark.parametrize('filled_taxonomy',
+                             [[1000]],
+                             indirect=['filled_taxonomy'])
+    def test_large_taxonomy(self, client, filled_taxonomy):
+        """Test listing of top-level taxonomy terms."""
+
+        # Test empty taxonomy
+        t1 = time.time()
+        res = client.get("/taxonomies/{}/".format(filled_taxonomy.code))
+        t2 = time.time()
+        print("time taken", t2 - t1)
+        assert len(res.json) == 1000

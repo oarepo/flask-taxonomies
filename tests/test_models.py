@@ -142,3 +142,9 @@ class TestTaxonomyTerm:
         db.session.commit()
 
         assert TaxonomyTerm.get_by_id(leaf.id) is None
+
+    @pytest.mark.parametrize('filled_taxonomy',
+                             [[1000]],
+                             indirect=['filled_taxonomy'])
+    def test_large_taxonomy(self, db, filled_taxonomy):
+        assert filled_taxonomy.terms.count() == 1000

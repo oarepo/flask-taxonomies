@@ -130,41 +130,30 @@ def jsonify_taxonomy(t: Taxonomy) -> dict:
 
 def jsonify_taxonomy_term(taxonomy_code: str,
                           t: TaxonomyTerm,
-                          drilldown: bool = False) -> dict:
+                          path: str) -> dict:
     """Prepare TaxonomyTerm to be easily jsonified."""
+    if not path.endswith('/'):
+        path += '/'
+    path += t.slug
     result = {
         **(t.extra_data or {}),
         "id": t.id,
         "slug": t.slug,
         "title": t.title,
-        "path": t.tree_path,
+        "path": path,
         "links": {
             # TODO: replace with Term detail route
             "self": url_for(
                 "taxonomies.taxonomy_get_term",
                 taxonomy_code=taxonomy_code,
-                term_path=("".join(t.tree_path.split("/", 2)[2:])),
+                term_path=("".join(path.split("/", 2)[2:])),
                 _external=True,
             )
         },
     }
-    if drilldown:
-        def _term_fields(term: TaxonomyTerm):
-            # no drilldown here
-            return jsonify_taxonomy_term(taxonomy_code, term)
-
-        # First drilldown tree element is always reference to self -> strip it
-        try:
-            children = t.drilldown_tree(
-                json=True, json_fields=_term_fields)[0]['children']  # noqa
-        except KeyError:
-            children = []
-
-        result.update({"children": children})
-    else:
-        descendants_count = (t.right - t.left - 1) / 2
-        if descendants_count:
-            result["descendants_count"] = descendants_count
+    descendants_count = (t.right - t.left - 1) / 2
+    if descendants_count:
+        result["descendants_count"] = descendants_count
 
     return result
 
@@ -216,16 +205,29 @@ def taxonomy_get_roots(taxonomy):
     if not do_drilldown:
         roots = TaxonomyManager.get_taxonomy_roots(taxonomy)
         return jsonify([
-            jsonify_taxonomy_term(taxonomy.code, t) for t in roots])
+            jsonify_taxonomy_term(taxonomy.code, t,
+                                  f'/{taxonomy.code}/')
+            for t in roots])
+
+    ret = build_tree_from_list(taxonomy.code, f'/{taxonomy.code}/', taxonomy.terms)
+    return jsonify(ret)
+
+
+def build_tree_from_list(taxonomy_code, root_path, tree_as_list):
     ret = []
     stack = []
-    for item in taxonomy.terms:
-        while item.level-2 < len(stack):
+    root_level = None
+    for item in tree_as_list:
+        if root_level is None:
+            root_level = item.level
+        while item.level - root_level < len(stack):
             stack.pop()
 
-        item_json = jsonify_taxonomy_term(taxonomy.code, item)
+        item_json = jsonify_taxonomy_term(
+            taxonomy_code, item,
+            root_path if not stack else stack[-1]['path'])
 
-        if item.level == 2:
+        if item.level == root_level:
             # just under the single root
             ret.append(item_json)
         else:
@@ -235,7 +237,7 @@ def taxonomy_get_roots(taxonomy):
             stack[-1]['children'].append(item_json)
 
         stack.append(item_json)
-    return jsonify(ret)
+    return ret
 
 
 @blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("GET",))
@@ -246,12 +248,18 @@ def taxonomy_get_term(taxonomy, term):
     accepts = accept.parse(
         request.headers.get("Accept", "application/json; drilldown=true"))
     drilldown = (
-        request.args.get('drilldown') or
-        accepts[0].params.get('drilldown', 'true')
+            request.args.get('drilldown') or
+            accepts[0].params.get('drilldown', 'true')
     )
     do_drilldown = drilldown in {'true', '1'}
-    return jsonify(
-        jsonify_taxonomy_term(taxonomy.code, term, drilldown=do_drilldown))
+    if not do_drilldown:
+        return jsonify(
+            jsonify_taxonomy_term(taxonomy.code, term, term.parent.tree_path))
+    else:
+        return jsonify(
+            build_tree_from_list(taxonomy.code,
+                                 term.parent.tree_path,
+                                 term.descendants_or_self)[0])
 
 
 @blueprint.route("/<string:taxonomy_code>/", methods=("POST",))
@@ -283,7 +291,9 @@ def taxonomy_create_term(taxonomy, title, slug,
     if taxonomy and term and move_target:
         target_path = url_to_path(move_target)
         TaxonomyManager.move_tree(term.tree_path, target_path)
-        moved = jsonify_taxonomy_term(taxonomy.code, term, drilldown=True)
+        moved = jsonify_taxonomy_term(taxonomy.code,
+                                      term,
+                                      term.parent.tree_path)
         response = jsonify(moved)
         response.headers['Location'] = moved['links']['self']
         return response
@@ -295,7 +305,9 @@ def taxonomy_create_term(taxonomy, title, slug,
                                          path=full_path)
 
         created_dict = \
-            jsonify_taxonomy_term(taxonomy.code, created, drilldown=True)
+            jsonify_taxonomy_term(taxonomy.code,
+                                  created,
+                                  created.parent.tree_path)
 
         response = jsonify(created_dict)
         response.headers['Location'] = created_dict['links']['self']
@@ -361,4 +373,4 @@ def taxonomy_update_term(taxonomy, term, title=None, extra_data=None):
     term.update(**changes)
 
     return jsonify(
-        jsonify_taxonomy_term(taxonomy.code, term, drilldown=True))
+        jsonify_taxonomy_term(taxonomy.code, term, term.parent.tree_path))

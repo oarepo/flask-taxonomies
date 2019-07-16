@@ -135,6 +135,13 @@ class TaxonomyTerm(SurrogatePK, db.Model, BaseNestedSets):
     def append(self, term):
         term.move_inside(self.id)
 
+    @property
+    def descendants_or_self(self):
+        return TaxonomyTerm.query.filter(
+            TaxonomyTerm.tree_id == self.tree_id,
+            TaxonomyTerm.left >= self.left,
+            TaxonomyTerm.right <= self.right).order_by('lft')
+
 
 @event.listens_for(db.session, 'before_flush')
 def remove_orphans(session, flush_context, *args, **kwargs):
