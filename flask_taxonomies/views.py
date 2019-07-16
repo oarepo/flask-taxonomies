@@ -130,11 +130,11 @@ def jsonify_taxonomy(t: Taxonomy) -> dict:
 
 def jsonify_taxonomy_term(taxonomy_code: str,
                           t: TaxonomyTerm,
-                          path: str) -> dict:
+                          parent_path: str) -> dict:
     """Prepare TaxonomyTerm to be easily jsonified."""
-    if not path.endswith('/'):
-        path += '/'
-    path += t.slug
+    if not parent_path.endswith('/'):
+        parent_path += '/'
+    path = parent_path + t.slug
     result = {
         **(t.extra_data or {}),
         "id": t.id,
@@ -209,7 +209,9 @@ def taxonomy_get_roots(taxonomy):
                                   f'/{taxonomy.code}/')
             for t in roots])
 
-    ret = build_tree_from_list(taxonomy.code, f'/{taxonomy.code}/', taxonomy.terms)
+    ret = build_tree_from_list(taxonomy.code,
+                               f'/{taxonomy.code}/',
+                               taxonomy.terms)
     return jsonify(ret)
 
 
