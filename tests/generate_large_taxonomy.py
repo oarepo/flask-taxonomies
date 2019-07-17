@@ -5,7 +5,7 @@ import requests
 @click.command()
 @click.argument('code', required=True)
 @click.argument('lengths', nargs=-1, required=True, type=int)
-@click.option('--url', default='https://localhost:8080/api/taxonomies/')
+@click.option('--url', default='https://localhost:5000/api/taxonomies/')
 @click.option('--delete/--no-delete')
 def generate(code, lengths, url, delete):
     if delete:
