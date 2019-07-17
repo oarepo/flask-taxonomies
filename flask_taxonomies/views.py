@@ -9,14 +9,14 @@ from flask import request
 from invenio_db import db
 from slugify import slugify
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy_mptt import mptt_sessionmaker
 from webargs import fields
 from webargs.flaskparser import use_kwargs
 from werkzeug.exceptions import BadRequest
-from werkzeug.http import parse_accept_header
 
-from .managers import TaxonomyManager
-from .models import Taxonomy, TaxonomyTerm
+from flask_taxonomies.models import Taxonomy
+from .models import TaxonomyTerm
 
 blueprint = Blueprint("taxonomies", __name__, url_prefix="/taxonomies")
 
@@ -41,10 +41,11 @@ def pass_taxonomy(f):
     @wraps(f)
     def decorate(*args, **kwargs):
         code = kwargs.pop("taxonomy_code")
-        taxonomy = TaxonomyManager.get_taxonomy(code=code)
-        if not taxonomy:
+        try:
+            taxonomy = Taxonomy.get(code)
+            return f(taxonomy=taxonomy, *args, **kwargs)
+        except NoResultFound:
             abort(404, "Taxonomy does not exist.")
-        return f(taxonomy=taxonomy, *args, **kwargs)
 
     return decorate
 
@@ -73,7 +74,6 @@ def pass_term_extra_data(f):
         extra = {**request.json}
         try:
             extra.pop('slug')
-            extra.pop('title')
             extra.pop('move_target')
         except KeyError:
             pass
@@ -91,11 +91,11 @@ def pass_term(f):
         code = kwargs.pop("taxonomy_code")
         path = kwargs.pop("term_path")
         try:
-            taxonomy, term = TaxonomyManager.get_from_path("/{}/{}".format(code, path))  # noqa
-        except AttributeError:
+            taxonomy = Taxonomy.get(code)
+            term = taxonomy.find_term(path)
+        except:
             term = None
             taxonomy = None
-
         if not term:
             abort(404, "Taxonomy Term does not exist on a specified path.")
         return f(taxonomy=taxonomy, term=term, *args, **kwargs)
@@ -103,16 +103,7 @@ def pass_term(f):
     return decorate
 
 
-def target_path_validator(value):
-    """Validate target path."""
-    path = url_to_path(value)
-    try:
-        TaxonomyManager.get_from_path(path)
-    except AttributeError:
-        abort(400, "Target Path is invalid.")
-
-
-def jsonify_taxonomy(t: Taxonomy) -> dict:
+def jsonify_taxonomy(t: TaxonomyTerm) -> dict:
     """Prepare Taxonomy to be easily jsonified."""
     return {
         **(t.extra_data or {}),
@@ -139,7 +130,6 @@ def jsonify_taxonomy_term(taxonomy_code: str,
         **(t.extra_data or {}),
         "id": t.id,
         "slug": t.slug,
-        "title": t.title,
         "path": path,
         "links": {
             # TODO: replace with Term detail route
@@ -161,8 +151,7 @@ def jsonify_taxonomy_term(taxonomy_code: str,
 @blueprint.route("/", methods=("GET",))
 def taxonomy_list():
     """List all available taxonomies."""
-    taxonomies = Taxonomy.query.all()
-    return jsonify([jsonify_taxonomy(t) for t in taxonomies])
+    return jsonify([jsonify_taxonomy(t) for t in Taxonomy.taxonomies()])
 
 
 @blueprint.route("/", methods=("POST",))
@@ -175,19 +164,21 @@ def taxonomy_list():
 )
 def taxonomy_create(code: str, extra_data: dict = None):
     """Create a new Taxonomy."""
-    if TaxonomyManager.get_taxonomy(code):
-        raise BadRequest("Taxonomy with this code already exists.")
-    else:
+    try:
         session = mptt_sessionmaker(db.session)
-        created = Taxonomy.create(session, code=code, extra_data=extra_data)
+        created = Taxonomy.create_taxonomy(code=code, extra_data=extra_data)
+        session.add(created)
         session.commit()
-
+        for tax in Taxonomy.taxonomies():
+            print(tax.code, tax.parent, tax.tree_id)
         created_dict = jsonify_taxonomy(created)
 
         response = jsonify(created_dict)
         response.status_code = 201
         response.headers['Location'] = created_dict['links']['self']
         return response
+    except IntegrityError:
+        raise BadRequest("Taxonomy with this code already exists.")
 
 
 @blueprint.route("/<string:taxonomy_code>/", methods=("GET",))
@@ -203,7 +194,7 @@ def taxonomy_get_roots(taxonomy):
     )
     do_drilldown = drilldown in {'true', '1'}
     if not do_drilldown:
-        roots = TaxonomyManager.get_taxonomy_roots(taxonomy)
+        roots = taxonomy.roots
         return jsonify([
             jsonify_taxonomy_term(taxonomy.code, t,
                                   f'/{taxonomy.code}/')
@@ -271,29 +262,31 @@ def taxonomy_get_term(taxonomy, term):
 @pass_term_extra_data
 @use_kwargs(
     {
-        "title": fields.Dict(required=True),
-        "slug": fields.Str(required=True),
+        "slug": fields.Str(required=False),
         "extra_data": fields.Dict(),
         "move_target": fields.URL(required=False,
-                                  empty_value=None,
-                                  validate=target_path_validator),
+                                  empty_value=None),
     }
 )
-def taxonomy_create_term(taxonomy, title, slug,
+def taxonomy_create_term(taxonomy, slug=None,
                          term_path='', extra_data=None, move_target=None):
     """Create a Term inside a Taxonomy tree."""
-    term = None
-    try:
-        _, term = TaxonomyManager.get_from_path(
-            "/{}/{}".format(taxonomy.code, term_path))
-    except AttributeError:
+    if not move_target and not slug:
+        abort(400, "No slug given for created element.")
+
+    term = taxonomy.find_term(term_path)
+    if not term:
         abort(400, "Invalid Term path given.")
 
     full_path = "/{}/{}".format(taxonomy.code, term_path)
 
     if taxonomy and term and move_target:
         target_path = url_to_path(move_target)
-        TaxonomyManager.move_tree(term.tree_path, target_path)
+        try:
+            term.move_to(target_path)
+        except NoResultFound:
+            abort(400, "Target path not found.")
+
         moved = jsonify_taxonomy_term(taxonomy.code,
                                       term,
                                       term.parent.tree_path)
@@ -302,10 +295,11 @@ def taxonomy_create_term(taxonomy, title, slug,
         return response
 
     try:
-        created = TaxonomyManager.create(slug=slugify(slug),
-                                         title=title,
-                                         extra_data=extra_data,
-                                         path=full_path)
+        created = TaxonomyTerm(slug=slugify(slug), extra_data=extra_data)
+        term.append(created)
+        session = mptt_sessionmaker(db.session)
+        session.add(created)
+        session.commit()
 
         created_dict = \
             jsonify_taxonomy_term(taxonomy.code,
@@ -337,7 +331,9 @@ def taxonomy_delete(taxonomy):
 @pass_term
 def taxonomy_delete_term(taxonomy, term):
     """Delete a Term subtree in a Taxonomy."""
-    TaxonomyManager.delete_tree(term.tree_path)
+    session = mptt_sessionmaker(db.session)
+    session.delete(term)
+    session.commit()
     response = make_response()
     response.status_code = 204
     return response
@@ -360,16 +356,13 @@ def taxonomy_update(taxonomy, extra_data):
 @pass_term_extra_data
 @use_kwargs(
     {
-        "title": fields.Dict(required=False, empty_value=None),
         "extra_data": fields.Dict(empty_value={}),
     }
 )
 @pass_term
-def taxonomy_update_term(taxonomy, term, title=None, extra_data=None):
+def taxonomy_update_term(taxonomy, term, extra_data=None):
     """Update Term in Taxonomy."""
     changes = {}
-    if title:
-        changes["title"] = title
     if extra_data:
         changes["extra_data"] = extra_data
 

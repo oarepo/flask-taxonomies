@@ -50,13 +50,6 @@ def app(base_app):
         return base_app
 
 
-@pytest.fixture
-def manager(app):
-    """Taxonomy Manager fixture."""
-    from flask_taxonomies.managers import TaxonomyManager
-    return TaxonomyManager
-
-
 @pytest.yield_fixture()
 def client(app):
     """Get test client."""
@@ -83,18 +76,12 @@ def db(app):
 @pytest.fixture
 def root_taxonomy(db):
     """Create root taxonomy element."""
-    from flask_taxonomies.models import Taxonomy, TaxonomyTerm
+    from flask_taxonomies.models import Taxonomy
     session = mptt_sessionmaker(db.session)
-    root = Taxonomy.create(session, code="root")
+    root = Taxonomy.create_taxonomy(code="root")
+    session.add(root)
     session.commit()
     return root
-
-
-@pytest.fixture
-def Taxonomy(db):
-    """Taxonomy fixture."""
-    from flask_taxonomies.models import Taxonomy as _Taxonomy
-    return _Taxonomy
 
 
 @pytest.fixture
@@ -105,26 +92,33 @@ def TaxonomyTerm(db):
 
 
 @pytest.fixture
+def Taxonomy(db):
+    """Taxonomy Term fixture."""
+    from flask_taxonomies.models import Taxonomy as _Taxonomy
+    return _Taxonomy
+
+
+@pytest.fixture
 def filled_taxonomy(request, db, root_taxonomy, TaxonomyTerm):
     def _generate(parent, lengths, prefix, separator):
         if not lengths:
             return
         for i in range(1, 1 + lengths[0]):
             title = f'{prefix}{i}'
-            t = TaxonomyTerm(slug=title, title={'en': title}, parent=parent)
+            t = TaxonomyTerm(slug=title, parent=parent)
             t.left = t.right = 0
-            t.tree_id = root_taxonomy.root.tree_id
+            t.tree_id = root_taxonomy.tree_id
             db.session.add(t)
             _generate(t, lengths[1:], prefix + separator, separator)
 
     tree_manager.register_events(remove=True)       # danger: not thread safe
 
-    _generate(root_taxonomy.root, request.param, 'node-', '-')
+    _generate(root_taxonomy, request.param, 'node-', '-')
     db.session.commit()
 
     session = mptt_sessionmaker(db.session)
     tree_manager.register_events()
 
-    TaxonomyTerm.rebuild_tree(session, root_taxonomy.root.tree_id)
+    TaxonomyTerm.rebuild_tree(session, root_taxonomy.tree_id)
 
     return root_taxonomy

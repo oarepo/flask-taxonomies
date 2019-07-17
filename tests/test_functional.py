@@ -7,6 +7,7 @@
 import time
 
 import pytest
+from sqlalchemy.orm.exc import NoResultFound
 
 if False:
     from sqlalchemy import event
@@ -30,10 +31,11 @@ if False:
 class TestTaxonomyAPI:
     """TaxonomyTerm functional test."""
 
-    def test_list_taxonomies(self, db, client, root_taxonomy, Taxonomy):
+    def test_list_taxonomies(self, db, client, root_taxonomy, Taxonomy, TaxonomyTerm):
         """Test listing of taxonomies."""
-        additional = Taxonomy.create(db.session, code="additional",
-                                     extra_data={"extra": "data"})
+        additional = Taxonomy.create_taxonomy(code="additional",
+                                              extra_data={"extra": "data"})
+        db.session.add(additional)
         db.session.commit()
 
         res = client.get("/taxonomies/")
@@ -51,7 +53,7 @@ class TestTaxonomyAPI:
                        "self": "http://localhost/taxonomies/additional/"},
                } in jsonres
 
-    def test_create_taxonomy(self, client, root_taxonomy, Taxonomy):
+    def test_create_taxonomy(self, client, root_taxonomy, Taxonomy, TaxonomyTerm):
         """Test Taxonomy creation."""
 
         res = client.post("/taxonomies/",
@@ -60,7 +62,7 @@ class TestTaxonomyAPI:
         assert res.status_code == 201
         assert res.headers['Location'] == 'http://localhost/taxonomies/new/'
 
-        retrieved = Taxonomy.query.filter(Taxonomy.code == "new").first()
+        retrieved = next(Taxonomy.taxonomies(lambda q: q.filter_by(slug="new")))
         assert retrieved is not None
         assert retrieved.extra_data == {"extra": "new"}
 
@@ -68,16 +70,16 @@ class TestTaxonomyAPI:
         res = client.post("/taxonomies/", json={"code": root_taxonomy.code})
         assert res.status_code == 400
 
-    def test_list_taxonomy_roots(self, client, root_taxonomy, manager):
+    def test_list_taxonomy_roots(self, client, root_taxonomy):
         """Test listing of top-level taxonomy terms."""
 
         # Test empty taxonomy
         res = client.get("/taxonomies/{}/".format(root_taxonomy.code))
         assert res.json == []
 
-        manager.create("top1", {"en": "Top1"}, "/root/")
-        manager.create("leaf1", {"en": "Leaf1"}, "/root/top1/")
-        manager.create("top2", {"en": "Top2"}, "/root/")
+        root_taxonomy.create_term("/root/", slug="top1")
+        root_taxonomy.create_term("/root/top1/", slug="leaf1")
+        root_taxonomy.create_term("/root/", slug="top2")
 
         # Test multiple top-level terms
         res = client.get("/taxonomies/{}/".format(root_taxonomy.code))
@@ -91,14 +93,15 @@ class TestTaxonomyAPI:
         res = client.get("/taxonomies/blah/")
         assert res.status_code == 404
 
-    def test_get_taxonomy_term(self, client, root_taxonomy, manager):
+    def test_get_taxonomy_term(self, client, root_taxonomy):
         """Test getting Term details."""
-        manager.create("top1", {"en": "Top1"}, "/root/")
-        manager.create("leaf1", {"en": "Leaf1"}, "/root/top1/")
-        manager.create("leafeaf", {"en": "LeafOfLeaf"}, "/root/top1/leaf1")
+        root_taxonomy.create_term("/root/", slug="top1")
+        root_taxonomy.create_term("/root/top1/", slug="leaf1")
+        root_taxonomy.create_term("/root/top1/leaf1", slug="leafeaf")
 
         res = client.get("/taxonomies/{}/top1/leaf1/?drilldown=1"
                          .format(root_taxonomy.code))
+
         assert res.json["slug"] == "leaf1"
         assert res.json["path"] == "/root/top1/leaf1"
         assert len(res.json["children"]) == 1
@@ -115,7 +118,7 @@ class TestTaxonomyAPI:
                          .format(root_taxonomy.code))
         assert res.status_code == 404
 
-    def test_term_create(self, root_taxonomy, client, manager):
+    def test_term_create(self, root_taxonomy, client):
         """Test TaxonomyTerm creation."""
         res = client.post("/taxonomies/{}/".format(root_taxonomy.code),
                           json={"title": {"en": "Leaf"}, "slug": "leaf 1"})
@@ -123,10 +126,9 @@ class TestTaxonomyAPI:
         assert res.json["slug"] == "leaf-1"
         assert res.headers['location'] == 'http://localhost/taxonomies/{}/leaf-1/'.format(root_taxonomy.code)  # noqa
 
-        created = manager.get_term(root_taxonomy, "leaf-1")
-        assert created.title == {"en": "Leaf"}
+        created = root_taxonomy.get_term("leaf-1")
         assert created.slug == "leaf-1"
-        assert created.tree_id == root_taxonomy.root.tree_id
+        assert created.tree_id == root_taxonomy.tree_id
 
         # Test invalid path fails
         res = client.post("/taxonomies/{}/top1/top2/"
@@ -135,16 +137,15 @@ class TestTaxonomyAPI:
         assert res.status_code == 400
 
         # Test create on nested path
-        top1 = manager.create("top1", {"en": "Top1"}, "/root/")
+        top1 = root_taxonomy.create_term("/root/", slug="top1")
         res = client.post("/taxonomies/{}/top1/"
                           .format(root_taxonomy.code),
-                          json={"title": {"en": "Leaf"}, "slug": "leaf 2"})
+                          json={"slug": "leaf 2"})
         assert res.status_code == 201
 
-        created = manager.get_term(root_taxonomy, "leaf-2")
-        assert created.title == {"en": "Leaf"}
+        created = root_taxonomy.get_term("leaf-2")
         assert created.slug == "leaf-2"
-        assert created.tree_id == root_taxonomy.root.tree_id
+        assert created.tree_id == root_taxonomy.tree_id
         assert created.is_descendant_of(top1)
 
         # Test create duplicit slug fails
@@ -158,126 +159,117 @@ class TestTaxonomyAPI:
         assert res.status_code == 404
 
     def test_taxonomy_delete(self, db, root_taxonomy,
-                             manager, client, Taxonomy):
+                             client, Taxonomy, TaxonomyTerm):
         """Test deleting whole taxonomy."""
-        t = Taxonomy.create(db.session, code="tbd")
+        t = Taxonomy.create_taxonomy(code="tbd")
+        db.session.add(t)
         db.session.commit()
 
-        manager.create("top1", {"en": "Top1"}, "/tbd/")
-        manager.create("leaf1", {"en": "Leaf1"}, "/tbd/top1/")
+        t.create_term("/tbd/", slug="top1")
+        t.create_term("/tbd/top1", slug="leaf1")
 
         res = client.delete("/taxonomies/tbd/")
         assert res.status_code == 204
-        assert manager.get_taxonomy("tbd") is None
-        assert manager.get_term(t, "leaf1") is None
-        assert manager.get_term(t, "top1") is None
+        with pytest.raises(NoResultFound):
+            Taxonomy.get("tbd")
+        assert TaxonomyTerm.query.filter_by(slug="leaf1").one_or_none() is None
+        assert TaxonomyTerm.query.filter_by(slug="top1").one_or_none() is None
 
         # Delete nonexistent taxonomy fails
         res = client.delete("/taxonomies/nope/")
         assert res.status_code == 404
 
-    def test_term_delete(self, root_taxonomy, manager, client):
+    def test_term_delete(self, root_taxonomy, client):
         """Test deleting whole term and a subtree."""
-        manager.create("top1", {"en": "Top1"}, "/root/")
-        manager.create("leaf1", {"en": "Leaf1"}, "/root/top1/")
-        manager.create("top2", {"en": "Top2"}, "/root/")
+        root_taxonomy.create_term("/root/", slug="top1")
+        root_taxonomy.create_term("/root/top1/", slug="leaf1")
+        root_taxonomy.create_term("/root/", slug="top2")
 
         client.delete("/taxonomies/root/top1/")
-        assert manager.get_term(root_taxonomy, "leaf1") is None
-        assert manager.get_term(root_taxonomy, "top1") is None
-        assert manager.get_term(root_taxonomy, "top2") is not None
+        assert root_taxonomy.get_term("leaf1") is None
+        assert root_taxonomy.get_term("top1") is None
+        assert root_taxonomy.get_term("top2") is not None
 
-    def test_taxomomy_update(self, root_taxonomy, client, manager):
+    def test_taxomomy_update(self, root_taxonomy, client, Taxonomy):
         """Test updating a taxonomy."""
         res = client.patch("/taxonomies/root/",
                            json={"updated": "yes"})
         assert res.status_code == 200
         assert res.json["updated"] == "yes"
-        assert manager.get_taxonomy("root").extra_data == {"updated": "yes"}
+        assert Taxonomy.get('root').extra_data == {"updated": "yes"}
 
         # Test update invalid taxonomy fails
         res = client.patch("/taxonomies/nope/",
                            json={"updated": "yes"})
         assert res.status_code == 404
 
-    def test_term_update(self, root_taxonomy, client, manager):
+    def test_term_update(self, root_taxonomy, client):
         """Test updating a term."""
-        manager.create("term1", {"en": "Term1"}, "/root/")
+        root_taxonomy.create_term('', slug="term1")
 
         res = client.patch("/taxonomies/root/term1/",
                            json={"updated": "yes"})
         assert res.status_code == 200
         assert res.json["updated"] == "yes"
-        assert manager.get_term(root_taxonomy, "term1"). \
-            extra_data == {"updated": "yes"}
+        assert root_taxonomy.get_term("term1").extra_data == {"updated": "yes"}
 
         res = client.patch("/taxonomies/root/term1/",
                            json={"title": {"updated": "yes"}})
         assert res.status_code == 200
         assert res.json["title"] == {"updated": "yes"}
-        assert manager.get_term(root_taxonomy, "term1"). \
-            title == {"updated": "yes"}
+        assert root_taxonomy.get_term("term1").extra_data['title'] == {"updated": "yes"}
 
         # Test update invalid term fails
         res = client.patch("/taxonomies/root/nope/",
                            json={"title": {"updated": "yes"}})
         assert res.status_code == 404
 
-    def test_term_move(self, db, root_taxonomy, client, manager, Taxonomy):
+    def test_term_move(self, db, root_taxonomy, client, Taxonomy):
         """Test moving a Taxonomy Term."""
-        t = Taxonomy.create(db.session, code="groot")
+        t = Taxonomy.create_taxonomy(code="groot")
         db.session.commit()
 
-        manager.create("term1", {"en": "Term1"}, "/root/")
-        term2 = manager.create("term2", {"en": "Term1"}, "/groot/")
+        root_taxonomy.create_term('', slug="term1")
+        term2 = t.create_term('', slug="term2")
 
         # Test move /root/term1 -> /groot/term2/term1
         res = client.post("/taxonomies/root/term1/",
-                          json={"title": {},
-                                "slug": "whatever",
-                                "move_target": "http://localhost/taxonomies/groot/term2/"})  # noqa
+                          json={"move_target": "http://localhost/taxonomies/groot/term2/"})  # noqa
+
         assert res.status_code == 200
-        moved = manager.get_term(t, "term1")
+        moved = t.get_term("term1")
         assert moved is not None
-        assert moved.tree_id == t.root.tree_id
+        assert moved.tree_id == t.tree_id
         assert moved.is_descendant_of(term2)
         assert moved.tree_path == "/groot/term2/term1"
 
         # Test move subtree
         res = client.post("/taxonomies/groot/term2/",
-                          json={"title": {},
-                                "slug": "whatever",
-                                "move_target": "http://localhost/taxonomies/root/"})  # noqa
+                          json={"move_target": "http://localhost/taxonomies/root/"})  # noqa
         assert res.status_code == 200
 
-        moved1 = manager.get_term(root_taxonomy, "term2")
-        moved2 = manager.get_term(root_taxonomy, "term1")
+        moved1 = root_taxonomy.get_term("term2")
+        moved2 = root_taxonomy.get_term("term1")
 
         assert moved1.tree_path == "/root/term2"
         assert moved2.tree_path == "/root/term2/term1"
-        assert moved1.taxonomy == root_taxonomy
-        assert moved2.taxonomy == root_taxonomy
+        assert moved1.is_descendant_of(root_taxonomy)
+        assert moved2.is_descendant_of(root_taxonomy)
         assert moved2.is_descendant_of(moved1)
 
         # Test move to invalid path fails
         res = client.post("/taxonomies/root/term2/",
-                          json={"title": term2.title,
-                                "slug": term2.slug,
-                                "move_target": "http://localhost/taxonomies/root/somethingbad/"})  # noqa
+                          json={"move_target": "http://localhost/taxonomies/root/somethingbad/"})  # noqa
         assert res.status_code == 400
 
         # Test move to invalid url prefix fails
         res = client.post("/taxonomies/root/term2/",
-                          json={"title": term2.title,
-                                "slug": term2.slug,
-                                "move_target": "http://localhost/taxi/root/somethinggood/"})  # noqa
+                          json={"move_target": "http://localhost/taxi/root/somethinggood/"})  # noqa
         assert res.status_code == 400
 
         # Test move from invalid source fails
         res = client.post("/taxonomies/root/somethingbad/",
-                          json={"title": {},
-                                "slug": "whatever",
-                                "move_target": "http://localhost/taxonomies/groot/"})  # noqa
+                          json={"move_target": "http://localhost/taxonomies/groot/"})  # noqa
         assert res.status_code == 400
 
     @pytest.mark.parametrize('filled_taxonomy',
