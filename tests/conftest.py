@@ -4,12 +4,26 @@ import os
 
 import pytest
 from flask import Flask
+from invenio_access import ActionUsers, InvenioAccess
+from invenio_accounts import InvenioAccounts
+from invenio_accounts.testutils import create_test_user
 from invenio_db import InvenioDB
 from invenio_db import db as _db
 from sqlalchemy_mptt import mptt_sessionmaker
 from sqlalchemy_utils import create_database, database_exists
 
 from flask_taxonomies.ext import FlaskTaxonomies
+from flask_taxonomies.permissions import (
+    taxonomy_create_all,
+    taxonomy_delete_all,
+    taxonomy_read_all,
+    taxonomy_term_create_all,
+    taxonomy_term_delete_all,
+    taxonomy_term_move_all,
+    taxonomy_term_read_all,
+    taxonomy_term_update_all,
+    taxonomy_update_all,
+)
 from flask_taxonomies.views import blueprint
 
 from sqlalchemy_mptt import tree_manager
@@ -36,6 +50,8 @@ def base_app():
     )
 
     InvenioDB(app_)
+    InvenioAccounts(app_)
+    InvenioAccess(app_)
 
     return app_
 
@@ -48,6 +64,24 @@ def app(base_app):
 
     with base_app.app_context():
         return base_app
+
+
+@pytest.fixture()
+def users_data(db):
+    """User data fixture."""
+    return [
+        dict(email='user1@inveniosoftware.org', password='pass1'),
+        dict(email='user2@inveniosoftware.org', password='pass1'),
+    ]
+
+
+@pytest.fixture()
+def users(db, users_data):
+    """Create test users."""
+    return [
+        create_test_user(active=True, **users_data[0]),
+        create_test_user(active=True, **users_data[1]),
+    ]
 
 
 @pytest.yield_fixture()
@@ -122,3 +156,50 @@ def filled_taxonomy(request, db, root_taxonomy, TaxonomyTerm):
     TaxonomyTerm.rebuild_tree(session, root_taxonomy.tree_id)
 
     return root_taxonomy
+
+
+@pytest.yield_fixture()
+def permissions(db, root_taxonomy):
+    """Permission for users."""
+    users = {
+        None: None,
+    }
+
+    for user in ['taxonomies', 'terms', 'noperms', 'root-taxo']:
+        users[user] = create_test_user(
+            email='{0}@invenio-software.org'.format(user),
+            password='pass1',
+            active=True
+        )
+
+    taxonomy_perms = [
+        taxonomy_create_all,
+        taxonomy_update_all,
+        taxonomy_read_all,
+        taxonomy_delete_all
+    ]
+
+    taxonomy_term_perms = [
+        taxonomy_term_create_all,
+        taxonomy_term_update_all,
+        taxonomy_term_read_all,
+        taxonomy_term_delete_all,
+        taxonomy_term_move_all
+    ]
+
+    for perm in taxonomy_perms:
+        db.session.add(ActionUsers(
+            action=perm.value,
+            user=users['taxonomies']))
+        db.session.add(ActionUsers(
+            action=perm.value,
+            argument=str(root_taxonomy.code),
+            user=users['root-taxo']))
+    for perm in taxonomy_term_perms:
+        db.session.add(ActionUsers(
+            action=perm.value,
+            user=users['terms']))
+
+    db.session.commit()
+
+    yield users

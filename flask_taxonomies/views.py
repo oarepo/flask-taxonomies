@@ -6,6 +6,8 @@ from urllib.parse import urlsplit
 import accept
 from flask import Blueprint, abort, jsonify, url_for, make_response
 from flask import request
+from flask import Blueprint, abort, jsonify, make_response, request, url_for
+from flask_login import current_user
 from invenio_db import db
 from slugify import slugify
 from sqlalchemy.exc import IntegrityError
@@ -15,8 +17,14 @@ from webargs import fields
 from webargs.flaskparser import use_kwargs
 from werkzeug.exceptions import BadRequest
 
-from flask_taxonomies.models import Taxonomy
-from .models import TaxonomyTerm
+from flask_taxonomies.permissions import (
+    permission_taxonomy_create_all,
+    permission_taxonomy_read_all,
+    permission_term_create_all,
+)
+from flask_taxonomies.proxies import current_permission_factory
+
+from .models import Taxonomy, TaxonomyTerm
 
 blueprint = Blueprint("taxonomies", __name__, url_prefix="/taxonomies")
 
@@ -37,7 +45,6 @@ def url_to_path(url):
 
 def pass_taxonomy(f):
     """Decorate to retrieve a bucket."""
-
     @wraps(f)
     def decorate(*args, **kwargs):
         code = kwargs.pop("taxonomy_code")
@@ -52,7 +59,6 @@ def pass_taxonomy(f):
 
 def pass_taxonomy_extra_data(f):
     """Decorate to retrieve extra data for a taxonomy."""
-
     @wraps(f)
     def decorate(*args, **kwargs):
         extra = {**request.json}
@@ -68,7 +74,6 @@ def pass_taxonomy_extra_data(f):
 
 def pass_term_extra_data(f):
     """Decorate to retrieve extra data for a term."""
-
     @wraps(f)
     def decorate(*args, **kwargs):
         extra = {**request.json}
@@ -85,7 +90,6 @@ def pass_term_extra_data(f):
 
 def pass_term(f):
     """Decorate to retrieve a bucket."""
-
     @wraps(f)
     def decorate(*args, **kwargs):
         code = kwargs.pop("taxonomy_code")
@@ -103,7 +107,61 @@ def pass_term(f):
     return decorate
 
 
-def jsonify_taxonomy(t: TaxonomyTerm) -> dict:
+def check_permission(permission):
+    """
+    Check if permission is allowed.
+    If permission fails then the connection is aborted.
+    :param permission: The permission to check.
+    """
+    if permission is not None and not permission.can():
+        if current_user.is_authenticated:
+            abort(403,
+                  'You do not have a permission for this action')
+        abort(401)
+
+
+def need_permissions(object_getter, action):
+    """
+    Get permission for an action or abort.
+    :param object_getter: The function used to retrieve the object and pass it
+        to the permission factory.
+    :param action: The action needed.
+    """
+    def decorator_builder(f):
+        @wraps(f)
+        def decorate(*args, **kwargs):
+            check_permission(current_permission_factory(
+                object_getter(*args, **kwargs),
+                action(*args, **kwargs) if callable(action) else action))
+            return f(*args, **kwargs)
+
+        return decorate
+
+    return decorator_builder
+
+
+def need_move_permissions(object_getter, action):
+    """Get permission to move a Term if trying to move."""
+    def decorator_builder(f):
+        @wraps(f)
+        def decorate(*args, **kwargs):
+            taxonomy, term_path, move_target = object_getter(*args, **kwargs)
+            if move_target:
+                try:
+                    term = taxonomy.find_term(term_path)
+                    check_permission(
+                        current_permission_factory(term, action))
+                    check_permission(permission_term_create_all)
+                except AttributeError:
+                    pass
+            return f(*args, **kwargs)
+
+        return decorate
+
+    return decorator_builder
+
+
+def jsonify_taxonomy(t: Taxonomy) -> dict:
     """Prepare Taxonomy to be easily jsonified."""
     return {
         **(t.extra_data or {}),
@@ -132,7 +190,6 @@ def jsonify_taxonomy_term(taxonomy_code: str,
         "slug": t.slug,
         "path": path,
         "links": {
-            # TODO: replace with Term detail route
             "self": url_for(
                 "taxonomies.taxonomy_get_term",
                 taxonomy_code=taxonomy_code,
@@ -149,6 +206,7 @@ def jsonify_taxonomy_term(taxonomy_code: str,
 
 
 @blueprint.route("/", methods=("GET",))
+@permission_taxonomy_read_all.require(http_exception=403)
 def taxonomy_list():
     """List all available taxonomies."""
     return jsonify([jsonify_taxonomy(t) for t in Taxonomy.taxonomies()])
@@ -162,6 +220,7 @@ def taxonomy_list():
         "extra_data": fields.Dict()
     }
 )
+@permission_taxonomy_create_all.require(http_exception=403)
 def taxonomy_create(code: str, extra_data: dict = None):
     """Create a new Taxonomy."""
     try:
@@ -183,6 +242,10 @@ def taxonomy_create(code: str, extra_data: dict = None):
 
 @blueprint.route("/<string:taxonomy_code>/", methods=("GET",))
 @pass_taxonomy
+@need_permissions(
+    lambda taxonomy: taxonomy,
+    'taxonomy-read'
+)
 def taxonomy_get_roots(taxonomy):
     """Get top-level terms in a Taxonomy."""
     # default for drilldown on taxonomy is False
@@ -236,6 +299,10 @@ def build_tree_from_list(taxonomy_code, root_path, tree_as_list):
 
 @blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("GET",))
 @pass_term
+@need_permissions(
+    lambda taxonomy, term: term,
+    'taxonomy-term-read'
+)
 def taxonomy_get_term(taxonomy, term):
     """Get Taxonomy Term detail."""
     # default for drilldown on taxonomy term is True
@@ -267,6 +334,13 @@ def taxonomy_get_term(taxonomy, term):
         "move_target": fields.URL(required=False,
                                   empty_value=None),
     }
+)
+@permission_term_create_all.require(http_exception=403)
+@need_move_permissions(
+    lambda **kwargs: (kwargs.get('taxonomy'),
+                      kwargs.get('term_path'),
+                      kwargs.get('move_target')),
+    'taxonomy-term-move'
 )
 def taxonomy_create_term(taxonomy, slug=None,
                          term_path='', extra_data=None, move_target=None):
@@ -317,6 +391,10 @@ def taxonomy_create_term(taxonomy, slug=None,
 
 @blueprint.route("/<string:taxonomy_code>/", methods=("DELETE",))
 @pass_taxonomy
+@need_permissions(
+    lambda taxonomy: taxonomy,
+    'taxonomy-delete'
+)
 def taxonomy_delete(taxonomy):
     """Delete whole taxonomy tree."""
     session = mptt_sessionmaker(db.session)
@@ -329,6 +407,10 @@ def taxonomy_delete(taxonomy):
 
 @blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("DELETE",))  # noqa
 @pass_term
+@need_permissions(
+    lambda taxonomy, term: term,
+    'taxonomy-term-delete'
+)
 def taxonomy_delete_term(taxonomy, term):
     """Delete a Term subtree in a Taxonomy."""
     session = mptt_sessionmaker(db.session)
@@ -345,6 +427,10 @@ def taxonomy_delete_term(taxonomy, term):
     {"extra_data": fields.Dict(empty_value={})}
 )
 @pass_taxonomy
+@need_permissions(
+    lambda taxonomy, extra_data: taxonomy,
+    'taxonomy-update'
+)
 def taxonomy_update(taxonomy, extra_data):
     """Update Taxonomy."""
     taxonomy.update(extra_data)
@@ -354,12 +440,16 @@ def taxonomy_update(taxonomy, extra_data):
 
 @blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("PATCH",))  # noqa
 @pass_term_extra_data
+@pass_term
 @use_kwargs(
     {
         "extra_data": fields.Dict(empty_value={}),
     }
 )
-@pass_term
+@need_permissions(
+    lambda **kwargs: kwargs.get('term'),
+    'taxonomy-term-update'
+)
 def taxonomy_update_term(taxonomy, term, extra_data=None):
     """Update Term in Taxonomy."""
     changes = {}
