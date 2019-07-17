@@ -9,7 +9,7 @@ from invenio_accounts import InvenioAccounts
 from invenio_accounts.testutils import create_test_user
 from invenio_db import InvenioDB
 from invenio_db import db as _db
-from sqlalchemy_mptt import mptt_sessionmaker
+from sqlalchemy_mptt import mptt_sessionmaker, tree_manager
 from sqlalchemy_utils import create_database, database_exists
 
 from flask_taxonomies.ext import FlaskTaxonomies
@@ -25,8 +25,6 @@ from flask_taxonomies.permissions import (
     taxonomy_update_all,
 )
 from flask_taxonomies.views import blueprint
-
-from sqlalchemy_mptt import tree_manager
 
 
 @pytest.fixture()

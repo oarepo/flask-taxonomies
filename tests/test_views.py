@@ -7,9 +7,9 @@
 import time
 
 import pytest
-from sqlalchemy.orm.exc import NoResultFound
 from flask_security import AnonymousUser
 from invenio_access import ActionUsers
+from sqlalchemy.orm.exc import NoResultFound
 
 from tests.testutils import login_user
 

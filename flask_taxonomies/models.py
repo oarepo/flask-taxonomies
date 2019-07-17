@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """User models."""
+import wrapt
 from invenio_db import db
 from sqlalchemy import asc
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy_mptt import mptt_sessionmaker, BaseNestedSets
-import wrapt
+from sqlalchemy_mptt import BaseNestedSets, mptt_sessionmaker
 
 
 class TaxonomyTerm(db.Model, BaseNestedSets):

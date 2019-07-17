@@ -21,6 +21,7 @@ from flask_taxonomies.permissions import (
     permission_term_create_all,
 )
 from flask_taxonomies.proxies import current_permission_factory
+
 from .models import Taxonomy, TaxonomyTerm
 
 blueprint = Blueprint("taxonomies", __name__, url_prefix="/taxonomies")

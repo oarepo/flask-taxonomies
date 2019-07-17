@@ -7,9 +7,8 @@
 
 """Create flask-taxonomies branch."""
 
-from alembic import op
 import sqlalchemy as sa
-
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = 'e5848504dc5f'

@@ -1,16 +1,24 @@
 import click
 from flask import current_app
 from flask.cli import with_appcontext
+from invenio_access import ActionSystemRoles, any_user
 from invenio_accounts.models import Role, User
 from invenio_db import db
-from invenio_access import ActionSystemRoles, any_user
 
 #
 # Taxonomies commands
 #
-from flask_taxonomies.permissions import taxonomy_read_all, taxonomy_term_read_all, taxonomy_create_all, \
-    taxonomy_update_all, taxonomy_delete_all, taxonomy_term_create_all, taxonomy_term_update_all, \
-    taxonomy_term_delete_all, taxonomy_term_move_all
+from flask_taxonomies.permissions import (
+    taxonomy_create_all,
+    taxonomy_delete_all,
+    taxonomy_read_all,
+    taxonomy_term_create_all,
+    taxonomy_term_delete_all,
+    taxonomy_term_move_all,
+    taxonomy_term_read_all,
+    taxonomy_term_update_all,
+    taxonomy_update_all,
+)
 
 
 @click.group()

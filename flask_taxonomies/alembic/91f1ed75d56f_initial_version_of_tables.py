@@ -7,9 +7,8 @@
 
 """Initial version of tables."""
 
-from alembic import op
 import sqlalchemy as sa
-
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = '91f1ed75d56f'
