@@ -31,8 +31,8 @@ def upgrade():
     sa.Column('level', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['parent_id'], ['taxonomy_term.id'], name=op.f('fk_taxonomy_term_parent_id_taxonomy_term'), ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id', name=op.f('pk_taxonomy_term')),
-    sa.UniqueConstraint('slug', 'parent_id', name=op.f('uq_taxonomy_term_slug')),
-    sa.UniqueConstraint('slug', 'tree_id', name=op.f('uq_taxonomy_term_slug'))
+    sa.UniqueConstraint('slug', 'parent_id', name=op.f('uq_taxonomy_term_slug_parent')),
+    sa.UniqueConstraint('slug', 'tree_id', name=op.f('uq_taxonomy_term_slug_tree'))
     )
     op.create_index(op.f('ix_taxonomy_term_slug'), 'taxonomy_term', ['slug'], unique=False)
     # ### end Alembic commands ###
