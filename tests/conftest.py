@@ -12,6 +12,8 @@ from sqlalchemy_utils import create_database, database_exists
 from flask_taxonomies.ext import FlaskTaxonomies
 from flask_taxonomies.views import blueprint
 
+from sqlalchemy_mptt import tree_manager
+
 
 @pytest.fixture()
 def base_app():
@@ -107,13 +109,22 @@ def filled_taxonomy(request, db, root_taxonomy, TaxonomyTerm):
     def _generate(parent, lengths, prefix, separator):
         if not lengths:
             return
-        session = mptt_sessionmaker(db.session)
         for i in range(1, 1 + lengths[0]):
             title = f'{prefix}{i}'
             t = TaxonomyTerm(slug=title, title={'en': title}, parent=parent)
-            session.add(t)
-            session.commit()
+            t.left = t.right = 0
+            t.tree_id = root_taxonomy.root.tree_id
+            db.session.add(t)
             _generate(t, lengths[1:], prefix + separator, separator)
 
+    tree_manager.register_events(remove=True)       # danger: not thread safe
+
     _generate(root_taxonomy.root, request.param, 'node-', '-')
+    db.session.commit()
+
+    session = mptt_sessionmaker(db.session)
+    tree_manager.register_events()
+
+    TaxonomyTerm.rebuild_tree(session, root_taxonomy.root.tree_id)
+
     return root_taxonomy

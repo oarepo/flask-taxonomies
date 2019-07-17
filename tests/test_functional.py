@@ -4,16 +4,26 @@
 # See: http://webtest.readthedocs.org/
 # """
 """Functional unit tests using WebTest."""
-import json
 import time
 
 import pytest
 
+if False:
+    from sqlalchemy import event
+    from sqlalchemy.engine import Engine
 
-# import logging
-#
-# logging.basicConfig()
-# logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
+    @event.listens_for(Engine, "before_cursor_execute")
+    def before_cursor_execute(conn, cursor, statement,
+                              parameters, context, executemany):
+        conn.info.setdefault('query_start_time', []).append(time.time())
+        print("Start Query: %s", statement)
+
+    @event.listens_for(Engine, "after_cursor_execute")
+    def after_cursor_execute(conn, cursor, statement,
+                             parameters, context, executemany):
+        total = time.time() - conn.info['query_start_time'].pop(-1)
+        print("Query Complete!")
+        print("Query Time:", total)
 
 
 @pytest.mark.usefixtures("db")
@@ -275,10 +285,12 @@ class TestTaxonomyAPI:
                              indirect=['filled_taxonomy'])
     def test_large_taxonomy(self, client, filled_taxonomy):
         """Test listing of top-level taxonomy terms."""
-
-        # Test empty taxonomy
         t1 = time.time()
-        res = client.get("/taxonomies/{}/".format(filled_taxonomy.code))
-        t2 = time.time()
-        print("time taken", t2 - t1)
+        res = client.get(
+            "/taxonomies/{}/?drilldown=1".format(filled_taxonomy.code))
+        print('Total time', time.time() - t1)
+        t1 = time.time()
+        res = client.get(
+            "/taxonomies/{}/?drilldown=1".format(filled_taxonomy.code))
+        print('Total time', time.time() - t1)
         assert len(res.json) == 1000

@@ -222,6 +222,7 @@ def build_tree_from_list(taxonomy_code, root_path, tree_as_list):
     for item in tree_as_list:
         if root_level is None:
             root_level = item.level
+
         while item.level - root_level < len(stack):
             stack.pop()
 
@@ -230,7 +231,7 @@ def build_tree_from_list(taxonomy_code, root_path, tree_as_list):
             root_path if not stack else stack[-1]['path'])
 
         if item.level == root_level:
-            # just under the single root
+            # top element in tree_as_list
             ret.append(item_json)
         else:
             # append to parent element
