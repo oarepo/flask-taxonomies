@@ -74,7 +74,7 @@ class TestTaxonomyTerm:
         assert retrieved_leaf == leaf
 
         # Test get invalid id
-        retrieved_leaf = TaxonomyTerm.query.get('hello123')
+        retrieved_leaf = TaxonomyTerm.query.get(12345)
         assert retrieved_leaf is None
 
     def test_update_taxonomy_term(self, db, root_taxonomy, TaxonomyTerm):
