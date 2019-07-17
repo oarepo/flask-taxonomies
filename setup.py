@@ -107,6 +107,9 @@ setup(
             'taxonomy_term_move_all'
             ' = flask_taxonomies.permissions:taxonomy_term_move_all',
         ],
+        'flask.commands': [
+            'taxonomies = flask_taxonomies.cli:taxonomies',
+        ]
     },
     include_package_data=True,
     setup_requires=setup_requires,

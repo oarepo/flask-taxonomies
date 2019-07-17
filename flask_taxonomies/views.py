@@ -4,8 +4,6 @@ from functools import wraps
 from urllib.parse import urlsplit
 
 import accept
-from flask import Blueprint, abort, jsonify, url_for, make_response
-from flask import request
 from flask import Blueprint, abort, jsonify, make_response, request, url_for
 from flask_login import current_user
 from invenio_db import db
@@ -23,7 +21,6 @@ from flask_taxonomies.permissions import (
     permission_term_create_all,
 )
 from flask_taxonomies.proxies import current_permission_factory
-
 from .models import Taxonomy, TaxonomyTerm
 
 blueprint = Blueprint("taxonomies", __name__, url_prefix="/taxonomies")

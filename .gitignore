@@ -68,3 +68,5 @@ migrations/
 dist/
 
 \.envrc
+
+run\.sh
