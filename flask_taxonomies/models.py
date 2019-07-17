@@ -40,7 +40,7 @@ class Taxonomy(SurrogatePK, db.Model):
     root_id = db.Column(db.Integer, db.ForeignKey("taxonomy_term.id"),
                         nullable=False)
     root = relationship("TaxonomyTerm", uselist=False,
-                        back_populates="root_of")
+                        back_populates="root_of", lazy='joined')
 
     def __init__(self, code: str,
                  root: 'TaxonomyTerm',

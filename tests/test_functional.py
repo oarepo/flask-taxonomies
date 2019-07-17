@@ -16,7 +16,7 @@ if False:
     def before_cursor_execute(conn, cursor, statement,
                               parameters, context, executemany):
         conn.info.setdefault('query_start_time', []).append(time.time())
-        print("Start Query: %s", statement)
+        print("Start Query: %s", statement, parameters)
 
     @event.listens_for(Engine, "after_cursor_execute")
     def after_cursor_execute(conn, cursor, statement,
@@ -290,6 +290,7 @@ class TestTaxonomyAPI:
             "/taxonomies/{}/?drilldown=1".format(filled_taxonomy.code))
         print('Total time', time.time() - t1)
         t1 = time.time()
+        print("Request starts")
         res = client.get(
             "/taxonomies/{}/?drilldown=1".format(filled_taxonomy.code))
         print('Total time', time.time() - t1)
