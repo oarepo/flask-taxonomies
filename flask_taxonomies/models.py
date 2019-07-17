@@ -11,8 +11,8 @@ class TaxonomyTerm(db.Model, BaseNestedSets):
     """TaxonomyTerm adjacency list model."""
     __tablename__ = "taxonomy_term"
     __table_args__ = (
-        db.UniqueConstraint('slug', 'parent_id'),
-        db.UniqueConstraint('slug', 'tree_id'),
+        db.UniqueConstraint('slug', 'parent_id', name='uq_taxonomy_term_slug_parent'),
+        db.UniqueConstraint('slug', 'tree_id', name='uq_taxonomy_term_slug_tree'),
     )
 
     id = db.Column(db.Integer, primary_key=True)
