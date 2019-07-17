@@ -37,6 +37,7 @@ def all_read():
     db.session.add(ActionSystemRoles.allow(taxonomy_term_read_all, role=any_user))
     db.session.commit()
 
+
 @taxonomies.command('all-modify')
 @with_appcontext
 def all_modify():
