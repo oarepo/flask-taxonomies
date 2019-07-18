@@ -12,7 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy_mptt import mptt_sessionmaker
 from webargs import fields
-from webargs.flaskparser import use_kwargs
+from webargs.flaskparser import use_kwargs, parser
 from werkzeug.exceptions import BadRequest
 
 from flask_taxonomies.permissions import (
@@ -55,35 +55,14 @@ def pass_taxonomy(f):
     return decorate
 
 
-def pass_taxonomy_extra_data(f):
-    """Decorate to retrieve extra data for a taxonomy."""
-    @wraps(f)
-    def decorate(*args, **kwargs):
+@parser.location_handler("extra_data")
+def parse_extra_data(request, name, field):
+    if name == 'extra_data':
         extra = {**request.json}
-        try:
-            extra.pop('code')
-        except KeyError:
-            pass
-        request.json['extra_data'] = extra
-        return f(extra_data=extra, *args, **kwargs)
-
-    return decorate
-
-
-def pass_term_extra_data(f):
-    """Decorate to retrieve extra data for a term."""
-    @wraps(f)
-    def decorate(*args, **kwargs):
-        extra = {**request.json}
-        try:
-            extra.pop('slug')
-            extra.pop('move_target')
-        except KeyError:
-            pass
-        request.json['extra_data'] = extra
-        return f(extra_data=extra, *args, **kwargs)
-
-    return decorate
+        extra.pop('code', None)
+        extra.pop('slug', None)
+        extra.pop('move_target', None)
+        return extra
 
 
 def pass_term(f):
@@ -211,11 +190,10 @@ def taxonomy_list():
 
 
 @blueprint.route("/", methods=("POST",))
-@pass_taxonomy_extra_data
 @use_kwargs(
     {
         "code": fields.Str(required=True),
-        "extra_data": fields.Dict()
+        "extra_data": fields.Dict(location='extra_data')
     }
 )
 @permission_taxonomy_create_all.require(http_exception=403)
@@ -324,11 +302,10 @@ def taxonomy_get_term(taxonomy, term):
 @blueprint.route("/<string:taxonomy_code>/", methods=("POST",))
 @blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("POST",))  # noqa
 @pass_taxonomy
-@pass_term_extra_data
 @use_kwargs(
     {
         "slug": fields.Str(required=False),
-        "extra_data": fields.Dict(),
+        "extra_data": fields.Dict(location='extra_data'),
         "move_target": fields.URL(required=False,
                                   empty_value=None),
     }
@@ -351,7 +328,7 @@ def taxonomy_create_term(taxonomy, slug=None,
         abort(400, "Invalid Term path given.")
 
     full_path = "/{}/{}".format(taxonomy.code, term_path)
-
+    print('Extra', extra_data)
     if taxonomy and term and move_target:
         target_path = url_to_path(move_target)
         try:
@@ -420,9 +397,8 @@ def taxonomy_delete_term(taxonomy, term):
 
 
 @blueprint.route("/<string:taxonomy_code>/", methods=("PATCH",))
-@pass_taxonomy_extra_data
 @use_kwargs(
-    {"extra_data": fields.Dict(empty_value={})}
+    {"extra_data": fields.Dict(empty_value={}, location='extra_data')}
 )
 @pass_taxonomy
 @need_permissions(
@@ -437,11 +413,10 @@ def taxonomy_update(taxonomy, extra_data):
 
 
 @blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("PATCH",))  # noqa
-@pass_term_extra_data
 @pass_term
 @use_kwargs(
     {
-        "extra_data": fields.Dict(empty_value={}),
+        "extra_data": fields.Dict(empty_value={}, location='extra_data'),
     }
 )
 @need_permissions(
