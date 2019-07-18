@@ -12,7 +12,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy_mptt import mptt_sessionmaker
 from webargs import fields
-from webargs.flaskparser import use_kwargs, parser
+from webargs.flaskparser import parser, use_kwargs
 from werkzeug.exceptions import BadRequest
 
 from flask_taxonomies.permissions import (
