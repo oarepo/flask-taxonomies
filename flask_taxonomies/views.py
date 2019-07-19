@@ -4,7 +4,7 @@ from functools import wraps
 from urllib.parse import urlsplit
 
 import accept
-from flask import Blueprint, abort, jsonify, make_response, request, url_for
+from flask import Blueprint, abort, jsonify, make_response, request, url_for, current_app
 from flask_login import current_user
 from invenio_db import db
 from slugify import slugify
@@ -33,9 +33,14 @@ def url_to_path(url):
     :param url: The target URL.
     :returns: The target path
     """
+    if url == '/':
+        return ''
     parts = urlsplit(url)
     path = parts.path
-    if parts.path.startswith(blueprint.url_prefix):
+    # invenio uses proxy hack to map /api, so need to do it here as well
+    if path.startswith('/api/'):
+        path = path[4:]
+    if path.startswith(blueprint.url_prefix):
         return path[len(blueprint.url_prefix):]
     else:
         abort(400, 'Invalid URL passed.')
@@ -306,7 +311,7 @@ def taxonomy_get_term(taxonomy, term):
     {
         "slug": fields.Str(required=False),
         "extra_data": fields.Dict(location='extra_data'),
-        "move_target": fields.URL(required=False,
+        "move_target": fields.Str(required=False,
                                   empty_value=None),
     }
 )
@@ -331,6 +336,10 @@ def taxonomy_create_term(taxonomy, slug=None,
     print('Extra', extra_data)
     if taxonomy and term and move_target:
         target_path = url_to_path(move_target)
+
+        if not target_path:
+            target_path = f'{taxonomy.code}/'
+
         try:
             term.move_to(target_path)
         except NoResultFound:
