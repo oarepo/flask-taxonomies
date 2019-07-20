@@ -4,7 +4,15 @@ from functools import wraps
 from urllib.parse import urlsplit
 
 import accept
-from flask import Blueprint, abort, jsonify, make_response, request, url_for, current_app
+from flask import (
+    Blueprint,
+    abort,
+    current_app,
+    jsonify,
+    make_response,
+    request,
+    url_for,
+)
 from flask_login import current_user
 from invenio_db import db
 from slugify import slugify
@@ -15,6 +23,22 @@ from webargs import fields
 from webargs.flaskparser import parser, use_kwargs
 from werkzeug.exceptions import BadRequest
 
+from flask_taxonomies.models import (
+    after_taxonomy_created,
+    after_taxonomy_deleted,
+    after_taxonomy_term_created,
+    after_taxonomy_term_deleted,
+    after_taxonomy_term_moved,
+    after_taxonomy_term_updated,
+    after_taxonomy_updated,
+    before_taxonomy_created,
+    before_taxonomy_deleted,
+    before_taxonomy_term_created,
+    before_taxonomy_term_deleted,
+    before_taxonomy_term_moved,
+    before_taxonomy_term_updated,
+    before_taxonomy_updated,
+)
 from flask_taxonomies.permissions import (
     permission_taxonomy_create_all,
     permission_taxonomy_read_all,
@@ -206,11 +230,11 @@ def taxonomy_create(code: str, extra_data: dict = None):
     """Create a new Taxonomy."""
     try:
         session = mptt_sessionmaker(db.session)
+        before_taxonomy_created.send(current_app._get_current_object(), code, extra_data)
         created = Taxonomy.create_taxonomy(code=code, extra_data=extra_data)
         session.add(created)
         session.commit()
-        for tax in Taxonomy.taxonomies():
-            print(tax.code, tax.parent, tax.tree_id)
+        after_taxonomy_created.send(created)
         created_dict = jsonify_taxonomy(created)
 
         response = jsonify(created_dict)
@@ -336,6 +360,7 @@ def taxonomy_create_term(taxonomy, slug=None,
     print('Extra', extra_data)
     if taxonomy and term and move_target:
         target_path = url_to_path(move_target)
+        before_taxonomy_term_moved(taxonomy, term, target_path)
 
         if not target_path:
             target_path = f'{taxonomy.code}/'
@@ -344,6 +369,7 @@ def taxonomy_create_term(taxonomy, slug=None,
             term.move_to(target_path)
         except NoResultFound:
             abort(400, "Target path not found.")
+        after_taxonomy_term_moved(taxonomy, term)
 
         moved = jsonify_taxonomy_term(taxonomy.code,
                                       term,
@@ -353,11 +379,14 @@ def taxonomy_create_term(taxonomy, slug=None,
         return response
 
     try:
-        created = TaxonomyTerm(slug=slugify(slug), extra_data=extra_data)
+        slug = slugify(slug)
+        before_taxonomy_term_created(taxonomy, slug, extra_data)
+        created = TaxonomyTerm(slug=slug, extra_data=extra_data)
         term.append(created)
         session = mptt_sessionmaker(db.session)
         session.add(created)
         session.commit()
+        after_taxonomy_term_created(taxonomy, term)
 
         created_dict = \
             jsonify_taxonomy_term(taxonomy.code,
@@ -382,8 +411,10 @@ def taxonomy_create_term(taxonomy, slug=None,
 def taxonomy_delete(taxonomy):
     """Delete whole taxonomy tree."""
     session = mptt_sessionmaker(db.session)
+    before_taxonomy_deleted.send(taxonomy)
     session.delete(taxonomy)
     session.commit()
+    after_taxonomy_deleted.send(taxonomy)
     response = make_response()
     response.status_code = 204
     return response
@@ -398,8 +429,10 @@ def taxonomy_delete(taxonomy):
 def taxonomy_delete_term(taxonomy, term):
     """Delete a Term subtree in a Taxonomy."""
     session = mptt_sessionmaker(db.session)
+    before_taxonomy_term_deleted(taxonomy, term)
     session.delete(term)
     session.commit()
+    after_taxonomy_term_deleted(taxonomy, term)
     response = make_response()
     response.status_code = 204
     return response
@@ -416,7 +449,9 @@ def taxonomy_delete_term(taxonomy, term):
 )
 def taxonomy_update(taxonomy, extra_data):
     """Update Taxonomy."""
+    before_taxonomy_updated.send(taxonomy, extra_data)
     taxonomy.update(extra_data)
+    after_taxonomy_updated.send(taxonomy)
 
     return jsonify(jsonify_taxonomy(taxonomy))
 
@@ -438,7 +473,9 @@ def taxonomy_update_term(taxonomy, term, extra_data=None):
     if extra_data:
         changes["extra_data"] = extra_data
 
+    before_taxonomy_term_updated.send(taxonomy, term, extra_data)
     term.update(**changes)
+    after_taxonomy_term_updated.send(taxonomy, term)
 
     return jsonify(
         jsonify_taxonomy_term(taxonomy.code, term, term.parent.tree_path))
