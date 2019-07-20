@@ -72,6 +72,7 @@ def url_to_path(url):
 
 def pass_taxonomy(f):
     """Decorate to retrieve a bucket."""
+
     @wraps(f)
     def decorate(*args, **kwargs):
         code = kwargs.pop("taxonomy_code")
@@ -96,6 +97,7 @@ def parse_extra_data(request, name, field):
 
 def pass_term(f):
     """Decorate to retrieve a bucket."""
+
     @wraps(f)
     def decorate(*args, **kwargs):
         code = kwargs.pop("taxonomy_code")
@@ -133,6 +135,7 @@ def need_permissions(object_getter, action):
         to the permission factory.
     :param action: The action needed.
     """
+
     def decorator_builder(f):
         @wraps(f)
         def decorate(*args, **kwargs):
@@ -148,6 +151,7 @@ def need_permissions(object_getter, action):
 
 def need_move_permissions(object_getter, action):
     """Get permission to move a Term if trying to move."""
+
     def decorator_builder(f):
         @wraps(f)
         def decorate(*args, **kwargs):
@@ -230,7 +234,8 @@ def taxonomy_create(code: str, extra_data: dict = None):
     """Create a new Taxonomy."""
     try:
         session = mptt_sessionmaker(db.session)
-        before_taxonomy_created.send(current_app._get_current_object(), code=code, extra_data=extra_data)
+        before_taxonomy_created.send(current_app._get_current_object(),
+                                     code=code, extra_data=extra_data)
         created = Taxonomy.create_taxonomy(code=code, extra_data=extra_data)
         session.add(created)
         session.commit()
