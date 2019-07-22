@@ -138,8 +138,14 @@ class Taxonomy(wrapt.ObjectProxy):
             yield cls(term)
 
     @classmethod
-    def get(cls, code):
-        return cls(TaxonomyTerm.query.filter_by(parent=None, slug=code).one())
+    def get(cls, code, required=False):
+        if required:
+            tax = TaxonomyTerm.query.filter_by(parent=None, slug=code).one()
+        else:
+            tax = TaxonomyTerm.query.filter_by(parent=None, slug=code).one_or_none()
+            if not tax:
+                return None
+        return cls(tax)
 
     @classmethod
     def find_taxonomy_and_term(cls, path):
