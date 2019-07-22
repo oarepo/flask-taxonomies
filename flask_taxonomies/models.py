@@ -166,8 +166,8 @@ class Taxonomy(wrapt.ObjectProxy):
             return found.one()
         return found.one_or_none()
 
-    def create_term(self, parent_path, *args, **kwargs):
-        term = TaxonomyTerm(*args, **kwargs)
+    def create_term(self, parent_path=None, **kwargs):
+        term = TaxonomyTerm(**kwargs)
         parts = _parse_path(parent_path)
         parent_term = self.get_term(parts[-1]) if parts else self
         if not parent_term:
@@ -181,7 +181,7 @@ class Taxonomy(wrapt.ObjectProxy):
 
 
 def _parse_path(path):
-    path = path.strip('/')
+    path = (path or '').strip('/')
     return [x for x in path.split('/') if x]
 
 
