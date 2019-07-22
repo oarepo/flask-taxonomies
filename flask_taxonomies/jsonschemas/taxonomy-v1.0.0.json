@@ -1,0 +1,32 @@
+{
+    "definitions": {
+        "taxonomy": {
+            "$id": "#taxonomy",
+            "type": "object",
+            "properties": {
+                "id": {
+                    "description": "Invenio DB identifier (integer).",
+                    "type": "string"
+                },
+                "slug": {
+                    "description": "Taxonomy slug or code.",
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
+                },
+                "links": {
+                    "type": "object",
+                    "properties": {
+                        "self": {
+                            "type": "string"
+                        },
+                        "tree": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -35,6 +35,8 @@ tests_require = [
     'pytest-cov>=1.8.0',
     'pytest-random-order>=0.5.4',
     'pytest-pep8>=1.0.6',
+    'invenio-oarepo-mapping-includes>=1.0.0',
+    'invenio-records-rest>=1.4.2'
 ]
 
 extras_require = {
@@ -84,6 +86,12 @@ setup(
         ],
         'invenio_base.api_apps': [
             'flask_taxonomies = flask_taxonomies.ext:FlaskTaxonomies',
+        ],
+        'invenio_jsonschemas.schemas': [
+            'flask_taxonomies = flask_taxonomies.jsonschemas'
+        ],
+        'invenio_oarepo_mapping_includes': [
+            'flask_taxonomies=flask_taxonomies.included_mappings'
         ],
         'invenio_access.actions': [
             # Taxonomy related permissions

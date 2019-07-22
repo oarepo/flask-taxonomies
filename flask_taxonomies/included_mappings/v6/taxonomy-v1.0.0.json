@@ -1,0 +1,27 @@
+{
+    "Taxonomy": {
+        "type": "nested",
+        "properties": {
+            "id": {
+                "type": "keyword"
+            },
+            "slug": {
+                "type": "keyword"
+            },
+            "path": {
+                "type": "text"
+            },
+            "links": {
+                "type": "nested",
+                "properties": {
+                    "self": {
+                        "type": "keyword"
+                    },
+                    "tree": {
+                        "type": "keyword"
+                    }
+                }
+            }
+        }
+    }
+}
