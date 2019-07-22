@@ -67,7 +67,7 @@ def url_to_path(url):
     if path.startswith(blueprint.url_prefix):
         return path[len(blueprint.url_prefix):]
     else:
-        abort(400, 'Invalid URL passed.')
+        raise ValueError('Invalid URL passed.')
 
 
 def pass_taxonomy(f):
@@ -361,7 +361,11 @@ def taxonomy_create_term(taxonomy, slug=None,
         abort(400, "Invalid Term path given.")
 
     if taxonomy and term and move_target:
-        target_path = url_to_path(move_target)
+        try:
+            target_path = url_to_path(move_target)
+        except ValueError:
+            abort(400, 'Invalid target URL passed.')
+
         before_taxonomy_term_moved.send(term, taxonomy=taxonomy, target_path=target_path)
 
         if not target_path:

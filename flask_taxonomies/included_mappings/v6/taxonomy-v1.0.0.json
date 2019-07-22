@@ -1,6 +1,6 @@
 {
     "Taxonomy": {
-        "type": "nested",
+        "type": "object",
         "properties": {
             "id": {
                 "type": "keyword"

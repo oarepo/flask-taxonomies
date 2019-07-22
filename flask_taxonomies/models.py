@@ -151,7 +151,7 @@ class Taxonomy(wrapt.ObjectProxy):
     def find_taxonomy_and_term(cls, path):
         parts = _parse_path(path)
         taxonomy = Taxonomy.get(parts[0])
-        if len(parts) > 1:
+        if len(parts) > 1 and taxonomy:
             term = taxonomy.get_term(parts[-1], required=True)
         else:
             term = taxonomy
