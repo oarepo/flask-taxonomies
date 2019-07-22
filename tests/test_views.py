@@ -1,0 +1,363 @@
+# # -*- coding: utf-8 -*-
+# """Functional tests using WebTest.
+#
+# See: http://webtest.readthedocs.org/
+# """
+"""Functional unit tests using WebTest."""
+import time
+
+import pytest
+from flask_security import AnonymousUser
+from invenio_access import ActionUsers
+from sqlalchemy.orm.exc import NoResultFound
+
+from tests.testutils import login_user
+
+if False:
+    from sqlalchemy import event
+    from sqlalchemy.engine import Engine
+
+    @event.listens_for(Engine, "before_cursor_execute")
+    def before_cursor_execute(conn, cursor, statement,
+                              parameters, context, executemany):
+        conn.info.setdefault('query_start_time', []).append(time.time())
+        print("Start Query: %s", statement, parameters)
+
+    @event.listens_for(Engine, "after_cursor_execute")
+    def after_cursor_execute(conn, cursor, statement,
+                             parameters, context, executemany):
+        total = time.time() - conn.info['query_start_time'].pop(-1)
+        print("Query Complete!")
+        print("Query Time:", total)
+
+
+@pytest.mark.usefixtures("db")
+class TestTaxonomyAPI:
+    """TaxonomyTerm functional test."""
+
+    def test_list_taxonomies(self, db, client, root_taxonomy, Taxonomy, permissions):
+        """Test listing of taxonomies."""
+        login_user(client, permissions['taxonomies'])
+        additional = Taxonomy.create_taxonomy(code="additional",
+                                              extra_data={"extra": "data"})
+        db.session.add(additional)
+        db.session.commit()
+
+        res = client.get("/taxonomies/")
+        jsonres = res.json
+        assert {
+                   "id": root_taxonomy.id,
+                   "code": root_taxonomy.code,
+                   "links": {"self": "http://localhost/taxonomies/root/"},
+               } in jsonres
+        assert {
+                   "id": additional.id,
+                   "code": additional.code,
+                   "extra": "data",
+                   "links": {
+                       "self": "http://localhost/taxonomies/additional/"},
+               } in jsonres
+
+        # Test access forbidden for user without permission
+        login_user(client, permissions['noperms'])
+        res = client.get("/taxonomies/")
+        jsonres = res.json
+        assert jsonres is None
+        assert res.status_code == 403
+
+    def test_create_taxonomy(self, client, root_taxonomy, Taxonomy, permissions):
+        """Test Taxonomy creation."""
+
+        login_user(client, permissions['taxonomies'])
+
+        res = client.post("/taxonomies/",
+                          json={"code": "new", "extra": "new"})
+
+        assert res.status_code == 201
+        assert res.headers['Location'] == 'http://localhost/taxonomies/new/'
+
+        retrieved = next(Taxonomy.taxonomies(lambda q: q.filter_by(slug="new")))
+        assert retrieved is not None
+        assert retrieved.extra_data == {"extra": "new"}
+
+        # Test duplicit create fails
+        res = client.post("/taxonomies/", json={"code": root_taxonomy.code})
+        assert res.status_code == 400
+
+        # Test access forbidden for user without permission
+        login_user(client, permissions['root-taxo'])
+        res = client.post("/taxonomies/", json={"code": "no-root"})
+        assert res.status_code == 403
+
+    def test_list_taxonomy_roots(self, client, root_taxonomy, permissions):
+        """Test listing of top-level taxonomy terms."""
+        login_user(client, permissions['root-taxo'])
+
+        # Test empty taxonomy
+        res = client.get("/taxonomies/{}/".format(root_taxonomy.code))
+        assert res.json == []
+
+        root_taxonomy.create_term("/root/", slug="top1")
+        root_taxonomy.create_term("/root/top1/", slug="leaf1")
+        root_taxonomy.create_term("/root/", slug="top2")
+
+        # Test multiple top-level terms
+        res = client.get("/taxonomies/{}/".format(root_taxonomy.code))
+        assert len(res.json) == 2
+        slugs = [r["slug"] for r in res.json]
+        assert "top1" in slugs
+        assert "top2" in slugs
+        assert "leaf1" not in slugs
+
+        # Test non-existent taxonomy
+        res = client.get("/taxonomies/blah/")
+        assert res.status_code == 404
+
+        # Test access forbidden for user without permission
+        login_user(client, permissions['noperms'])
+        res = client.get("/taxonomies/{}/".format(root_taxonomy.code))
+        assert res.status_code == 403
+
+    def test_get_taxonomy_term(self, client, root_taxonomy, permissions):
+        """Test getting Term details."""
+        login_user(client, permissions['terms'])
+
+        root_taxonomy.create_term("/root/", slug="top1")
+        root_taxonomy.create_term("/root/top1/", slug="leaf1")
+        root_taxonomy.create_term("/root/top1/leaf1", slug="leafeaf")
+
+        res = client.get("/taxonomies/{}/top1/leaf1/?drilldown=1"
+                         .format(root_taxonomy.code))
+
+        assert res.json["slug"] == "leaf1"
+        assert res.json["path"] == "/root/top1/leaf1"
+        assert len(res.json["children"]) == 1
+
+        # Test get parent/child details
+        res = client.get("/taxonomies/{}/top1/"
+                         .format(root_taxonomy.code))
+        assert len(res.json['children']) == 1
+        assert 'children' in res.json['children'][0]
+        assert res.json['children'][0]['children'][0]['slug'] == 'leafeaf'
+
+        # Test get nonexistent path
+        res = client.get("/taxonomies/{}/top1/nope/"
+                         .format(root_taxonomy.code))
+        assert res.status_code == 404
+
+        # Test access forbidden for user without permission
+        login_user(client, permissions['root-taxo'])
+        res = client.get("/taxonomies/{}/top1/leaf1/"
+                         .format(root_taxonomy.code))
+        assert res.status_code == 403
+
+    def test_term_create(self, root_taxonomy, client, permissions):
+        """Test TaxonomyTerm creation."""
+        login_user(client, permissions['terms'])
+        res = client.post("/taxonomies/{}/".format(root_taxonomy.code),
+                          json={"title": {"en": "Leaf"}, "slug": "leaf 1"})
+        assert res.status_code == 201
+        assert res.json["slug"] == "leaf-1"
+        assert res.headers['location'] == 'http://localhost/taxonomies/{}/leaf-1/'.format(root_taxonomy.code)  # noqa
+
+        created = root_taxonomy.get_term("leaf-1")
+        assert created.slug == "leaf-1"
+        assert created.tree_id == root_taxonomy.tree_id
+
+        # Test invalid path fails
+        res = client.post("/taxonomies/{}/top1/top2/"
+                          .format(root_taxonomy.code),
+                          json={"title": {"en": "Leaf"}, "slug": "leaf 1"})
+        assert res.status_code == 400
+
+        # Test create on nested path
+        top1 = root_taxonomy.create_term("/root/", slug="top1")
+        res = client.post("/taxonomies/{}/top1/"
+                          .format(root_taxonomy.code),
+                          json={"slug": "leaf 2"})
+        assert res.status_code == 201
+
+        created = root_taxonomy.get_term("leaf-2")
+        assert created.slug == "leaf-2"
+        assert created.tree_id == root_taxonomy.tree_id
+        assert created.is_descendant_of(top1)
+
+        # Test create duplicit slug fails
+        res = client.post("/taxonomies/{}/top1/".format(root_taxonomy.code),
+                          json={"title": {"en": "Leaf"}, "slug": "leaf 2"})
+        assert res.status_code == 400
+
+        # Test create in non-existent taxonomy fails
+        res = client.post("/taxonomies/none/",
+                          json={"title": {"en": "Leaf"}, "slug": "leaf 1"})
+        assert res.status_code == 404
+
+        # Test access forbidden for user without permission
+        login_user(client, permissions['taxonomies'])
+        res = client.post("/taxonomies/{}/"
+                          .format(root_taxonomy.code),
+                          json={"title": {"en": "Leaf"}, "slug": "noperm"})
+        assert res.status_code == 403
+
+    def test_taxonomy_delete(self, db, root_taxonomy,
+                             client, Taxonomy, TaxonomyTerm,
+                             permissions):
+        """Test deleting whole taxonomy."""
+        t = Taxonomy.create_taxonomy(code="tbd")
+        db.session.add(t)
+        db.session.commit()
+
+        t.create_term("/tbd/", slug="top1")
+        t.create_term("/tbd/top1", slug="leaf1")
+
+        # Test unauthenticated delete fails
+        res = client.delete("/taxonomies/tbd/")
+        assert res.status_code == 401
+
+        login_user(client, permissions['taxonomies'])
+        res = client.delete("/taxonomies/tbd/")
+        assert res.status_code == 204
+        with pytest.raises(NoResultFound):
+            Taxonomy.get("tbd")
+        assert TaxonomyTerm.query.filter_by(slug="leaf1").one_or_none() is None
+        assert TaxonomyTerm.query.filter_by(slug="top1").one_or_none() is None
+
+        # Delete nonexistent taxonomy fails
+        res = client.delete("/taxonomies/nope/")
+        assert res.status_code == 404
+
+        # Test access forbidden for user without permission
+        login_user(client, permissions['terms'])
+        res = client.delete("/taxonomies/root/")
+        assert res.status_code == 403
+
+    def test_term_delete(self, root_taxonomy, client, permissions):
+        """Test deleting whole term and a subtree."""
+        login_user(client, permissions['terms'])
+        root_taxonomy.create_term("/root/", slug="top1")
+        root_taxonomy.create_term("/root/top1/", slug="leaf1")
+        root_taxonomy.create_term("/root/", slug="top2")
+
+        client.delete("/taxonomies/root/top1/")
+        assert root_taxonomy.get_term("leaf1") is None
+        assert root_taxonomy.get_term("top1") is None
+        assert root_taxonomy.get_term("top2") is not None
+
+        # Test access forbidden for user without permission
+        login_user(client, permissions['noperms'])
+        res = client.delete("/taxonomies/root/top2/")
+        assert res.status_code == 403
+
+    def test_taxomomy_update(self, root_taxonomy, client, Taxonomy, permissions):
+        """Test updating a taxonomy."""
+        login_user(client, permissions['root-taxo'])
+        res = client.patch("/taxonomies/root/",
+                           json={"updated": "yes"})
+        assert res.status_code == 200
+        assert res.json["updated"] == "yes"
+        assert Taxonomy.get('root').extra_data == {"updated": "yes"}
+
+        # Test update invalid taxonomy fails
+        res = client.patch("/taxonomies/nope/",
+                           json={"updated": "yes"})
+        assert res.status_code == 404
+
+        # Test access forbidden for user without permission
+        login_user(client, permissions['noperms'])
+        res = client.patch("/taxonomies/root/",
+                           json={"updated": "yes"})
+        assert res.status_code == 403
+
+    def test_term_update(self, root_taxonomy, client, permissions):
+        """Test updating a term."""
+        login_user(client, permissions['terms'])
+        root_taxonomy.create_term('', slug="term1")
+
+        res = client.patch("/taxonomies/root/term1/",
+                           json={"updated": "yes"})
+        assert res.status_code == 200
+        assert res.json["updated"] == "yes"
+        assert root_taxonomy.get_term("term1").extra_data == {"updated": "yes"}
+
+        res = client.patch("/taxonomies/root/term1/",
+                           json={"title": {"updated": "yes"}})
+        assert res.status_code == 200
+        assert res.json["title"] == {"updated": "yes"}
+        assert root_taxonomy.get_term("term1").extra_data['title'] == {"updated": "yes"}
+
+        # Test update invalid term fails
+        res = client.patch("/taxonomies/root/nope/",
+                           json={"title": {"updated": "yes"}})
+        assert res.status_code == 404
+
+        # Test access forbidden for user without permission
+        login_user(client, permissions['root-taxo'])
+        res = client.patch("/taxonomies/root/term1/",
+                           json={"updated": "yes"})
+        assert res.status_code == 403
+
+    def test_term_move(self, db, root_taxonomy, client, Taxonomy, permissions):
+        """Test moving a Taxonomy Term."""
+        t = Taxonomy.create_taxonomy(code="groot")
+        db.session.commit()
+
+        root_taxonomy.create_term('', slug="term1")
+        term2 = t.create_term('', slug="term2")
+
+        # Test move /root/term1 -> /groot/term2/term1
+        login_user(client, permissions['terms'])
+        res = client.post("/taxonomies/root/term1/",
+                          json={"move_target": "http://localhost/taxonomies/groot/term2/"})  # noqa
+
+        assert res.status_code == 200
+        moved = t.get_term("term1")
+        assert moved is not None
+        assert moved.tree_id == t.tree_id
+        assert moved.is_descendant_of(term2)
+        assert moved.tree_path == "/groot/term2/term1"
+
+        # Test move subtree
+        res = client.post("/taxonomies/groot/term2/",
+                          json={"move_target": "http://localhost/taxonomies/root/"})  # noqa
+        assert res.status_code == 200
+
+        moved1 = root_taxonomy.get_term("term2")
+        moved2 = root_taxonomy.get_term("term1")
+
+        assert moved1.tree_path == "/root/term2"
+        assert moved2.tree_path == "/root/term2/term1"
+        assert moved1.is_descendant_of(root_taxonomy)
+        assert moved2.is_descendant_of(root_taxonomy)
+        assert moved2.is_descendant_of(moved1)
+
+        # Test move to invalid path fails
+        res = client.post("/taxonomies/root/term2/",
+                          json={"move_target": "http://localhost/taxonomies/root/somethingbad/"})  # noqa
+        assert res.status_code == 400
+
+        # Test move to invalid url prefix fails
+        res = client.post("/taxonomies/root/term2/",
+                          json={"move_target": "http://localhost/taxi/root/somethinggood/"})  # noqa
+        assert res.status_code == 400
+
+        # Test move from invalid source fails
+        res = client.post("/taxonomies/root/somethingbad/",
+                          json={"move_target": "http://localhost/taxonomies/groot/"})  # noqa
+        assert res.status_code == 400
+
+    @pytest.mark.parametrize('filled_taxonomy',
+                             [[1000]],
+                             indirect=['filled_taxonomy'])
+    def test_large_taxonomy(self, client, filled_taxonomy, permissions):
+        """Test listing of top-level taxonomy terms."""
+        login_user(client, permissions['root-taxo'])
+        t1 = time.time()
+        res = client.get(
+            "/taxonomies/{}/?drilldown=1".format(filled_taxonomy.code))
+        print('Total time', time.time() - t1)
+        t1 = time.time()
+        print("Request starts")
+        res = client.get(
+            "/taxonomies/{}/?drilldown=1".format(filled_taxonomy.code))
+        print('Total time', time.time() - t1)
+        assert len(res.json) == 1000

@@ -37,25 +37,23 @@ database tables and perform the initial migration ::
 Python Usage
 ------------
 
-    >>> from flask_taxonomies.managers import TaxonomyManager
     >>> from flask_taxonomies.models import Taxonomy, TaxonomyTerm
     >>> # To create Taxonomy:
-    >>> t = Taxonomy(code='taxcode')
+    >>> t = Taxonomy.create_taxonomy(code='taxcode')
     >>> # To create TaxonomyTerm
-    >>> m = TaxonomyManager()
-    >>> term = m.create('slug', title={'en': 'Tax Term'}, path='/taxcode/taxterm', extra_data={})
+    >>> term = t.create_term(path='/taxcode/taxterm', slug='slug', extra_data={})
     >>> # To get taxonomy by code
-    >>> t = m.get_taxonomy('taxcode')
+    >>> t = Taxonomy.get('taxcode')
     >>> # To list taxonomy top-level terms
-    >>> terms = list(m.get_taxonomy_roots(t))
+    >>> terms = list(t.roots)
     >>> # To get term by taxonomy and slug
-    >>> term = m.get_term(t, 'taxcode')
+    >>> term = t.get_term('taxcode')
     >>> # To get term from taxonomy path
-    >>> t, term = manager.get_from_path('/taxcode/taxterm')
+    >>> t, term = Taxonomy.find_taxonomy_and_term('/taxcode/taxterm')
     >>> # To move term to a different path
-    >>> m.move_tree('/taxcode/taxterm/', '/anothertax/otherterm/') # moves term subtree to '/anothertax/otherterm/taxterm/'
+    >>> term.move_to('/anothertax/otherterm/') # moves term subtree to '/anothertax/otherterm/taxterm/'
     >>> # To delete term and its descendants
-    >>> m.delete_tree('/taxcode/taxterm/')
+    >>> db.session.delete(term)
     >>> # To update Taxonomy/TaxonomyTerm
     >>> t.update(extra_data={'updated': true})
     >>> # To delete Taxonomy (including all related terms) or a single TaxonomyTerm
@@ -117,5 +115,5 @@ Move taxonomy term (or whole term subtree) to another location ::
 
     curl -X POST \
         http://localhost:5000/taxonomies/<taxonomy-code>/<taxonomy-term-path>/ \
-        -d '{"move_target":"http://localhost:5000/taxonomies/<taxonomy-code>/<taxonomy-destination-path>", \
-             "title": {}, "slug": "..."}'
+        -d '{"move_target":"http://localhost:5000/taxonomies/<taxonomy-code>/<taxonomy-destination-path>"}'
+
