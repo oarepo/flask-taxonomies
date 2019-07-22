@@ -2,6 +2,7 @@
 """User models."""
 import wrapt
 from blinker import Namespace
+from flask import url_for
 from invenio_db import db
 from sqlalchemy import asc
 from sqlalchemy.exc import IntegrityError
@@ -94,6 +95,29 @@ class TaxonomyTerm(db.Model, BaseNestedSets):
             TaxonomyTerm.right <= self.right).order_by('lft')
 
     @property
+    def link_self(self):
+        taxonomy_code, term_path = self.tree_path.lstrip('/').split('/', 1)
+
+        return url_for(
+                "taxonomies.taxonomy_get_term",
+                taxonomy_code=taxonomy_code,
+                term_path=term_path,
+                _external=True,
+            )
+
+    @property
+    def link_tree(self):
+        taxonomy_code, term_path = self.tree_path.lstrip('/').split('/', 1)
+
+        return url_for(
+            "taxonomies.taxonomy_get_term",
+            taxonomy_code=taxonomy_code,
+            term_path=term_path,
+            drilldown=True,
+            _external=True,
+        )
+
+    @property
     def tree_path(self) -> str:
         """Get path in a taxonomy tree."""
         return "/{path}".format(
@@ -128,6 +152,23 @@ class Taxonomy(wrapt.ObjectProxy):
     @property
     def roots(self):
         return self.children
+
+    @property
+    def link_self(self):
+        return url_for(
+            "taxonomies.taxonomy_get_roots",
+            taxonomy_code=self.code,
+            _external=True,
+        )
+
+    @property
+    def link_tree(self):
+        return url_for(
+            "taxonomies.taxonomy_get_roots",
+            taxonomy_code=self.code,
+            drilldown=True,
+            _external=True,
+        )
 
     @classmethod
     def taxonomies(cls, _filter=None):

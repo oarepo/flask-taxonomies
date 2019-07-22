@@ -9,7 +9,6 @@ from flask import (
     current_app,
     jsonify,
     make_response,
-    request,
     url_for,
 )
 from flask_accept import accept
@@ -178,23 +177,13 @@ def jsonify_taxonomy(t: Taxonomy) -> dict:
         "id": t.id,
         "code": t.code,
         "links": {
-            "tree": url_for(
-                "taxonomies.taxonomy_get_roots",
-                taxonomy_code=t.code,
-                _external=True,
-                drilldown=True,
-            ),
-            "self": url_for(
-                "taxonomies.taxonomy_get_roots",
-                taxonomy_code=t.code,
-                _external=True
-            )
+            "tree": t.link_tree,
+            "self": t.link_self
         },
     }
 
 
-def jsonify_taxonomy_term(taxonomy_code: str,
-                          t: TaxonomyTerm,
+def jsonify_taxonomy_term(t: TaxonomyTerm,
                           parent_path: str) -> dict:
     """Prepare TaxonomyTerm to be easily jsonified."""
     if not parent_path.endswith('/'):
@@ -206,12 +195,8 @@ def jsonify_taxonomy_term(taxonomy_code: str,
         "slug": t.slug,
         "path": path,
         "links": {
-            "self": url_for(
-                "taxonomies.taxonomy_get_term",
-                taxonomy_code=taxonomy_code,
-                term_path=("".join(path.split("/", 2)[2:])),
-                _external=True,
-            )
+            "self": t.link_self,
+            "tree": t.link_tree
         },
     }
     descendants_count = (t.right - t.left - 1) / 2
@@ -271,17 +256,15 @@ def taxonomy_get_roots(taxonomy, drilldown=False):
     if not drilldown:
         roots = taxonomy.roots
         return jsonify([
-            jsonify_taxonomy_term(taxonomy.code, t,
-                                  f'/{taxonomy.code}/')
+            jsonify_taxonomy_term(t, f'/{taxonomy.code}/')
             for t in roots])
 
-    ret = build_tree_from_list(taxonomy.code,
-                               f'/{taxonomy.code}/',
+    ret = build_tree_from_list('/{taxonomy.code}/',
                                taxonomy.terms)
     return jsonify(ret)
 
 
-def build_tree_from_list(taxonomy_code, root_path, tree_as_list):
+def build_tree_from_list(root_path, tree_as_list):
     ret = []
     stack = []
     root_level = None
@@ -292,8 +275,7 @@ def build_tree_from_list(taxonomy_code, root_path, tree_as_list):
         while item.level - root_level < len(stack):
             stack.pop()
 
-        item_json = jsonify_taxonomy_term(
-            taxonomy_code, item,
+        item_json = jsonify_taxonomy_term(item,
             root_path if not stack else stack[-1]['path'])
 
         if item.level == root_level:
@@ -323,12 +305,11 @@ def taxonomy_get_term(taxonomy, term, drilldown=False):
     """Get Taxonomy Term detail."""
     if not drilldown:
         return jsonify(
-            jsonify_taxonomy_term(taxonomy.code, term, term.parent.tree_path),
+            jsonify_taxonomy_term(term, term.parent.tree_path),
         )
     else:
         return jsonify(
-            build_tree_from_list(taxonomy.code,
-                                 term.parent.tree_path,
+            build_tree_from_list(term.parent.tree_path,
                                  term.descendants_or_self)[0])
 
 
@@ -361,12 +342,13 @@ def taxonomy_create_term(taxonomy, slug=None,
         abort(400, "Invalid Term path given.")
 
     if taxonomy and term and move_target:
+        target_path = None
+
         try:
             target_path = url_to_path(move_target)
+            before_taxonomy_term_moved.send(term, taxonomy=taxonomy, target_path=target_path)
         except ValueError:
             abort(400, 'Invalid target URL passed.')
-
-        before_taxonomy_term_moved.send(term, taxonomy=taxonomy, target_path=target_path)
 
         if not target_path:
             target_path = f'{taxonomy.code}/'
@@ -377,9 +359,7 @@ def taxonomy_create_term(taxonomy, slug=None,
             abort(400, "Target path not found.")
         after_taxonomy_term_moved.send(term, taxonomy=taxonomy)
 
-        moved = jsonify_taxonomy_term(taxonomy.code,
-                                      term,
-                                      term.parent.tree_path)
+        moved = jsonify_taxonomy_term(term, term.parent.tree_path)
         response = jsonify(moved)
         response.headers['Location'] = moved['links']['self']
         return response
@@ -395,9 +375,7 @@ def taxonomy_create_term(taxonomy, slug=None,
         after_taxonomy_term_created.send(term, taxonomy=taxonomy)
 
         created_dict = \
-            jsonify_taxonomy_term(taxonomy.code,
-                                  created,
-                                  created.parent.tree_path)
+            jsonify_taxonomy_term(created, created.parent.tree_path)
 
         response = jsonify(created_dict)
         response.headers['Location'] = created_dict['links']['self']
@@ -484,5 +462,5 @@ def taxonomy_update_term(taxonomy, term, extra_data=None):
     after_taxonomy_term_updated.send(term, taxonomy=taxonomy)
 
     return jsonify(
-        jsonify_taxonomy_term(taxonomy.code, term, term.parent.tree_path),
+        jsonify_taxonomy_term(term, term.parent.tree_path),
     )
