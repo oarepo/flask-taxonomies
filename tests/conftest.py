@@ -4,6 +4,7 @@ import os
 
 import pytest
 from flask import Flask
+from flask.testing import FlaskClient
 from invenio_access import ActionUsers, InvenioAccess
 from invenio_accounts import InvenioAccounts
 from invenio_accounts.testutils import create_test_user
@@ -27,12 +28,20 @@ from flask_taxonomies.permissions import (
 from flask_taxonomies.views import blueprint
 
 
+class JsonClient(FlaskClient):
+    def open(self, *args, **kwargs):
+        kwargs.setdefault('content_type', 'application/json')
+        kwargs.setdefault('Accept', 'application/json')
+        return super().open(*args, **kwargs)
+
+
 @pytest.fixture()
 def base_app():
     """Flask application fixture."""
     app_ = Flask('testapp')
     app_.config.update(
         TESTING=True,
+        JSON_AS_ASCII=True,
         SQLALCHEMY_TRACK_MODIFICATIONS=True,
         SQLALCHEMY_DATABASE_URI=os.environ.get(
             'SQLALCHEMY_DATABASE_URI',
@@ -46,6 +55,7 @@ def base_app():
         FILES_REST_TASK_WAIT_INTERVAL=0.1,
         FILES_REST_TASK_WAIT_MAX_SECONDS=1,
     )
+    app.test_client_class = JsonClient
 
     InvenioDB(app_)
     InvenioAccounts(app_)
@@ -86,6 +96,7 @@ def users(db, users_data):
 def client(app):
     """Get test client."""
     with app.test_client() as client:
+        client
         yield client
 
 

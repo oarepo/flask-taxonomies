@@ -3,7 +3,6 @@
 from functools import wraps
 from urllib.parse import urlsplit
 
-import accept
 from flask import (
     Blueprint,
     abort,
@@ -13,6 +12,7 @@ from flask import (
     request,
     url_for,
 )
+from flask_accept import accept
 from flask_login import current_user
 from invenio_db import db
 from slugify import slugify
@@ -71,13 +71,13 @@ def url_to_path(url):
 
 
 def pass_taxonomy(f):
-    """Decorate to retrieve a bucket."""
+    """Decorate to retrieve a Taxonomy."""
 
     @wraps(f)
     def decorate(*args, **kwargs):
         code = kwargs.pop("taxonomy_code")
         try:
-            taxonomy = Taxonomy.get(code)
+            taxonomy = Taxonomy.get(code, required=True)
             return f(taxonomy=taxonomy, *args, **kwargs)
         except NoResultFound:
             abort(404, "Taxonomy does not exist.")
@@ -178,6 +178,12 @@ def jsonify_taxonomy(t: Taxonomy) -> dict:
         "id": t.id,
         "code": t.code,
         "links": {
+            "tree": url_for(
+                "taxonomies.taxonomy_get_roots",
+                taxonomy_code=t.code,
+                _external=True,
+                drilldown=True,
+            ),
             "self": url_for(
                 "taxonomies.taxonomy_get_roots",
                 taxonomy_code=t.code,
@@ -251,22 +257,18 @@ def taxonomy_create(code: str, extra_data: dict = None):
 
 
 @blueprint.route("/<string:taxonomy_code>/", methods=("GET",))
+@accept('application/json')
 @pass_taxonomy
 @need_permissions(
     lambda taxonomy: taxonomy,
     'taxonomy-read'
 )
-def taxonomy_get_roots(taxonomy):
+@use_kwargs({
+    "drilldown": fields.Bool(empty_value=False, location='querystring')
+})
+def taxonomy_get_roots(taxonomy, drilldown=False):
     """Get top-level terms in a Taxonomy."""
-    # default for drilldown on taxonomy is False
-    accepts = accept.parse(
-        request.headers.get("Accept",
-                            "application/json; drilldown=false"))
-    drilldown = (
-            request.args.get('drilldown') or accepts[0].params.get('drilldown')
-    )
-    do_drilldown = drilldown in {'true', '1'}
-    if not do_drilldown:
+    if not drilldown:
         roots = taxonomy.roots
         return jsonify([
             jsonify_taxonomy_term(taxonomy.code, t,
@@ -308,24 +310,21 @@ def build_tree_from_list(taxonomy_code, root_path, tree_as_list):
 
 
 @blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("GET",))
+@accept("application/json")
 @pass_term
 @need_permissions(
     lambda taxonomy, term: term,
     'taxonomy-term-read'
 )
-def taxonomy_get_term(taxonomy, term):
+@use_kwargs({
+    "drilldown": fields.Bool(empty_value=False, location='querystring')
+})
+def taxonomy_get_term(taxonomy, term, drilldown=False):
     """Get Taxonomy Term detail."""
-    # default for drilldown on taxonomy term is True
-    accepts = accept.parse(
-        request.headers.get("Accept", "application/json; drilldown=true"))
-    drilldown = (
-            request.args.get('drilldown') or
-            accepts[0].params.get('drilldown', 'true')
-    )
-    do_drilldown = drilldown in {'true', '1'}
-    if not do_drilldown:
+    if not drilldown:
         return jsonify(
-            jsonify_taxonomy_term(taxonomy.code, term, term.parent.tree_path))
+            jsonify_taxonomy_term(taxonomy.code, term, term.parent.tree_path),
+        )
     else:
         return jsonify(
             build_tree_from_list(taxonomy.code,
@@ -361,8 +360,6 @@ def taxonomy_create_term(taxonomy, slug=None,
     if not term:
         abort(400, "Invalid Term path given.")
 
-    full_path = "/{}/{}".format(taxonomy.code, term_path)
-    print('Extra', extra_data)
     if taxonomy and term and move_target:
         target_path = url_to_path(move_target)
         before_taxonomy_term_moved.send(term, taxonomy=taxonomy, target_path=target_path)
@@ -483,4 +480,5 @@ def taxonomy_update_term(taxonomy, term, extra_data=None):
     after_taxonomy_term_updated.send(term, taxonomy=taxonomy)
 
     return jsonify(
-        jsonify_taxonomy_term(taxonomy.code, term, term.parent.tree_path))
+        jsonify_taxonomy_term(taxonomy.code, term, term.parent.tree_path),
+    )

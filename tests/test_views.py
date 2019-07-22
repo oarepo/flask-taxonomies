@@ -7,9 +7,6 @@
 import time
 
 import pytest
-from flask_security import AnonymousUser
-from invenio_access import ActionUsers
-from sqlalchemy.orm.exc import NoResultFound
 
 from tests.testutils import login_user
 
@@ -48,14 +45,17 @@ class TestTaxonomyAPI:
         assert {
                    "id": root_taxonomy.id,
                    "code": root_taxonomy.code,
-                   "links": {"self": "http://localhost/taxonomies/root/"},
+                   "links": {"self": "http://localhost/taxonomies/root/",
+                             "tree": "http://localhost/taxonomies/root/?drilldown=True"},
                } in jsonres
         assert {
                    "id": additional.id,
                    "code": additional.code,
                    "extra": "data",
                    "links": {
-                       "self": "http://localhost/taxonomies/additional/"},
+                       "self": "http://localhost/taxonomies/additional/",
+                       "tree": "http://localhost/taxonomies/additional/?drilldown=True"
+                   },
                } in jsonres
 
         # Test access forbidden for user without permission
@@ -75,6 +75,8 @@ class TestTaxonomyAPI:
 
         assert res.status_code == 201
         assert res.headers['Location'] == 'http://localhost/taxonomies/new/'
+        assert res.json['links']['self'] == 'http://localhost/taxonomies/new/'
+        assert res.json['links']['tree'] == 'http://localhost/taxonomies/new/?drilldown=True'
 
         retrieved = next(Taxonomy.taxonomies(lambda q: q.filter_by(slug="new")))
         assert retrieved is not None
@@ -94,7 +96,8 @@ class TestTaxonomyAPI:
         login_user(client, permissions['root-taxo'])
 
         # Test empty taxonomy
-        res = client.get("/taxonomies/{}/".format(root_taxonomy.code))
+        res = client.get("/taxonomies/{}/".format(root_taxonomy.code),
+                         headers={'Accept': 'application/json'})
         assert res.json == []
 
         root_taxonomy.create_term("/root/", slug="top1")
@@ -102,7 +105,8 @@ class TestTaxonomyAPI:
         root_taxonomy.create_term("/root/", slug="top2")
 
         # Test multiple top-level terms
-        res = client.get("/taxonomies/{}/".format(root_taxonomy.code))
+        res = client.get("/taxonomies/{}/".format(root_taxonomy.code),
+                         headers={'Accept': 'application/json'})
         assert len(res.json) == 2
         slugs = [r["slug"] for r in res.json]
         assert "top1" in slugs
@@ -110,12 +114,15 @@ class TestTaxonomyAPI:
         assert "leaf1" not in slugs
 
         # Test non-existent taxonomy
-        res = client.get("/taxonomies/blah/")
+        login_user(client, permissions['taxonomies'])
+        res = client.get("/taxonomies/blah/",
+                         headers={'Accept': 'application/json'})
         assert res.status_code == 404
 
         # Test access forbidden for user without permission
         login_user(client, permissions['noperms'])
-        res = client.get("/taxonomies/{}/".format(root_taxonomy.code))
+        res = client.get("/taxonomies/{}/".format(root_taxonomy.code),
+                         headers={'Accept': 'application/json'})
         assert res.status_code == 403
 
     def test_get_taxonomy_term(self, client, root_taxonomy, permissions):
@@ -127,28 +134,32 @@ class TestTaxonomyAPI:
         root_taxonomy.create_term("/root/top1/leaf1", slug="leafeaf")
 
         res = client.get("/taxonomies/{}/top1/leaf1/?drilldown=1"
-                         .format(root_taxonomy.code))
+                         .format(root_taxonomy.code),
+                         headers={'Accept': 'application/json'})
 
         assert res.json["slug"] == "leaf1"
         assert res.json["path"] == "/root/top1/leaf1"
         assert len(res.json["children"]) == 1
 
         # Test get parent/child details
-        res = client.get("/taxonomies/{}/top1/"
-                         .format(root_taxonomy.code))
+        res = client.get("/taxonomies/{}/top1/?drilldown=True"
+                         .format(root_taxonomy.code),
+                         headers={'Accept': 'application/json'})
         assert len(res.json['children']) == 1
         assert 'children' in res.json['children'][0]
         assert res.json['children'][0]['children'][0]['slug'] == 'leafeaf'
 
         # Test get nonexistent path
         res = client.get("/taxonomies/{}/top1/nope/"
-                         .format(root_taxonomy.code))
+                         .format(root_taxonomy.code),
+                         headers={'Accept': 'application/json'})
         assert res.status_code == 404
 
         # Test access forbidden for user without permission
         login_user(client, permissions['root-taxo'])
         res = client.get("/taxonomies/{}/top1/leaf1/"
-                         .format(root_taxonomy.code))
+                         .format(root_taxonomy.code),
+                         headers={'Accept': 'application/json'})
         assert res.status_code == 403
 
     def test_term_create(self, root_taxonomy, client, permissions):
@@ -192,6 +203,13 @@ class TestTaxonomyAPI:
                           json={"title": {"en": "Leaf"}, "slug": "leaf 1"})
         assert res.status_code == 404
 
+        # Test create Term with unicode title
+        res = client.post("/taxonomies/{}/".format(root_taxonomy.code),
+                          json={"title": {"cs": "Příliš žluťoučký kůň úpěl ďábelské ódy."},  # noqa
+                                "slug": "kun1"})
+        assert res.status_code == 201
+        assert res.json["title"]["cs"] == "Příliš žluťoučký kůň úpěl ďábelské ódy."
+
         # Test access forbidden for user without permission
         login_user(client, permissions['taxonomies'])
         res = client.post("/taxonomies/{}/"
@@ -217,8 +235,7 @@ class TestTaxonomyAPI:
         login_user(client, permissions['taxonomies'])
         res = client.delete("/taxonomies/tbd/")
         assert res.status_code == 204
-        with pytest.raises(NoResultFound):
-            Taxonomy.get("tbd")
+        assert Taxonomy.get("tbd") is None
         assert TaxonomyTerm.query.filter_by(slug="leaf1").one_or_none() is None
         assert TaxonomyTerm.query.filter_by(slug="top1").one_or_none() is None
 
@@ -353,11 +370,12 @@ class TestTaxonomyAPI:
         login_user(client, permissions['root-taxo'])
         t1 = time.time()
         res = client.get(
-            "/taxonomies/{}/?drilldown=1".format(filled_taxonomy.code))
+            "/taxonomies/{}/?drilldown=True".format(filled_taxonomy.code))
         print('Total time', time.time() - t1)
         t1 = time.time()
         print("Request starts")
         res = client.get(
-            "/taxonomies/{}/?drilldown=1".format(filled_taxonomy.code))
+            "/taxonomies/{}/?drilldown=True".format(filled_taxonomy.code),
+            headers={'Accept': 'application/json'})
         print('Total time', time.time() - t1)
         assert len(res.json) == 1000
