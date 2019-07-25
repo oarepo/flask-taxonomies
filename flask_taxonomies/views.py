@@ -11,7 +11,7 @@ from flask import (
     make_response,
     url_for,
 )
-from flask_accept import accept
+from flask_accept import accept_fallback
 from flask_login import current_user
 from invenio_db import db
 from slugify import slugify
@@ -242,7 +242,7 @@ def taxonomy_create(code: str, extra_data: dict = None):
 
 
 @blueprint.route("/<string:taxonomy_code>/", methods=("GET",))
-@accept('application/json')
+@accept_fallback
 @pass_taxonomy
 @need_permissions(
     lambda taxonomy: taxonomy,
@@ -292,7 +292,7 @@ def build_tree_from_list(root_path, tree_as_list):
 
 
 @blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("GET",))
-@accept("application/json")
+@accept_fallback
 @pass_term
 @need_permissions(
     lambda taxonomy, term: term,
