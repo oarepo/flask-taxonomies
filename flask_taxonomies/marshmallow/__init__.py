@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """Flask Taxonomies Marshmallow schemas."""
 from invenio_records_rest.schemas import StrictKeysMixin
-from invenio_records_rest.schemas.fields import SanitizedUnicode, PersistentIdentifier
-from marshmallow import pre_load, ValidationError
+from invenio_records_rest.schemas.fields import PersistentIdentifier, SanitizedUnicode
+from marshmallow import ValidationError, pre_load
 from marshmallow.fields import Nested
 from sqlalchemy.orm.exc import NoResultFound
 

@@ -3,14 +3,7 @@
 from functools import wraps
 from urllib.parse import urlsplit
 
-from flask import (
-    Blueprint,
-    abort,
-    current_app,
-    jsonify,
-    make_response,
-    url_for,
-)
+from flask import Blueprint, abort, current_app, jsonify, make_response, url_for
 from flask_accept import accept_fallback
 from flask_login import current_user
 from invenio_db import db
