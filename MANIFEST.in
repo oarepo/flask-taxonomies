@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 
 include LICENSE
-recursive-include flask_taxonomies/alembic *.py
+recursive-include flask_taxonomies *.py
+recursive-include flask_taxonomies *.json
+
 recursive-exclude tests *.py
+
 exclude .coveragerc
 exclude .pydocstyle
 exclude Dockerfile
