@@ -259,7 +259,7 @@ def taxonomy_get_roots(taxonomy, drilldown=False):
             jsonify_taxonomy_term(t, f'/{taxonomy.code}/')
             for t in roots])
 
-    ret = build_tree_from_list('/{taxonomy.code}/',
+    ret = build_tree_from_list(f'/{taxonomy.code}/',
                                taxonomy.terms)
     return jsonify(ret)
 
