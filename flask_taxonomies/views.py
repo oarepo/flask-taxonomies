@@ -275,8 +275,7 @@ def build_tree_from_list(root_path, tree_as_list):
         while item.level - root_level < len(stack):
             stack.pop()
 
-        item_json = jsonify_taxonomy_term(item,
-            root_path if not stack else stack[-1]['path'])
+        item_json = jsonify_taxonomy_term(item, root_path if not stack else stack[-1]['path'])
 
         if item.level == root_level:
             # top element in tree_as_list
