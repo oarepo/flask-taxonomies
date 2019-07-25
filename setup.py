@@ -35,7 +35,6 @@ tests_require = [
     'pytest-cov>=1.8.0',
     'pytest-random-order>=0.5.4',
     'pytest-pep8>=1.0.6',
-    'invenio-oarepo-mapping-includes>=1.0.0',
     'invenio-records-rest>=1.4.2'
 ]
 

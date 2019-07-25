@@ -3,15 +3,8 @@
 from functools import wraps
 from urllib.parse import urlsplit
 
-from flask import (
-    Blueprint,
-    abort,
-    current_app,
-    jsonify,
-    make_response,
-    url_for,
-)
-from flask_accept import accept
+from flask import Blueprint, abort, current_app, jsonify, make_response, url_for
+from flask_accept import accept_fallback
 from flask_login import current_user
 from invenio_db import db
 from slugify import slugify
@@ -242,7 +235,7 @@ def taxonomy_create(code: str, extra_data: dict = None):
 
 
 @blueprint.route("/<string:taxonomy_code>/", methods=("GET",))
-@accept('application/json')
+@accept_fallback
 @pass_taxonomy
 @need_permissions(
     lambda taxonomy: taxonomy,
@@ -275,8 +268,7 @@ def build_tree_from_list(root_path, tree_as_list):
         while item.level - root_level < len(stack):
             stack.pop()
 
-        item_json = jsonify_taxonomy_term(item,
-            root_path if not stack else stack[-1]['path'])
+        item_json = jsonify_taxonomy_term(item, root_path if not stack else stack[-1]['path'])
 
         if item.level == root_level:
             # top element in tree_as_list
@@ -292,7 +284,7 @@ def build_tree_from_list(root_path, tree_as_list):
 
 
 @blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("GET",))
-@accept("application/json")
+@accept_fallback
 @pass_term
 @need_permissions(
     lambda taxonomy, term: term,
