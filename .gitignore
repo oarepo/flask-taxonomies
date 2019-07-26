@@ -70,5 +70,3 @@ dist/
 \.envrc
 
 run\.sh
-
-pytest-local\.ini
