@@ -115,5 +115,6 @@ Move taxonomy term (or whole term subtree) to another location ::
 
     curl -X POST \
         http://localhost:5000/taxonomies/<taxonomy-code>/<taxonomy-term-path>/ \
-        -d '{"move_target":"http://localhost:5000/taxonomies/<taxonomy-code>/<taxonomy-destination-path>"}'
+        -H 'Destination: http://localhost:5000/taxonomies/<taxonomy-code>/<taxonomy-destination-path>' \
+        -H 'Content-Type: application/vnd.move'
 
