@@ -318,8 +318,8 @@ class TestTaxonomyAPI:
         t = Taxonomy.create_taxonomy(code="groot")
         db.session.commit()
 
-        root_taxonomy.create_term('', slug="term1")
-        term2 = t.create_term('', slug="term2")
+        root_taxonomy.create_term(slug="term1")
+        term2 = t.create_term(slug="term2")
 
         # Test move /root/term1 -> /groot/term2/term1
         login_user(client, permissions['terms'])

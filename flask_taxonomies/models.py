@@ -78,13 +78,14 @@ class TaxonomyTerm(db.Model, BaseNestedSets):
             term = TaxonomyTerm.query.get(term.id)
 
         # add to the end of the term
-        session = mptt_sessionmaker(Session.object_session(self))
+        session = Session.object_session(self)
         if not session:
             if term.parent_id:
                 term.move_inside(self.id)
             else:
                 term.parent = self
             return
+        mptt_sessionmaker(session)
 
         # if no children, add to the end of the term regardless the order
         children = list(x.id for x in self.children)

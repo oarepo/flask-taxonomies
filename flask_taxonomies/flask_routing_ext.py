@@ -1,9 +1,8 @@
 import functools
+from functools import partial
 
 from flask import request
 from werkzeug.exceptions import NotAcceptable
-from functools import partial
-
 
 # extended from https://github.com/di/flask-accept
 #

@@ -169,7 +169,7 @@ class TestTaxonomyTerm:
             (3, 'leaf21'),
             (3, 'leaf22')
         ]
-        
+
         # move leaf2 to the end of leaf0
         move('leaf2', 'leaf0', -1)
         db.session.commit()
