@@ -10,7 +10,7 @@ from flask_taxonomies.models import Taxonomy, TaxonomyTerm
 from flask_taxonomies.views import url_to_path
 
 
-class TaxonomyLinksSchemaV1():
+class TaxonomyLinksSchemaV1(StrictKeysMixin):
     self = SanitizedUnicode(required=False)
     tree = SanitizedUnicode(required=False)
 
@@ -42,7 +42,17 @@ class TaxonomySchemaV1(StrictKeysMixin):
         if not tax:
             raise ValidationError('Taxonomy $ref link is invalid: {}'.format(ref))  # noqa
 
-        return {'$ref': ref}
+        for k, v in term.extra_data.items():
+            in_data[k] = v
+
+        in_data["id"] = term.id
+        in_data["slug"] = term.slug
+        in_data["path"] = term.tree_path
+        in_data["links"] = dict()
+        in_data["links"]["self"] = term.link_self
+        in_data["links"]["self"] = term.link_tree
+
+        return in_data
 
 
 __all__ = ('TaxonomySchemaV1',)
