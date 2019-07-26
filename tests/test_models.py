@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Model unit tests."""
 import pytest
+from sqlalchemy.orm import Session
+from sqlalchemy_mptt import mptt_sessionmaker
 
 
 @pytest.mark.usefixtures("db")
@@ -123,3 +125,137 @@ class TestTaxonomyTerm:
                              indirect=['filled_taxonomy'])
     def test_large_taxonomy(self, db, filled_taxonomy):
         assert filled_taxonomy.terms.count() == 1000
+
+    def test_move_taxonomy_term(self, db, root_taxonomy, Taxonomy, TaxonomyTerm):
+        mptt_sessionmaker(db.session)
+
+        def structure():
+            rt = Taxonomy.get(root_taxonomy.code)
+            return [
+                (x.level, x.slug) for x in rt.descendants
+            ]
+
+        def move(term, parent, order):
+            term = TaxonomyTerm.query.filter_by(slug=term).one()
+            parent = TaxonomyTerm.query.filter_by(slug=parent).one()
+            parent.append(term, order)
+
+        leafs = []
+        for i in range(3):
+            leaf = TaxonomyTerm(slug="leaf%s" % i)
+            root_taxonomy.append(leaf)
+            db.session.add(leaf)
+            db.session.commit()
+            leafs.append(leaf)
+
+            for i in range(3):
+                cleaf = TaxonomyTerm(slug="%s%s" % (leaf.slug, i))
+                assert Session.object_session(leaf)
+                leaf.append(cleaf)
+                db.session.add(cleaf)
+                db.session.commit()
+
+        assert structure() == [
+            (2, 'leaf0'),
+            (3, 'leaf00'),
+            (3, 'leaf01'),
+            (3, 'leaf02'),
+            (2, 'leaf1'),
+            (3, 'leaf10'),
+            (3, 'leaf11'),
+            (3, 'leaf12'),
+            (2, 'leaf2'),
+            (3, 'leaf20'),
+            (3, 'leaf21'),
+            (3, 'leaf22')
+        ]
+
+        # move leaf2 to the end of leaf0
+        move('leaf2', 'leaf0', -1)
+        db.session.commit()
+        assert structure() == [
+            (2, 'leaf0'),
+            (3, 'leaf00'),
+            (3, 'leaf01'),
+            (3, 'leaf02'),
+            (3, 'leaf2'),
+            (4, 'leaf20'),
+            (4, 'leaf21'),
+            (4, 'leaf22'),
+            (2, 'leaf1'),
+            (3, 'leaf10'),
+            (3, 'leaf11'),
+            (3, 'leaf12'),
+        ]
+
+        # move leaf1 to the start of leaf 0
+        move('leaf1', 'leaf0', 0)
+        db.session.commit()
+        assert structure() == [
+            (2, 'leaf0'),
+            (3, 'leaf1'),
+            (4, 'leaf10'),
+            (4, 'leaf11'),
+            (4, 'leaf12'),
+            (3, 'leaf00'),
+            (3, 'leaf01'),
+            (3, 'leaf02'),
+            (3, 'leaf2'),
+            (4, 'leaf20'),
+            (4, 'leaf21'),
+            (4, 'leaf22'),
+        ]
+
+        # move leaf1 after leaf00
+        move('leaf1', 'leaf0', 1)
+        db.session.commit()
+        assert structure() == [
+            (2, 'leaf0'),
+            (3, 'leaf00'),
+            (3, 'leaf1'),
+            (4, 'leaf10'),
+            (4, 'leaf11'),
+            (4, 'leaf12'),
+            (3, 'leaf01'),
+            (3, 'leaf02'),
+            (3, 'leaf2'),
+            (4, 'leaf20'),
+            (4, 'leaf21'),
+            (4, 'leaf22'),
+        ]
+
+        # move leaf1 after leaf00
+        move('leaf2', 'leaf1', 2)
+        db.session.commit()
+        assert structure() == [
+            (2, 'leaf0'),
+            (3, 'leaf00'),
+            (3, 'leaf1'),
+            (4, 'leaf10'),
+            (4, 'leaf11'),
+            (4, 'leaf2'),
+            (5, 'leaf20'),
+            (5, 'leaf21'),
+            (5, 'leaf22'),
+            (4, 'leaf12'),
+            (3, 'leaf01'),
+            (3, 'leaf02'),
+        ]
+
+        # and back
+        move('leaf2', 'leaf0', 1)
+        db.session.commit()
+        assert structure() == [
+            (2, 'leaf0'),
+            (3, 'leaf00'),
+            (3, 'leaf2'),
+            (4, 'leaf20'),
+            (4, 'leaf21'),
+            (4, 'leaf22'),
+            (3, 'leaf1'),
+            (4, 'leaf10'),
+            (4, 'leaf11'),
+            (4, 'leaf12'),
+            (3, 'leaf01'),
+            (3, 'leaf02'),
+        ]

@@ -6,6 +6,7 @@ from flask import url_for
 from invenio_db import db
 from sqlalchemy import asc
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import Session
 from sqlalchemy_mptt import BaseNestedSets, mptt_sessionmaker
 
 taxonomy_signals = Namespace()
@@ -64,18 +65,60 @@ class TaxonomyTerm(db.Model, BaseNestedSets):
         self.parent = parent
         self.tree_id = tree_id
 
-    def append(self, term):
-        if term.parent_id:
-            term.move_inside(self.id)
-        else:
-            term.parent = self
+    def append(self, term, order=-1):
 
-    def move_to(self, target_path):
+        if term.parent == self:
+            # moving seems to be broken, so remove it from the tree and unfortunately commit
+            term.parent = None
+            session = Session.object_session(term)
+            session.add(term)
+            session.commit()
+
+            # get it back and reinsert it into the tree
+            term = TaxonomyTerm.query.get(term.id)
+
+        # add to the end of the term
+        session = Session.object_session(self)
+        if not session:
+            if term.parent_id:
+                term.move_inside(self.id)
+            else:
+                term.parent = self
+            return
+        mptt_sessionmaker(session)
+
+        # if no children, add to the end of the term regardless the order
+        children = list(x.id for x in self.children)
+
+        if not children:
+            if term.parent_id:
+                term.move_inside(self.id)
+            else:
+                term.parent = self
+            return
+
+        if not term.parent_id:
+            term.parent = self
+            session.add(term)
+
+        # fix order to interval [0, len(children)] inclusive and move to the correct position
+        order = order % (len(children) + 1)
+
+        if order > 0:
+            if hasattr(term, 'mptt_move_before'):
+                delattr(term, 'mptt_move_before')
+            term.move_after(children[order - 1])
+        else:
+            if hasattr(term, 'mptt_move_after'):
+                delattr(term, 'mptt_move_after')
+            term.move_before(children[0])
+
+    def move_to(self, target_path, order=-1):
         if self.parent_id is None:
             raise AttributeError('Can not move taxonomy into another taxonomy')
         taxonomy, target_term = Taxonomy.find_taxonomy_and_term(target_path)
         session = mptt_sessionmaker(db.session)
-        target_term.append(self)
+        target_term.append(self, order)
         session.add(self)
         session.add(target_term)
         session.commit()
@@ -99,11 +142,11 @@ class TaxonomyTerm(db.Model, BaseNestedSets):
         taxonomy_code, term_path = self.tree_path.lstrip('/').split('/', 1)
 
         return url_for(
-                "taxonomies.taxonomy_get_term",
-                taxonomy_code=taxonomy_code,
-                term_path=term_path,
-                _external=True,
-            )
+            "taxonomies.taxonomy_get_term",
+            taxonomy_code=taxonomy_code,
+            term_path=term_path,
+            _external=True,
+        )
 
     @property
     def link_tree(self):

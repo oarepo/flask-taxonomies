@@ -318,13 +318,16 @@ class TestTaxonomyAPI:
         t = Taxonomy.create_taxonomy(code="groot")
         db.session.commit()
 
-        root_taxonomy.create_term('', slug="term1")
-        term2 = t.create_term('', slug="term2")
+        root_taxonomy.create_term(slug="term1")
+        term2 = t.create_term(slug="term2")
 
         # Test move /root/term1 -> /groot/term2/term1
         login_user(client, permissions['terms'])
         res = client.post("/taxonomies/root/term1/",
-                          json={"move_target": "http://localhost/taxonomies/groot/term2/"})  # noqa
+                          headers={
+                              'Destination': "http://localhost/taxonomies/groot/term2/",
+                              'Content-Type': 'application/vnd.move'
+                          })
 
         assert res.status_code == 200
         moved = t.get_term("term1")
@@ -335,7 +338,10 @@ class TestTaxonomyAPI:
 
         # Test move subtree
         res = client.post("/taxonomies/groot/term2/",
-                          json={"move_target": "http://localhost/taxonomies/root/"})  # noqa
+                          headers={
+                              "Destination": "http://localhost/taxonomies/root/",
+                              'Content-Type': 'application/vnd.move'
+                          })  # noqa
         assert res.status_code == 200
 
         moved1 = root_taxonomy.get_term("term2")
@@ -349,17 +355,26 @@ class TestTaxonomyAPI:
 
         # Test move to invalid path fails
         res = client.post("/taxonomies/root/term2/",
-                          json={"move_target": "http://localhost/taxonomies/root/somethingbad/"})  # noqa
+                          headers={
+                              "Destination": "http://localhost/taxonomies/root/somethingbad/",
+                              'Content-Type': 'application/vnd.move'
+                          })  # noqa
         assert res.status_code == 400
 
         # Test move to invalid url prefix fails
         res = client.post("/taxonomies/root/term2/",
-                          json={"move_target": "http://localhost/taxi/root/somethinggood/"})  # noqa
+                          headers={
+                              "Destination": "http://localhost/taxi/root/somethinggood/",
+                              'Content-Type': 'application/vnd.move'
+                          })  # noqa
         assert res.status_code == 400
 
         # Test move from invalid source fails
         res = client.post("/taxonomies/root/somethingbad/",
-                          json={"move_target": "http://localhost/taxonomies/groot/"})  # noqa
+                          headers={
+                              "Destination": "http://localhost/taxonomies/groot/",
+                              'Content-Type': 'application/vnd.move'
+                          })  # noqa
         assert res.status_code == 400
 
     @pytest.mark.parametrize('filled_taxonomy',

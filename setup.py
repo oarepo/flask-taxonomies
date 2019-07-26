@@ -16,7 +16,6 @@ install_requires = [
     'invenio[{db},base]~={version}'.format(
         db=DATABASE, version=INVENIO_VERSION),
     'invenio-access>=1.1.0',
-    'flask-accept>=0.0.6',
     'wrapt>=1.11.0'
 ]
 
