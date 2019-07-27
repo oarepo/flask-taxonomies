@@ -258,8 +258,6 @@ def taxonomy_get_roots(taxonomy, drilldown=False):
         return jsonify([
             jsonify_taxonomy_term(t, taxonomy.code, f'/{t.slug}')
             for t in roots])
-    for t in taxonomy.terms:
-        print(t.id, t.slug, t.left, t.right, t.level, t.parent)
 
     ret = build_tree_from_list(taxonomy.code, taxonomy.terms)
     return jsonify(ret)
@@ -347,10 +345,9 @@ def taxonomy_create_child_term(taxonomy, slug=None, term_path='', extra_data=Non
 @pass_taxonomy
 @use_kwargs(
     {
-        "slug": fields.Str(required=False),
         "destination": fields.Str(location='headers', load_from='Destination'),
         "destination_order":
-            fields.Int(location='headers', load_from='Destination-Order', default=-1),
+            fields.Str(location='headers', load_from='Destination-Order', default='inside'),
     }
 )
 @need_move_permissions(
