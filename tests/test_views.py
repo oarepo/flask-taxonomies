@@ -100,13 +100,13 @@ class TestTaxonomyAPI:
                          headers={'Accept': 'application/json'})
         assert res.json == []
 
-        root_taxonomy.create_term("/root/", slug="top1")
-        root_taxonomy.create_term("/root/top1/", slug="leaf1")
-        root_taxonomy.create_term("/root/", slug="top2")
+        root_taxonomy.create_term(slug="top1").create_term(slug="leaf1")
+        root_taxonomy.create_term(slug='top2')
 
         # Test multiple top-level terms
         res = client.get("/taxonomies/{}/".format(root_taxonomy.code),
                          headers={'Accept': 'application/json'})
+        print(res.json)
         assert len(res.json) == 2
         slugs = [r["slug"] for r in res.json]
         assert "top1" in slugs
@@ -129,9 +129,8 @@ class TestTaxonomyAPI:
         """Test getting Term details."""
         login_user(client, permissions['terms'])
 
-        root_taxonomy.create_term("/root/", slug="top1")
-        root_taxonomy.create_term("/root/top1/", slug="leaf1")
-        root_taxonomy.create_term("/root/top1/leaf1", slug="leafeaf")
+        leaf1 = root_taxonomy.create_term(slug="top1").create_term(slug="leaf1")
+        leaf1.create_term(slug="leafeaf")
 
         res = client.get("/taxonomies/{}/top1/leaf1/?drilldown=1"
                          .format(root_taxonomy.code),
@@ -182,7 +181,7 @@ class TestTaxonomyAPI:
         assert res.status_code == 400
 
         # Test create on nested path
-        top1 = root_taxonomy.create_term("/root/", slug="top1")
+        top1 = root_taxonomy.create_term(slug="top1")
         res = client.post("/taxonomies/{}/top1/"
                           .format(root_taxonomy.code),
                           json={"slug": "leaf 2"})
@@ -191,7 +190,8 @@ class TestTaxonomyAPI:
         created = root_taxonomy.get_term("leaf-2")
         assert created.slug == "leaf-2"
         assert created.tree_id == root_taxonomy.tree_id
-        assert created.is_descendant_of(top1)
+        assert created.parent == top1
+        root_taxonomy.check()
 
         # Test create duplicit slug fails
         res = client.post("/taxonomies/{}/top1/".format(root_taxonomy.code),
@@ -221,12 +221,15 @@ class TestTaxonomyAPI:
                              client, Taxonomy, TaxonomyTerm,
                              permissions):
         """Test deleting whole taxonomy."""
-        t = Taxonomy.create_taxonomy(code="tbd")
-        db.session.add(t)
-        db.session.commit()
+        root_taxonomy.check()
 
-        t.create_term("/tbd/", slug="top1")
-        t.create_term("/tbd/top1", slug="leaf1")
+        t = Taxonomy.create_taxonomy(code="tbd")
+        assert t.tree_id != root_taxonomy.tree_id
+
+        t.create_term(slug="top1").create_term(slug="leaf1")
+
+        root_taxonomy.check()
+        t.check()
 
         # Test unauthenticated delete fails
         res = client.delete("/taxonomies/tbd/")
@@ -238,6 +241,7 @@ class TestTaxonomyAPI:
         assert Taxonomy.get("tbd") is None
         assert TaxonomyTerm.query.filter_by(slug="leaf1").one_or_none() is None
         assert TaxonomyTerm.query.filter_by(slug="top1").one_or_none() is None
+        root_taxonomy.check()
 
         # Delete nonexistent taxonomy fails
         res = client.delete("/taxonomies/nope/")
@@ -251,14 +255,15 @@ class TestTaxonomyAPI:
     def test_term_delete(self, root_taxonomy, client, permissions):
         """Test deleting whole term and a subtree."""
         login_user(client, permissions['terms'])
-        root_taxonomy.create_term("/root/", slug="top1")
-        root_taxonomy.create_term("/root/top1/", slug="leaf1")
-        root_taxonomy.create_term("/root/", slug="top2")
+        root_taxonomy.create_term(slug="top1").create_term(slug="leaf1")
+        root_taxonomy.create_term(slug="top2")
+        root_taxonomy.check()
 
         client.delete("/taxonomies/root/top1/")
         assert root_taxonomy.get_term("leaf1") is None
         assert root_taxonomy.get_term("top1") is None
         assert root_taxonomy.get_term("top2") is not None
+        root_taxonomy.check()
 
         # Test access forbidden for user without permission
         login_user(client, permissions['noperms'])
@@ -288,7 +293,7 @@ class TestTaxonomyAPI:
     def test_term_update(self, root_taxonomy, client, permissions):
         """Test updating a term."""
         login_user(client, permissions['terms'])
-        root_taxonomy.create_term('', slug="term1")
+        root_taxonomy.create_term(slug="term1")
 
         res = client.patch("/taxonomies/root/term1/",
                            json={"updated": "yes"})
@@ -315,31 +320,30 @@ class TestTaxonomyAPI:
 
     def test_term_move(self, db, root_taxonomy, client, Taxonomy, permissions):
         """Test moving a Taxonomy Term."""
-        t = Taxonomy.create_taxonomy(code="groot")
-        db.session.commit()
 
         root_taxonomy.create_term(slug="term1")
-        term2 = t.create_term(slug="term2")
+        term2 = root_taxonomy.create_term(slug="term2")
+        term3 = root_taxonomy.create_term(slug="term3")
 
         # Test move /root/term1 -> /groot/term2/term1
         login_user(client, permissions['terms'])
         res = client.post("/taxonomies/root/term1/",
                           headers={
-                              'Destination': "http://localhost/taxonomies/groot/term2/",
+                              'Destination': "http://localhost/taxonomies/root/term2/",
                               'Content-Type': 'application/vnd.move'
                           })
 
         assert res.status_code == 200
-        moved = t.get_term("term1")
+        moved = root_taxonomy.get_term("term1")
         assert moved is not None
-        assert moved.tree_id == t.tree_id
-        assert moved.is_descendant_of(term2)
-        assert moved.tree_path == "/groot/term2/term1"
+        assert moved.tree_id == root_taxonomy.tree_id
+        assert moved.parent == term2
+        assert moved.tree_path == "/term2/term1"
 
         # Test move subtree
-        res = client.post("/taxonomies/groot/term2/",
+        res = client.post("/taxonomies/root/term2/",
                           headers={
-                              "Destination": "http://localhost/taxonomies/root/",
+                              "Destination": "http://localhost/taxonomies/root/term3/",
                               'Content-Type': 'application/vnd.move'
                           })  # noqa
         assert res.status_code == 200
@@ -347,11 +351,10 @@ class TestTaxonomyAPI:
         moved1 = root_taxonomy.get_term("term2")
         moved2 = root_taxonomy.get_term("term1")
 
-        assert moved1.tree_path == "/root/term2"
-        assert moved2.tree_path == "/root/term2/term1"
-        assert moved1.is_descendant_of(root_taxonomy)
-        assert moved2.is_descendant_of(root_taxonomy)
-        assert moved2.is_descendant_of(moved1)
+        assert moved1.tree_path == "/term3/term2"
+        assert moved2.tree_path == "/term3/term2/term1"
+        assert moved1.parent == term3
+        assert moved2.parent == term2
 
         # Test move to invalid path fails
         res = client.post("/taxonomies/root/term2/",

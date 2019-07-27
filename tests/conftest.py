@@ -148,22 +148,10 @@ def filled_taxonomy(request, db, root_taxonomy, TaxonomyTerm):
             return
         for i in range(1, 1 + lengths[0]):
             title = f'{prefix}{i}'
-            t = TaxonomyTerm(slug=title, parent=parent)
-            t.left = t.right = 0
-            t.tree_id = root_taxonomy.tree_id
-            db.session.add(t)
+            t = parent.create_term(slug=title)
             _generate(t, lengths[1:], prefix + separator, separator)
 
-    tree_manager.register_events(remove=True)       # danger: not thread safe
-
     _generate(root_taxonomy, request.param, 'node-', '-')
-    db.session.commit()
-
-    session = mptt_sessionmaker(db.session)
-    tree_manager.register_events()
-
-    TaxonomyTerm.rebuild_tree(session, root_taxonomy.tree_id)
-
     return root_taxonomy
 
 
@@ -212,3 +200,25 @@ def permissions(db, root_taxonomy):
     db.session.commit()
 
     yield users
+
+
+@pytest.fixture
+def mkt(db, TaxonomyTerm, root_taxonomy):
+    def wrapper(*nodes):
+        def construct(node, level, left, order):
+            children = []
+            this_left = left
+            left += 1
+            if not isinstance(node, tuple) and not isinstance(node, list):
+                node = (node,)
+            if len(node) > 1:
+                for ci, c in enumerate(node[1:]):
+                    cc, right = construct(c, level + 1, left, ci)
+                    left = right + 1
+                    children.extend(cc)
+            this_right = left
+            return [(node[0], level, this_left, this_right, order)] + children, this_right
+
+        return construct(('root', *nodes), level=1, left=1, order=0)[0]
+
+    return wrapper
