@@ -16,6 +16,7 @@ from werkzeug.exceptions import BadRequest
 
 from flask_taxonomies.flask_routing_ext import accept_fallback
 from flask_taxonomies.models import (
+    MovePosition,
     after_taxonomy_created,
     after_taxonomy_deleted,
     after_taxonomy_term_created,
@@ -83,7 +84,6 @@ def parse_extra_data(request, name, field):
         extra = {**request.json}
         extra.pop('code', None)
         extra.pop('slug', None)
-        extra.pop('move_target', None)
         return extra
 
 
@@ -147,8 +147,8 @@ def need_move_permissions(object_getter, action):
     def decorator_builder(f):
         @wraps(f)
         def decorate(*args, **kwargs):
-            taxonomy, term_path, move_target = object_getter(*args, **kwargs)
-            if move_target:
+            taxonomy, term_path, destination = object_getter(*args, **kwargs)
+            if destination:
                 try:
                     term = taxonomy.find_term(term_path)
                     check_permission(
@@ -250,6 +250,8 @@ def taxonomy_get_roots(taxonomy, drilldown=False):
         return jsonify([
             jsonify_taxonomy_term(t, f'/{taxonomy.code}/')
             for t in roots])
+    for t in taxonomy.terms:
+        print(t.id, t.slug, t.left, t.right, t.level, t.parent)
 
     ret = build_tree_from_list(f'/{taxonomy.code}/',
                                taxonomy.terms)
@@ -371,11 +373,15 @@ def taxonomy_move_term(taxonomy, term_path='', destination='', destination_order
         target_path = f'{taxonomy.code}/'
 
     try:
-        term.move_to(target_path, order=destination_order)
+        target_taxonomy, target_term = Taxonomy.find_taxonomy_and_term(target_path)
     except NoResultFound:
         abort(400, "Target path not found.")
-    after_taxonomy_term_moved.send(term, taxonomy=taxonomy)
 
+    term.move(target_term, position=MovePosition(destination_order or 'inside'))
+    db.session.commit()
+
+    after_taxonomy_term_moved.send(term, taxonomy=taxonomy)
+    db.session.refresh(term)
     moved = jsonify_taxonomy_term(term, term.parent.tree_path)
     response = jsonify(moved)
     response.headers['Location'] = moved['links']['self']
@@ -395,11 +401,7 @@ def _taxonomy_create_term_internal(taxonomy, slug=None,
     try:
         slug = slugify(slug)
         before_taxonomy_term_created.send(taxonomy, slug=slug, extra_data=extra_data)
-        created = TaxonomyTerm(slug=slug, extra_data=extra_data)
-        term.append(created)
-        session = mptt_sessionmaker(db.session)
-        session.add(created)
-        session.commit()
+        created = term.create_term(slug=slug, extra_data=extra_data)
         after_taxonomy_term_created.send(term, taxonomy=taxonomy)
 
         created_dict = \
@@ -440,10 +442,8 @@ def taxonomy_delete(taxonomy):
 )
 def taxonomy_delete_term(taxonomy, term):
     """Delete a Term subtree in a Taxonomy."""
-    session = mptt_sessionmaker(db.session)
     before_taxonomy_term_deleted.send(term, taxonomy=taxonomy)
-    session.delete(term)
-    session.commit()
+    term.delete()
     after_taxonomy_term_deleted.send(term, taxonomy=taxonomy)
     response = make_response()
     response.status_code = 204
