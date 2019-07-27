@@ -1,7 +1,7 @@
 {
   "definitions": {
-    "Taxonomy": {
-      "$id": "#taxonomy",
+    "TaxonomyTerm": {
+      "$id": "#TaxonomyTerm",
       "type": "object",
       "properties": {
         "id": {
@@ -28,10 +28,10 @@
         }
       }
     },
-    "TaxonomyArray": {
+    "TaxonomyTermArray": {
       "type": "array",
       "items": {
-        "$ref": "#/definitions/Taxonomy"
+        "$ref": "#/definitions/TaxonomyTerm"
       }
     }
   }
