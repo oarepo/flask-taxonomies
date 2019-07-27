@@ -12,7 +12,6 @@ INVENIO_VERSION = "3.1.0"
 install_requires = [
     'python-slugify>=3.0.2',
     'webargs>=5.3.2',
-    'sqlalchemy_mptt>=0.2.4',
     'invenio[{db},base]~={version}'.format(
         db=DATABASE, version=INVENIO_VERSION),
     'invenio-access>=1.1.0',

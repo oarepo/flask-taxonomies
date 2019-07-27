@@ -10,7 +10,6 @@ from invenio_accounts import InvenioAccounts
 from invenio_accounts.testutils import create_test_user
 from invenio_db import InvenioDB
 from invenio_db import db as _db
-from sqlalchemy_mptt import mptt_sessionmaker, tree_manager
 from sqlalchemy_utils import create_database, database_exists
 
 from flask_taxonomies.ext import FlaskTaxonomies
@@ -120,10 +119,9 @@ def db(app):
 def root_taxonomy(db):
     """Create root taxonomy element."""
     from flask_taxonomies.models import Taxonomy
-    session = mptt_sessionmaker(db.session)
     root = Taxonomy.create_taxonomy(code="root")
-    session.add(root)
-    session.commit()
+    db.session.add(root)
+    db.session.commit()
     return root
 
 

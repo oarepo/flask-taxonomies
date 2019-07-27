@@ -9,7 +9,6 @@ from invenio_db import db
 from slugify import slugify
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
-from sqlalchemy_mptt import mptt_sessionmaker
 from webargs import fields
 from webargs.flaskparser import parser, use_kwargs
 from werkzeug.exceptions import BadRequest
@@ -228,12 +227,10 @@ def taxonomy_list():
 def taxonomy_create(code: str, extra_data: dict = None):
     """Create a new Taxonomy."""
     try:
-        session = mptt_sessionmaker(db.session)
         before_taxonomy_created.send(current_app._get_current_object(),
                                      code=code, extra_data=extra_data)
         created = Taxonomy.create_taxonomy(code=code, extra_data=extra_data)
-        session.add(created)
-        session.commit()
+        db.session.commit()
         after_taxonomy_created.send(created)
         created_dict = jsonify_taxonomy(created)
 
@@ -261,8 +258,6 @@ def taxonomy_get_roots(taxonomy, drilldown=False):
         return jsonify([
             jsonify_taxonomy_term(t, taxonomy.code, f'/{t.slug}')
             for t in roots])
-    for t in taxonomy.terms:
-        print(t.id, t.slug, t.left, t.right, t.level, t.parent)
 
     ret = build_tree_from_list(taxonomy.code, taxonomy.terms)
     return jsonify(ret)
@@ -350,10 +345,9 @@ def taxonomy_create_child_term(taxonomy, slug=None, term_path='', extra_data=Non
 @pass_taxonomy
 @use_kwargs(
     {
-        "slug": fields.Str(required=False),
         "destination": fields.Str(location='headers', load_from='Destination'),
         "destination_order":
-            fields.Int(location='headers', load_from='Destination-Order', default=-1),
+            fields.Str(location='headers', load_from='Destination-Order', default='inside'),
     }
 )
 @need_move_permissions(
@@ -414,6 +408,7 @@ def _taxonomy_create_term_internal(taxonomy, slug=None,
         slug = slugify(slug)
         before_taxonomy_term_created.send(taxonomy, slug=slug, extra_data=extra_data)
         created = term.create_term(slug=slug, extra_data=extra_data)
+        db.session.commit()
         after_taxonomy_term_created.send(term, taxonomy=taxonomy)
 
         created_dict = \
@@ -436,10 +431,9 @@ def _taxonomy_create_term_internal(taxonomy, slug=None,
 )
 def taxonomy_delete(taxonomy):
     """Delete whole taxonomy tree."""
-    session = mptt_sessionmaker(db.session)
     before_taxonomy_deleted.send(taxonomy)
-    session.delete(taxonomy)
-    session.commit()
+    taxonomy.delete()
+    db.session.commit()
     after_taxonomy_deleted.send(taxonomy)
     response = make_response()
     response.status_code = 204
@@ -456,6 +450,7 @@ def taxonomy_delete_term(taxonomy, term):
     """Delete a Term subtree in a Taxonomy."""
     before_taxonomy_term_deleted.send(term, taxonomy=taxonomy)
     term.delete()
+    db.session.commit()
     after_taxonomy_term_deleted.send(term, taxonomy=taxonomy)
     response = make_response()
     response.status_code = 204
