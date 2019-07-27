@@ -215,10 +215,6 @@ class TaxonomyTerm(db.Model):
                             right=TaxonomyTerm.right - occupied_space)
                     )
 
-    def dump(self):
-        for c in self.descendants_or_self:
-            yield (c.slug, c.level, c.parent_id, c.left, c.right, c.order)
-
     def check(self, path=None):
         """
         Checks consistency of MPTT tree
@@ -238,17 +234,17 @@ class TaxonomyTerm(db.Model):
 
         if not children:
             if self.left + 1 != self.right:
-                raise ValueError(
+                raise ValueError(       # pragma: no cover
                     'Error in childless element {}: bad left {} or right{}'.format(
                         path, self.left, self.right))
         else:
             # check lefts and rights
             if self.left + 1 != children[0].left:
-                raise ValueError(
+                raise ValueError(       # pragma: no cover
                     'First child "{}" of {} has bad left {}, expecting {}'.format(
                         children[0].slug, path, children[0].left, self.left + 1))
             if self.right - 1 != children[-1].right:
-                raise ValueError(
+                raise ValueError(       # pragma: no cover
                     'Last child "{}" of {} has bad right {}, expecting {}'.format(
                         children[-1].slug, path, children[0].right, self.right - 1))
             # check lefts and rights between children
@@ -256,16 +252,16 @@ class TaxonomyTerm(db.Model):
                 c1 = children[i]
                 c2 = children[i + 1]
                 if c1.right + 1 != c2.left:
-                    raise ValueError(
+                    raise ValueError(       # pragma: no cover
                         'Child with slug "{}" of element {} has bad left {}, expecting {}'.format(
                             c2.slug, path, c2.left, c1.right + 1))
             for ci, c in enumerate(children):
                 if c.level != self.level + 1:
-                    raise ValueError(
+                    raise ValueError(       # pragma: no cover
                         'Child with slug "{}" of {} has bad level {}, expecting {}'.format(
                             c.slug, path, c.level, self.level + 1))
                 if c.order != ci:
-                    raise ValueError(
+                    raise ValueError(       # pragma: no cover
                         'Child with slug "{}" of {} has bad order {}, expecting {}'.format(
                             c.slug, path, c.order, ci))
 
@@ -309,7 +305,7 @@ class TaxonomyTerm(db.Model):
 
         t = TaxonomyTerm.__table__
 
-        if logger.isEnabledFor(logging.DEBUG):
+        if logger.isEnabledFor(logging.DEBUG):      # pragma: no cover
             logging.debug(f'target parent id {target_parent_id}, '
                           f'target parent left {target_parent_left}, '
                           f'target parent right {target_parent_right}\n'
@@ -319,7 +315,7 @@ class TaxonomyTerm(db.Model):
                           f'self right {self_right}\n'
                           )
 
-        if logger.isEnabledFor(logging.DEBUG):
+        if logger.isEnabledFor(logging.DEBUG):      # pragma: no cover
             logging.debug("Phase 0: before move right   \n%s", self.taxonomy.dump(True))
 
         if self_left == target_left:
@@ -354,7 +350,7 @@ class TaxonomyTerm(db.Model):
                 db.session.execute(
                     t.update().where(target_ancestors_cond).values(
                         right=TaxonomyTerm.right + occupied_space))
-            else:
+            else:   # pragma: no cover
                 raise RuntimeError('Should not get here as we are moving into parent, not onto it')
 
         if self_left >= target_left:
@@ -362,7 +358,7 @@ class TaxonomyTerm(db.Model):
             self_left += occupied_space
             self_right += occupied_space
 
-        if logger.isEnabledFor(logging.DEBUG):
+        if logger.isEnabledFor(logging.DEBUG):      # pragma: no cover
             logging.debug("Phase 1: after move right    \n%s", self.taxonomy.dump(True))
 
         with db.session.begin_nested():
@@ -374,7 +370,7 @@ class TaxonomyTerm(db.Model):
                     order=TaxonomyTerm.order + 1)
             )
 
-        if logger.isEnabledFor(logging.DEBUG):
+        if logger.isEnabledFor(logging.DEBUG):      # pragma: no cover
             logging.debug("Phase 2: after order future siblings\n%s", self.taxonomy.dump(True))
 
         with db.session.begin_nested():
@@ -390,7 +386,7 @@ class TaxonomyTerm(db.Model):
                     level=TaxonomyTerm.level + target_level - self_level)
             )
 
-        if logger.isEnabledFor(logging.DEBUG):
+        if logger.isEnabledFor(logging.DEBUG):      # pragma: no cover
             logging.debug("Phase 3: after move children \n%s", self.taxonomy.dump(True))
 
         with db.session.begin_nested():
@@ -404,7 +400,7 @@ class TaxonomyTerm(db.Model):
                     order=target_order)
             )
 
-        if logger.isEnabledFor(logging.DEBUG):
+        if logger.isEnabledFor(logging.DEBUG):      # pragma: no cover
             logging.debug("Phase 4: after move term     \n%s", self.taxonomy.dump(True))
 
         with db.session.begin_nested():
@@ -428,7 +424,7 @@ class TaxonomyTerm(db.Model):
                     right=TaxonomyTerm.right - occupied_space)
             )
 
-        if logger.isEnabledFor(logging.DEBUG):
+        if logger.isEnabledFor(logging.DEBUG):      # pragma: no cover
             logging.debug("Phase 5: after removing space\n%s", self.taxonomy.dump(True))
 
         with db.session.begin_nested():
@@ -438,7 +434,7 @@ class TaxonomyTerm(db.Model):
             db.session.execute(
                 t.update().where(orig_siblings_cond).values(order=TaxonomyTerm.order - 1))
 
-        if logger.isEnabledFor(logging.DEBUG):
+        if logger.isEnabledFor(logging.DEBUG):      # pragma: no cover
             logging.debug("Phase 6: after fixing order, done\n%s", self.taxonomy.dump(True))
 
     def _get_insertion_position(self, position: MovePosition):
@@ -454,7 +450,7 @@ class TaxonomyTerm(db.Model):
         if position == MovePosition.BEFORE:
             return parent.id, parent.left, parent.right, self.left, \
                    self.level, self.order
-        raise Exception('Unhandled MovePosition %s' % position)
+        raise Exception('Unhandled MovePosition %s' % position)     # pragma: no cover
 
     @property
     def taxonomy(self):
@@ -620,19 +616,6 @@ class Taxonomy(wrapt.ObjectProxy):
         if required:
             return found.one()
         return found.one_or_none()
-
-    def create_term_on_path(self, parent_path=None, **kwargs):
-        term = TaxonomyTerm(**kwargs)
-        parts = _parse_path(parent_path)
-        parent_term = self.get_term(parts[-1]) if parts else self
-        if not parent_term:
-            raise AttributeError('Term with slug %s not found in taxonomy %s' %
-                                 (parts[-1], self.code))
-        parent_term.append(term)
-        session = mptt_sessionmaker(db.session)
-        session.add(term)
-        session.commit()
-        return term
 
 
 def _parse_path(path):
