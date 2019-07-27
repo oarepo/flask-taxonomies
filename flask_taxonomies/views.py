@@ -177,7 +177,8 @@ def jsonify_taxonomy(t: Taxonomy) -> dict:
 
 def jsonify_taxonomy_term(t: TaxonomyTerm,
                           taxonomy_code,
-                          path: str) -> dict:
+                          path: str,
+                          parent_path: str = None) -> dict:
     """Prepare TaxonomyTerm to be easily jsonified."""
     if not path.startswith('/'):
         raise Exception()
@@ -185,7 +186,7 @@ def jsonify_taxonomy_term(t: TaxonomyTerm,
         **(t.extra_data or {}),
         "id": t.id,
         "slug": t.slug,
-        "path": f'/{taxonomy_code}{path}',
+        "path": path,
         "links": {
             "self": url_for(
                 "taxonomies.taxonomy_get_term",
@@ -202,6 +203,26 @@ def jsonify_taxonomy_term(t: TaxonomyTerm,
             )
         },
     }
+    if parent_path is not None:
+        print('inside', taxonomy_code, parent_path)
+        txc = taxonomy_code + parent_path
+        txc = txc.split('/', maxsplit=1)
+        result['links'].update({
+            "parent": url_for(
+                "taxonomies.taxonomy_get_term",
+                taxonomy_code=txc[0],
+                term_path=txc[1],
+                _external=True,
+            ),
+            "parent_tree": url_for(
+                "taxonomies.taxonomy_get_term",
+                taxonomy_code=txc[0],
+                term_path=txc[1],
+                drilldown=True,
+                _external=True,
+            )
+        })
+
     descendants_count = (t.right - t.left - 1) / 2
     if descendants_count:
         result["descendants_count"] = descendants_count
@@ -263,7 +284,7 @@ def taxonomy_get_roots(taxonomy, drilldown=False):
     return jsonify(ret)
 
 
-def build_tree_from_list(taxonomy_code, tree_as_list):
+def build_tree_from_list(taxonomy_code, tree_as_list, parent_path=None):
     ret = []
     stack = []
     root_level = None
@@ -274,9 +295,17 @@ def build_tree_from_list(taxonomy_code, tree_as_list):
         while item.level - root_level < len(stack):
             stack.pop()
 
+        if not stack:
+            if parent_path:
+                item_path = f'{parent_path}/{item.slug}'
+            else:
+                item_path = f'/{item.slug}'
+        else:
+            item_path = f'{stack[-1]["path"]}/{item.slug}'
+
         item_json = jsonify_taxonomy_term(
-            item, taxonomy_code,
-            f'/{item.slug}' if not stack else f'{stack[-1]["path"]}/{item.slug}')
+            item, taxonomy_code, item_path,
+            parent_path if not stack else None)
 
         if item.level == root_level:
             # top element in tree_as_list
@@ -302,14 +331,17 @@ def build_tree_from_list(taxonomy_code, tree_as_list):
 })
 def taxonomy_get_term(taxonomy, term, drilldown=False):
     """Get Taxonomy Term detail."""
+    print(term.parent.tree_path)
     if not drilldown:
         return jsonify(
-            jsonify_taxonomy_term(term, taxonomy.code, term.tree_path),
+            jsonify_taxonomy_term(term, taxonomy.code, term.tree_path,
+                                  term.parent.tree_path if term.parent else None),
         )
     else:
         return jsonify(
-            build_tree_from_list(taxonomy.code + term.parent.tree_path,
-                                 term.descendants_or_self)[0])
+            build_tree_from_list(taxonomy.code,
+                                 term.descendants_or_self,
+                                 term.parent.tree_path)[0])
 
 
 @blueprint.route("/<string:taxonomy_code>/", methods=("POST",))

@@ -136,9 +136,29 @@ class TestTaxonomyAPI:
                          .format(root_taxonomy.code),
                          headers={'Accept': 'application/json'})
 
+        print(res.json)
         assert res.json["slug"] == "leaf1"
-        assert res.json["path"] == "/root/top1/leaf1"
+        assert res.json["path"] == "/top1/leaf1"
         assert len(res.json["children"]) == 1
+
+        assert res.json['links']['self'].endswith(
+            '/taxonomies/root/top1/leaf1/')
+        assert res.json['links']['tree'].endswith(
+            '/taxonomies/root/top1/leaf1/?drilldown=True')
+
+        assert res.json['links']['parent'].endswith(
+            '/taxonomies/root/top1/')
+        assert res.json['links']['parent_tree'].endswith(
+            '/taxonomies/root/top1/?drilldown=True')
+
+        res_child = res.json["children"][0]
+        assert res_child["slug"] == "leafeaf"
+        assert res_child["path"] == "/top1/leaf1/leafeaf"
+
+        assert res_child['links']['self'].endswith(
+            '/taxonomies/root/top1/leaf1/leafeaf/')
+        assert res_child['links']['tree'].endswith(
+            '/taxonomies/root/top1/leaf1/leafeaf/?drilldown=True')
 
         # Test get parent/child details
         res = client.get("/taxonomies/{}/top1/?drilldown=True"
