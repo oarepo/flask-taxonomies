@@ -1,5 +1,5 @@
 {
-    "Taxonomy": {
+    "TaxonomyTerm": {
         "type": "object",
         "properties": {
             "id": {
