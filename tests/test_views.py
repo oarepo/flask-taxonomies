@@ -338,7 +338,7 @@ class TestTaxonomyAPI:
         assert moved is not None
         assert moved.tree_id == root_taxonomy.tree_id
         assert moved.parent == term2
-        assert moved.tree_path == "/root/term2/term1"
+        assert moved.tree_path == "/term2/term1"
 
         # Test move subtree
         res = client.post("/taxonomies/root/term2/",
@@ -351,8 +351,8 @@ class TestTaxonomyAPI:
         moved1 = root_taxonomy.get_term("term2")
         moved2 = root_taxonomy.get_term("term1")
 
-        assert moved1.tree_path == "/root/term3/term2"
-        assert moved2.tree_path == "/root/term3/term2/term1"
+        assert moved1.tree_path == "/term3/term2"
+        assert moved2.tree_path == "/term3/term2/term1"
         assert moved1.parent == term3
         assert moved2.parent == term2
 

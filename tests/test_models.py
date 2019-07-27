@@ -97,8 +97,8 @@ class TestTaxonomyTerm:
         leaf = root_taxonomy.create_term(slug="leaf")
         nested = leaf.create_term(slug="nested")
 
-        assert leaf.tree_path == "/root/leaf"
-        assert nested.tree_path == "/root/leaf/nested"
+        assert leaf.tree_path == "/leaf"
+        assert nested.tree_path == "/leaf/nested"
 
         root_taxonomy.check()
 

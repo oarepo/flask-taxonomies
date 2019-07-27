@@ -465,6 +465,7 @@ class TaxonomyTerm(db.Model):
     def tree_path(self) -> str:
         """Get path in a taxonomy tree."""
         ancestor_cond = and_(TaxonomyTerm.tree_id == self.tree_id,
+                             TaxonomyTerm.left > 1,     # do not take root
                              TaxonomyTerm.left <= self.left,
                              TaxonomyTerm.right >= self.right)
         path = [
@@ -509,7 +510,7 @@ class TaxonomyTerm(db.Model):
         )
 
     @property
-    def link_tree(self):
+    def link_tree(self, parent_path):
         taxonomy_code, term_path = self.tree_path.lstrip('/').split('/', 1)
 
         return url_for(
