@@ -1,7 +1,7 @@
+from invenio_db import db
 from slugify import slugify
 
 from flask_taxonomies.models import Taxonomy
-from invenio_db import db
 
 
 def import_taxonomy(taxonomy_file):
@@ -71,10 +71,12 @@ def convert_data_to_dict(data):
                         val = {part: val}
 
                 # merge converted_row with val, merge items in arrays
-                piecewise_merge(converted_row, val, list_update=lambda target, source: target[0].update(source[0]))
+                piecewise_merge(converted_row, val,
+                                list_update=lambda target, source: target[0].update(source[0]))
 
             # merge converted_row into ret, but handle arrays this time
-            piecewise_merge(ret, converted_row, list_update=lambda target, source: target.extend(source))
+            piecewise_merge(ret, converted_row,
+                            list_update=lambda target, source: target.extend(source))
         yield ret
 
 
