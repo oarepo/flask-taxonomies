@@ -106,7 +106,6 @@ class TestTaxonomyAPI:
         # Test multiple top-level terms
         res = client.get("/taxonomies/{}/".format(root_taxonomy.code),
                          headers={'Accept': 'application/json'})
-        print(res.json)
         assert len(res.json) == 2
         slugs = [r["slug"] for r in res.json]
         assert "top1" in slugs
@@ -137,8 +136,27 @@ class TestTaxonomyAPI:
                          headers={'Accept': 'application/json'})
 
         assert res.json["slug"] == "leaf1"
-        assert res.json["path"] == "/root/top1/leaf1"
+        assert res.json["path"] == "/top1/leaf1"
         assert len(res.json["children"]) == 1
+
+        assert res.json['links']['self'].endswith(
+            '/taxonomies/root/top1/leaf1/')
+        assert res.json['links']['tree'].endswith(
+            '/taxonomies/root/top1/leaf1/?drilldown=True')
+
+        assert res.json['links']['parent'].endswith(
+            '/taxonomies/root/top1/')
+        assert res.json['links']['parent_tree'].endswith(
+            '/taxonomies/root/top1/?drilldown=True')
+
+        res_child = res.json["children"][0]
+        assert res_child["slug"] == "leafeaf"
+        assert res_child["path"] == "/top1/leaf1/leafeaf"
+
+        assert res_child['links']['self'].endswith(
+            '/taxonomies/root/top1/leaf1/leafeaf/')
+        assert res_child['links']['tree'].endswith(
+            '/taxonomies/root/top1/leaf1/leafeaf/?drilldown=True')
 
         # Test get parent/child details
         res = client.get("/taxonomies/{}/top1/?drilldown=True"
@@ -160,6 +178,80 @@ class TestTaxonomyAPI:
                          .format(root_taxonomy.code),
                          headers={'Accept': 'application/json'})
         assert res.status_code == 403
+
+    def test_get_taxonomy_term_parent_link(self, client, root_taxonomy, permissions):
+        """Test getting Term details."""
+        login_user(client, permissions['terms'])
+
+        root_taxonomy.create_term(slug="top1").create_term(slug="leaf1")
+
+        res = client.get("/taxonomies/{}/top1/?drilldown=1"
+                         .format(root_taxonomy.code),
+                         headers={'Accept': 'application/json'})
+
+        assert res.json["slug"] == "top1"
+        assert res.json["path"] == "/top1"
+
+        assert res.json['links']['self'].endswith(
+            '/taxonomies/root/top1/')
+        assert res.json['links']['tree'].endswith(
+            '/taxonomies/root/top1/?drilldown=True')
+
+        assert res.json['links']['parent'].endswith(
+            '/taxonomies/root/')
+        assert res.json['links']['parent_tree'].endswith(
+            '/taxonomies/root/?drilldown=True')
+
+        res = client.get("/taxonomies/{}/top1/leaf1/?drilldown=1"
+                         .format(root_taxonomy.code),
+                         headers={'Accept': 'application/json'})
+
+        assert res.json["slug"] == "leaf1"
+        assert res.json["path"] == "/top1/leaf1"
+
+        assert res.json['links']['self'].endswith(
+            '/taxonomies/root/top1/leaf1/')
+        assert res.json['links']['tree'].endswith(
+            '/taxonomies/root/top1/leaf1/?drilldown=True')
+
+        assert res.json['links']['parent'].endswith(
+            '/taxonomies/root/top1/')
+        assert res.json['links']['parent_tree'].endswith(
+            '/taxonomies/root/top1/?drilldown=True')
+
+        res = client.get("/taxonomies/{}/top1/"
+                         .format(root_taxonomy.code),
+                         headers={'Accept': 'application/json'})
+
+        assert res.json["slug"] == "top1"
+        assert res.json["path"] == "/top1"
+
+        assert res.json['links']['self'].endswith(
+            '/taxonomies/root/top1/')
+        assert res.json['links']['tree'].endswith(
+            '/taxonomies/root/top1/?drilldown=True')
+
+        assert res.json['links']['parent'].endswith(
+            '/taxonomies/root/')
+        assert res.json['links']['parent_tree'].endswith(
+            '/taxonomies/root/?drilldown=True')
+
+        res = client.get("/taxonomies/{}/top1/leaf1/"
+                         .format(root_taxonomy.code),
+                         headers={'Accept': 'application/json'})
+
+        assert res.json["slug"] == "leaf1"
+        assert res.json["path"] == "/top1/leaf1"
+
+        assert res.json['links']['self'].endswith(
+            '/taxonomies/root/top1/leaf1/')
+        assert res.json['links']['tree'].endswith(
+            '/taxonomies/root/top1/leaf1/?drilldown=True')
+
+        assert res.json['links']['parent'].endswith(
+            '/taxonomies/root/top1/')
+        assert res.json['links']['parent_tree'].endswith(
+            '/taxonomies/root/top1/?drilldown=True')
 
     def test_term_create(self, root_taxonomy, client, permissions):
         """Test TaxonomyTerm creation."""

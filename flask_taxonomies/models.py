@@ -458,7 +458,7 @@ class TaxonomyTerm(db.Model):
         return Taxonomy(term)
 
     @property
-    def tree_path(self) -> str:
+    def tree_path(self) -> [str, None]:
         """Get path in a taxonomy tree."""
         ancestor_cond = and_(TaxonomyTerm.tree_id == self.tree_id,
                              TaxonomyTerm.left > 1,     # do not take root
@@ -468,6 +468,8 @@ class TaxonomyTerm(db.Model):
             x[0] for x in
             db.session.query(TaxonomyTerm.slug).filter(ancestor_cond).order_by(TaxonomyTerm.left)
         ]
+        if not path:
+            return None
         return '/' + '/'.join(path)
 
     def __repr__(self):
