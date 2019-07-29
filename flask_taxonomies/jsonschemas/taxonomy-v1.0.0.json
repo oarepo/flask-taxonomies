@@ -5,8 +5,8 @@
       "type": "object",
       "properties": {
         "id": {
-          "description": "Invenio DB identifier (integer).",
-          "type": "string"
+          "description": "Internal taxonomy term identifier, do not use.",
+          "type": "integer"
         },
         "slug": {
           "description": "Taxonomy slug or code.",
@@ -16,14 +16,7 @@
           "type": "string"
         },
         "title": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "lang": "string",
-              "value": "string"
-            }
-          }
+          "$ref": "multilingual-v1.0.0.json#/definitions/multilingualString"
         },
         "links": {
           "type": "object",
