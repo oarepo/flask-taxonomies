@@ -4,7 +4,7 @@ from slugify import slugify
 from flask_taxonomies.models import Taxonomy
 
 
-def import_taxonomy(taxonomy_file, int_conversions):
+def import_taxonomy(taxonomy_file, int_conversions, drop):
     from openpyxl import load_workbook
     wb = load_workbook(filename=taxonomy_file)
     ws = wb.active
@@ -14,7 +14,7 @@ def import_taxonomy(taxonomy_file, int_conversions):
     taxonomy_header, row = read_block(data, 0)
     taxonomy_data, row = read_block(data, row)
 
-    taxonomy = create_update_taxonomy(taxonomy_header)
+    taxonomy = create_update_taxonomy(taxonomy_header, drop)
 
     create_update_terms(taxonomy, taxonomy_data, int_conversions)
 
@@ -39,12 +39,17 @@ def create_update_terms(taxonomy, taxonomy_data, int_conversions):
     db.session.commit()
 
 
-def create_update_taxonomy(data):
+def create_update_taxonomy(data, drop):
     tax_dict = next(convert_data_to_dict(data))
     if 'code' not in tax_dict:
         raise ValueError('Taxonomy does not contain "code"')
     code = tax_dict.pop('code')
     taxonomy = Taxonomy.get(code=code)
+    if taxonomy and drop:
+        db.session.delete(taxonomy)
+        db.session.commit()
+        taxonomy = None
+
     if taxonomy:
         merged_dict = taxonomy.extra_data
         merged_dict.update(tax_dict)
