@@ -1,6 +1,10 @@
 Changes
 =======
 
+[Version 6.2.0]
+===============
+  - Added parent links and title to schemas and es mappings
+
 [Version 6.1.0]
 ===============
   - Model changes, discarded sqlalchemy-mptt because of problems with ordering

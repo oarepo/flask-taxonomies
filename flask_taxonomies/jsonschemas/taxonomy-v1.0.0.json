@@ -15,6 +15,16 @@
         "path": {
           "type": "string"
         },
+        "title": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "lang": "string",
+              "value": "string"
+            }
+          }
+        },
         "links": {
           "type": "object",
           "properties": {
@@ -22,6 +32,12 @@
               "type": "string"
             },
             "tree": {
+              "type": "string"
+            },
+            "parent": {
+              "type": "string"
+            },
+            "parent_tree": {
               "type": "string"
             }
           }
