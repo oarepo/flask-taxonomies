@@ -10,15 +10,15 @@ from flask_taxonomies.models import Taxonomy
 from flask_taxonomies.views import url_to_path
 
 
-class TaxonomyLinksSchemaV1():
+class TaxonomyLinksSchemaV1(StrictKeysMixin):
     self = SanitizedUnicode(required=False)
     tree = SanitizedUnicode(required=False)
     parent = SanitizedUnicode(required=False)
     parent_tree = SanitizedUnicode(required=False)
 
 
-class TaxonomyTitleSchemaV1():
-    title = SanitizedUnicode(required=False)
+class TaxonomyTitleSchemaV1(StrictKeysMixin):
+    lang  = SanitizedUnicode(required=False)
     value = SanitizedUnicode(required=False)
 
 
@@ -27,8 +27,8 @@ class TaxonomySchemaV1(StrictKeysMixin):
     id = PersistentIdentifier(required=False)
     slug = SanitizedUnicode(required=False)
     path = SanitizedUnicode(required=False)
-    title = Nested(TaxonomyTitleSchemaV1, many=True, required=False)
-    links = Nested(TaxonomyLinksSchemaV1, required=False)
+    title = Nested(TaxonomyTitleSchemaV1(), many=True, required=False)
+    links = Nested(TaxonomyLinksSchemaV1(), required=False)
     ref = SanitizedUnicode(required=False, dump_to='$ref', load_from='$ref')
 
     @pre_load

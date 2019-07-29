@@ -8,6 +8,7 @@ from invenio_db import db
 #
 # Taxonomies commands
 #
+from flask_taxonomies.models import Taxonomy
 from flask_taxonomies.permissions import (
     taxonomy_create_all,
     taxonomy_delete_all,
@@ -52,7 +53,7 @@ def all_modify():
     db.session.commit()
 
 
-@taxonomies.command('import-taxonomy')
+@taxonomies.command('import')
 @click.argument('taxonomy_file')
 @click.option('--int', 'int_conversions', multiple=True)
 @click.option('--drop/--no-drop', default=False)
@@ -60,3 +61,19 @@ def all_modify():
 def import_taxonomy(taxonomy_file, int_conversions, drop):
     from .import_export import import_taxonomy
     import_taxonomy(taxonomy_file, int_conversions, drop)
+
+
+@taxonomies.command('list')
+@with_appcontext
+def list_taxonomies():
+    for t in Taxonomy.taxonomies():
+        print(t.code)
+
+
+@taxonomies.command('delete')
+@click.argument('code')
+@with_appcontext
+def delete_taxonomy(code):
+    t = Taxonomy.get(code)
+    db.session.delete(t)
+    db.session.commit()
