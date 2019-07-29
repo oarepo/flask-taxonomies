@@ -1,6 +1,10 @@
 Changes
 =======
 
+[Version 6.2.1]
+===============
+  - Add --drop option to import_taxonomy cli command
+
 [Version 6.2.0]
 ===============
   - Added parent links and title to schemas and es mappings
