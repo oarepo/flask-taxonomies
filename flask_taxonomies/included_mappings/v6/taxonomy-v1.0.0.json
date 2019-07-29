@@ -12,13 +12,7 @@
                 "type": "text"
             },
             "title": {
-                "type": "nested",
-                "properties": {
-                    "lang": {
-                        "type": "keyword",
-                        "value": "text"
-                    }
-                }
+                "type": "multilingual-v1.0.0.json#/MultilingualString"
             },
             "links": {
                 "type": "nested",
