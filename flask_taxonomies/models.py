@@ -7,6 +7,7 @@ from invenio_db import db
 from sqlalchemy import asc
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy_mptt import BaseNestedSets, mptt_sessionmaker
+from sqlalchemy.dialects.postgresql import JSON
 
 taxonomy_signals = Namespace()
 
@@ -43,7 +44,7 @@ class TaxonomyTerm(db.Model, BaseNestedSets):
 
     id = db.Column(db.Integer, primary_key=True)
     slug = db.Column(db.String(64), unique=False, index=True)
-    extra_data = db.Column(db.JSON)
+    extra_data = db.Column(JSON)
 
     def update(self, extra_data: dict = None):
         """Update Taxonomy Term data."""
