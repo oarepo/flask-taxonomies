@@ -50,10 +50,8 @@ def test_alembic(app, db):
     if db.engine.name == 'sqlite':
         raise pytest.skip('Upgrades are not supported on SQLite.')
 
-    print("FACE1", ext.alembic.compare_metadata())
     assert not ext.alembic.compare_metadata()
     db.drop_all()
     ext.alembic.upgrade()
 
-    print("FACE2", ext.alembic.compare_metadata())
     assert not ext.alembic.compare_metadata()
