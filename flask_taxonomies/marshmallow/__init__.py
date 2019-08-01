@@ -18,7 +18,7 @@ class TaxonomyLinksSchemaV1(StrictKeysMixin):
 
 
 class TaxonomyTitleSchemaV1(StrictKeysMixin):
-    lang  = SanitizedUnicode(required=False)
+    lang = SanitizedUnicode(required=False)
     value = SanitizedUnicode(required=False)
 
 

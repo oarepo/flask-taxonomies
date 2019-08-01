@@ -5,14 +5,15 @@
 # Invenio is free software; you can redistribute it and/or modify it
 # under the terms of the MIT License; see LICENSE file for more details.
 
-"""Custom MPTT."""
-
+"""postgres specific json field in taxonomy term json data"""
 import sqlalchemy as sa
+import sqlalchemy.dialects.postgresql
 from alembic import op
 
 # revision identifiers, used by Alembic.
-revision = 'ae4696241f9e'
+revision = '2f7c25afd313'
 down_revision = 'e5848504dc5f'
+branch_labels = ()
 depends_on = None
 
 
@@ -22,7 +23,7 @@ def upgrade():
     op.create_table('taxonomy_term',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('slug', sa.String(length=64), nullable=True),
-    sa.Column('extra_data', sa.JSON(), nullable=True),
+    sa.Column('extra_data', sa.JSON().with_variant(sqlalchemy.dialects.postgresql.JSON, 'postgresql'), nullable=True),
     sa.Column('tree_id', sa.Integer(), nullable=False),
     sa.Column('left', sa.Integer(), nullable=False),
     sa.Column('right', sa.Integer(), nullable=False),
