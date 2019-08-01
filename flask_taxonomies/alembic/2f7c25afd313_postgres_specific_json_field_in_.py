@@ -6,8 +6,8 @@
 # under the terms of the MIT License; see LICENSE file for more details.
 
 """postgres specific json field in taxonomy term json data"""
-import sqlalchemy.dialects.postgresql
 import sqlalchemy as sa
+import sqlalchemy.dialects.postgresql
 from alembic import op
 
 # revision identifiers, used by Alembic.
