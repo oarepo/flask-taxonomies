@@ -12,12 +12,12 @@ INVENIO_VERSION = "3.1.0"
 install_requires = [
     'python-slugify>=3.0.2',
     'webargs>=5.3.2',
-    'sqlalchemy_mptt>=0.2.4',
     'invenio[{db},base]~={version}'.format(
         db=DATABASE, version=INVENIO_VERSION),
     'invenio-access>=1.1.0',
-    'flask-accept>=0.0.6',
-    'wrapt>=1.11.0'
+    'wrapt>=1.11.0',
+    'invenio-records-rest>=1.4.2',
+    'invenio-search>=1.0.0'
 ]
 
 tests_require = [
@@ -35,8 +35,6 @@ tests_require = [
     'pytest-cov>=1.8.0',
     'pytest-random-order>=0.5.4',
     'pytest-pep8>=1.0.6',
-    'invenio-oarepo-mapping-includes>=1.0.0',
-    'invenio-records-rest>=1.4.2'
 ]
 
 extras_require = {

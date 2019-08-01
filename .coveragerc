@@ -2,3 +2,6 @@
 omit =
     flask_taxonomies/alembic/*
     migrations/*
+    flask_taxonomies/included_mappings/*
+    flask_taxonomies/jsonschemas/*
+    flask_taxonomies/cli.py

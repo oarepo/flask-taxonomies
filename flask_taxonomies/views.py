@@ -3,26 +3,19 @@
 from functools import wraps
 from urllib.parse import urlsplit
 
-from flask import (
-    Blueprint,
-    abort,
-    current_app,
-    jsonify,
-    make_response,
-    url_for,
-)
-from flask_accept import accept
+from flask import Blueprint, abort, current_app, jsonify, make_response, url_for
 from flask_login import current_user
 from invenio_db import db
 from slugify import slugify
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
-from sqlalchemy_mptt import mptt_sessionmaker
 from webargs import fields
 from webargs.flaskparser import parser, use_kwargs
 from werkzeug.exceptions import BadRequest
 
+from flask_taxonomies.flask_routing_ext import accept_fallback
 from flask_taxonomies.models import (
+    MovePosition,
     after_taxonomy_created,
     after_taxonomy_deleted,
     after_taxonomy_term_created,
@@ -90,7 +83,6 @@ def parse_extra_data(request, name, field):
         extra = {**request.json}
         extra.pop('code', None)
         extra.pop('slug', None)
-        extra.pop('move_target', None)
         return extra
 
 
@@ -154,8 +146,8 @@ def need_move_permissions(object_getter, action):
     def decorator_builder(f):
         @wraps(f)
         def decorate(*args, **kwargs):
-            taxonomy, term_path, move_target = object_getter(*args, **kwargs)
-            if move_target:
+            taxonomy, term_path, destination = object_getter(*args, **kwargs)
+            if destination:
                 try:
                     term = taxonomy.find_term(term_path)
                     check_permission(
@@ -184,21 +176,68 @@ def jsonify_taxonomy(t: Taxonomy) -> dict:
 
 
 def jsonify_taxonomy_term(t: TaxonomyTerm,
-                          parent_path: str) -> dict:
+                          taxonomy_code,
+                          path: str,
+                          parent_path: str = None) -> dict:
     """Prepare TaxonomyTerm to be easily jsonified."""
-    if not parent_path.endswith('/'):
-        parent_path += '/'
-    path = parent_path + t.slug
+    if not path.startswith('/'):
+        raise Exception()
     result = {
         **(t.extra_data or {}),
         "id": t.id,
         "slug": t.slug,
         "path": path,
         "links": {
-            "self": t.link_self,
-            "tree": t.link_tree
+            "self": url_for(
+                "taxonomies.taxonomy_get_term",
+                taxonomy_code=taxonomy_code,
+                term_path=path[1:],
+                _external=True,
+            ),
+            "tree": url_for(
+                "taxonomies.taxonomy_get_term",
+                taxonomy_code=taxonomy_code,
+                term_path=path[1:],
+                drilldown=True,
+                _external=True,
+            )
         },
     }
+    if parent_path is not None:
+        if parent_path != '':
+            txc = taxonomy_code + parent_path
+            txc = txc.split('/', maxsplit=1)
+            result['links'].update({
+                "parent": url_for(
+                    "taxonomies.taxonomy_get_term",
+                    taxonomy_code=txc[0],
+                    term_path=txc[1],
+                    _external=True,
+                ),
+                "parent_tree": url_for(
+                    "taxonomies.taxonomy_get_term",
+                    taxonomy_code=txc[0],
+                    term_path=txc[1],
+                    drilldown=True,
+                    _external=True,
+                )
+            })
+        else:
+            # parent is a taxonomy
+            result['links'].update({
+                "parent": url_for(
+                    "taxonomies.taxonomy_get_roots",
+                    taxonomy_code=taxonomy_code,
+                    _external=True,
+                ),
+                "parent_tree": url_for(
+                    "taxonomies.taxonomy_get_roots",
+                    taxonomy_code=taxonomy_code,
+                    drilldown=True,
+                    _external=True,
+                )
+            })
+
     descendants_count = (t.right - t.left - 1) / 2
     if descendants_count:
         result["descendants_count"] = descendants_count
@@ -224,12 +263,10 @@ def taxonomy_list():
 def taxonomy_create(code: str, extra_data: dict = None):
     """Create a new Taxonomy."""
     try:
-        session = mptt_sessionmaker(db.session)
         before_taxonomy_created.send(current_app._get_current_object(),
                                      code=code, extra_data=extra_data)
         created = Taxonomy.create_taxonomy(code=code, extra_data=extra_data)
-        session.add(created)
-        session.commit()
+        db.session.commit()
         after_taxonomy_created.send(created)
         created_dict = jsonify_taxonomy(created)
 
@@ -242,7 +279,6 @@ def taxonomy_create(code: str, extra_data: dict = None):
 
 
 @blueprint.route("/<string:taxonomy_code>/", methods=("GET",))
-@accept('application/json')
 @pass_taxonomy
 @need_permissions(
     lambda taxonomy: taxonomy,
@@ -256,15 +292,14 @@ def taxonomy_get_roots(taxonomy, drilldown=False):
     if not drilldown:
         roots = taxonomy.roots
         return jsonify([
-            jsonify_taxonomy_term(t, f'/{taxonomy.code}/')
+            jsonify_taxonomy_term(t, taxonomy.code, f'/{t.slug}')
             for t in roots])
 
-    ret = build_tree_from_list(f'/{taxonomy.code}/',
-                               taxonomy.terms)
+    ret = build_tree_from_list(taxonomy.code, taxonomy.terms, '')
     return jsonify(ret)
 
 
-def build_tree_from_list(root_path, tree_as_list):
+def build_tree_from_list(taxonomy_code, tree_as_list, parent_path=None):
     ret = []
     stack = []
     root_level = None
@@ -275,8 +310,17 @@ def build_tree_from_list(root_path, tree_as_list):
         while item.level - root_level < len(stack):
             stack.pop()
 
-        item_json = jsonify_taxonomy_term(item,
-            root_path if not stack else stack[-1]['path'])
+        if not stack:
+            if parent_path:
+                item_path = f'{parent_path}/{item.slug}'
+            else:
+                item_path = f'/{item.slug}'
+        else:
+            item_path = f'{stack[-1]["path"]}/{item.slug}'
+
+        item_json = jsonify_taxonomy_term(
+            item, taxonomy_code, item_path,
+            parent_path if not stack else None)
 
         if item.level == root_level:
             # top element in tree_as_list
@@ -292,7 +336,6 @@ def build_tree_from_list(root_path, tree_as_list):
 
 
 @blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("GET",))
-@accept("application/json")
 @pass_term
 @need_permissions(
     lambda taxonomy, term: term,
@@ -305,77 +348,117 @@ def taxonomy_get_term(taxonomy, term, drilldown=False):
     """Get Taxonomy Term detail."""
     if not drilldown:
         return jsonify(
-            jsonify_taxonomy_term(term, term.parent.tree_path),
+            jsonify_taxonomy_term(term, taxonomy.code, term.tree_path,
+                                  term.parent.tree_path or ''),
         )
     else:
         return jsonify(
-            build_tree_from_list(term.parent.tree_path,
-                                 term.descendants_or_self)[0])
+            build_tree_from_list(taxonomy.code,
+                                 term.descendants_or_self,
+                                 term.parent.tree_path or '')[0])
 
 
 @blueprint.route("/<string:taxonomy_code>/", methods=("POST",))
-@blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("POST",))  # noqa
 @pass_taxonomy
 @use_kwargs(
     {
         "slug": fields.Str(required=False),
         "extra_data": fields.Dict(location='extra_data'),
-        "move_target": fields.Str(required=False,
-                                  empty_value=None),
     }
 )
 @permission_term_create_all.require(http_exception=403)
+def taxonomy_create_root_term(taxonomy, slug=None, term_path='', extra_data=None):
+    return _taxonomy_create_term_internal(taxonomy=taxonomy, slug=slug,
+                                          term_path='', extra_data=extra_data)
+
+
+@blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("POST",))
+@accept_fallback('content_type')
+@pass_taxonomy
+@use_kwargs(
+    {
+        "slug": fields.Str(required=False),
+        "extra_data": fields.Dict(location='extra_data'),
+    }
+)
+@permission_term_create_all.require(http_exception=403)
+def taxonomy_create_child_term(taxonomy, slug=None, term_path='', extra_data=None):
+    return _taxonomy_create_term_internal(taxonomy=taxonomy, slug=slug,
+                                          term_path=term_path, extra_data=extra_data)
+
+
+@taxonomy_create_child_term.support('application/vnd.move')
+@pass_taxonomy
+@use_kwargs(
+    {
+        "destination": fields.Str(location='headers', load_from='Destination'),
+        "destination_order":
+            fields.Str(location='headers', load_from='Destination-Order', default='inside'),
+    }
+)
 @need_move_permissions(
     lambda **kwargs: (kwargs.get('taxonomy'),
                       kwargs.get('term_path'),
-                      kwargs.get('move_target')),
+                      kwargs.get('destination')),
     'taxonomy-term-move'
 )
-def taxonomy_create_term(taxonomy, slug=None,
-                         term_path='', extra_data=None, move_target=None):
+def taxonomy_move_term(taxonomy, term_path='', destination='', destination_order=''):
     """Create a Term inside a Taxonomy tree."""
-    if not move_target and not slug:
+    if not destination:
+        abort(400, "No destination given.")
+
+    term = taxonomy.find_term(term_path)
+    if not term:
+        abort(400, "Invalid Term path given.")
+
+    target_path = None
+
+    try:
+        target_path = url_to_path(destination)
+        before_taxonomy_term_moved.send(
+            term, taxonomy=taxonomy,
+            target_path=target_path, order=destination_order)
+    except ValueError:
+        abort(400, 'Invalid target URL passed.')
+
+    if not target_path:
+        target_path = f'{taxonomy.code}/'
+
+    try:
+        target_taxonomy, target_term = Taxonomy.find_taxonomy_and_term(target_path)
+    except NoResultFound:
+        abort(400, "Target path not found.")
+
+    term.move(target_term, position=MovePosition(destination_order or 'inside'))
+    db.session.commit()
+
+    after_taxonomy_term_moved.send(term, taxonomy=taxonomy)
+    db.session.refresh(term)
+    moved = jsonify_taxonomy_term(term, target_taxonomy.code, term.tree_path)
+    response = jsonify(moved)
+    response.headers['Location'] = moved['links']['self']
+    return response
+
+
+def _taxonomy_create_term_internal(taxonomy, slug=None,
+                                   term_path='', extra_data=None, move_target=None):
+    """Create a Term inside a Taxonomy tree."""
+    if not slug:
         abort(400, "No slug given for created element.")
 
     term = taxonomy.find_term(term_path)
     if not term:
         abort(400, "Invalid Term path given.")
 
-    if taxonomy and term and move_target:
-        target_path = None
-
-        try:
-            target_path = url_to_path(move_target)
-            before_taxonomy_term_moved.send(term, taxonomy=taxonomy, target_path=target_path)
-        except ValueError:
-            abort(400, 'Invalid target URL passed.')
-
-        if not target_path:
-            target_path = f'{taxonomy.code}/'
-
-        try:
-            term.move_to(target_path)
-        except NoResultFound:
-            abort(400, "Target path not found.")
-        after_taxonomy_term_moved.send(term, taxonomy=taxonomy)
-
-        moved = jsonify_taxonomy_term(term, term.parent.tree_path)
-        response = jsonify(moved)
-        response.headers['Location'] = moved['links']['self']
-        return response
-
     try:
         slug = slugify(slug)
         before_taxonomy_term_created.send(taxonomy, slug=slug, extra_data=extra_data)
-        created = TaxonomyTerm(slug=slug, extra_data=extra_data)
-        term.append(created)
-        session = mptt_sessionmaker(db.session)
-        session.add(created)
-        session.commit()
+        created = term.create_term(slug=slug, extra_data=extra_data)
+        db.session.commit()
         after_taxonomy_term_created.send(term, taxonomy=taxonomy)
 
         created_dict = \
-            jsonify_taxonomy_term(created, created.parent.tree_path)
+            jsonify_taxonomy_term(created, taxonomy.code, created.tree_path)
 
         response = jsonify(created_dict)
         response.headers['Location'] = created_dict['links']['self']
@@ -394,10 +477,9 @@ def taxonomy_create_term(taxonomy, slug=None,
 )
 def taxonomy_delete(taxonomy):
     """Delete whole taxonomy tree."""
-    session = mptt_sessionmaker(db.session)
     before_taxonomy_deleted.send(taxonomy)
-    session.delete(taxonomy)
-    session.commit()
+    taxonomy.delete()
+    db.session.commit()
     after_taxonomy_deleted.send(taxonomy)
     response = make_response()
     response.status_code = 204
@@ -412,10 +494,9 @@ def taxonomy_delete(taxonomy):
 )
 def taxonomy_delete_term(taxonomy, term):
     """Delete a Term subtree in a Taxonomy."""
-    session = mptt_sessionmaker(db.session)
     before_taxonomy_term_deleted.send(term, taxonomy=taxonomy)
-    session.delete(term)
-    session.commit()
+    term.delete()
+    db.session.commit()
     after_taxonomy_term_deleted.send(term, taxonomy=taxonomy)
     response = make_response()
     response.status_code = 204
@@ -462,5 +543,5 @@ def taxonomy_update_term(taxonomy, term, extra_data=None):
     after_taxonomy_term_updated.send(term, taxonomy=taxonomy)
 
     return jsonify(
-        jsonify_taxonomy_term(term, term.parent.tree_path),
+        jsonify_taxonomy_term(term, taxonomy.code, term.tree_path),
     )

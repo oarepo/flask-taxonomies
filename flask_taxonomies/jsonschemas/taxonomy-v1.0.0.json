@@ -1,32 +1,47 @@
 {
-    "definitions": {
-        "taxonomy": {
-            "$id": "#taxonomy",
-            "type": "object",
-            "properties": {
-                "id": {
-                    "description": "Invenio DB identifier (integer).",
-                    "type": "string"
-                },
-                "slug": {
-                    "description": "Taxonomy slug or code.",
-                    "type": "string"
-                },
-                "path": {
-                    "type": "string"
-                },
-                "links": {
-                    "type": "object",
-                    "properties": {
-                        "self": {
-                            "type": "string"
-                        },
-                        "tree": {
-                            "type": "string"
-                        }
-                    }
-                }
+  "definitions": {
+    "TaxonomyTerm": {
+      "$id": "#TaxonomyTerm",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "Internal taxonomy term identifier, do not use.",
+          "type": "integer"
+        },
+        "slug": {
+          "description": "Taxonomy slug or code.",
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "title": {
+          "$ref": "multilingual-v1.0.0.json#/definitions/multilingualString"
+        },
+        "links": {
+          "type": "object",
+          "properties": {
+            "self": {
+              "type": "string"
+            },
+            "tree": {
+              "type": "string"
+            },
+            "parent": {
+              "type": "string"
+            },
+            "parent_tree": {
+              "type": "string"
             }
+          }
         }
+      }
+    },
+    "TaxonomyTermArray": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/TaxonomyTerm"
+      }
     }
+  }
 }
