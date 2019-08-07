@@ -29,7 +29,7 @@ class TaxonomySchemaV1(StrictKeysMixin):
     path = SanitizedUnicode(required=False)
     title = Nested(TaxonomyTitleSchemaV1(), many=True, required=False)
     links = Nested(TaxonomyLinksSchemaV1(), required=False)
-    ref = SanitizedUnicode(required=False, dump_to='$ref', load_from='$ref')
+    ref = SanitizedUnicode(required=False, dump_to='$ref', load_from='$ref', attribute="$ref")
 
     @pre_load
     def convert_ref(self, in_data, **kwargs):
