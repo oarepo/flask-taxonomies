@@ -24,7 +24,7 @@ class TaxonomyTitleSchemaV1(StrictKeysMixin):
 
 class TaxonomySchemaV1(StrictKeysMixin):
     """Taxonomy schema."""
-    id = PersistentIdentifier(required=False)
+    id = Integer(required=False)
     slug = SanitizedUnicode(required=False)
     path = SanitizedUnicode(required=False)
     title = Nested(TaxonomyTitleSchemaV1(), many=True, required=False)
