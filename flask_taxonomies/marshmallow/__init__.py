@@ -3,7 +3,7 @@
 from invenio_records_rest.schemas import StrictKeysMixin
 from invenio_records_rest.schemas.fields import PersistentIdentifier, SanitizedUnicode
 from marshmallow import ValidationError, pre_load
-from marshmallow.fields import Nested
+from marshmallow.fields import Nested, Integer
 from sqlalchemy.orm.exc import NoResultFound
 
 from flask_taxonomies.models import Taxonomy
@@ -29,7 +29,8 @@ class TaxonomySchemaV1(StrictKeysMixin):
     path = SanitizedUnicode(required=False)
     title = Nested(TaxonomyTitleSchemaV1(), many=True, required=False)
     links = Nested(TaxonomyLinksSchemaV1(), required=False)
-    ref = SanitizedUnicode(required=False, dump_to='$ref', load_from='$ref')
+    ref = SanitizedUnicode(required=False, dump_to='$ref', load_from='$ref', attribute="$ref")
+    descendants_count = Integer(required=False, dump_only=True)
 
     @pre_load
     def convert_ref(self, in_data, **kwargs):
