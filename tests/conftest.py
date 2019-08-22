@@ -10,6 +10,7 @@ from invenio_accounts import InvenioAccounts
 from invenio_accounts.testutils import create_test_user
 from invenio_db import InvenioDB
 from invenio_db import db as _db
+from invenio_jsonschemas import InvenioJSONSchemas
 from sqlalchemy_utils import create_database, database_exists
 
 from flask_taxonomies.ext import FlaskTaxonomies
@@ -59,6 +60,7 @@ def base_app():
     InvenioDB(app_)
     InvenioAccounts(app_)
     InvenioAccess(app_)
+    InvenioJSONSchemas(app_)
 
     return app_
 

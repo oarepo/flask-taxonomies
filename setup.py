@@ -87,6 +87,9 @@ setup(
         'invenio_oarepo_mapping_includes': [
             'flask_taxonomies=flask_taxonomies.included_mappings'
         ],
+        'invenio_records.jsonresolver': [
+            'flask_taxonomies = flask_taxonomies.jsonresolver'
+        ],
         'invenio_access.actions': [
             # Taxonomy related permissions
             'taxonomy_create_all'
