@@ -3,7 +3,7 @@
 from invenio_records_rest.schemas import StrictKeysMixin
 from invenio_records_rest.schemas.fields import SanitizedUnicode
 from marshmallow import ValidationError, pre_load
-from marshmallow.fields import Nested, Integer
+from marshmallow.fields import Integer, Nested
 from sqlalchemy.orm.exc import NoResultFound
 
 from flask_taxonomies.models import Taxonomy
