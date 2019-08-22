@@ -462,13 +462,8 @@ class TaxonomyTerm(db.Model):
     @property
     def tree_path(self) -> [str, None]:
         """Get path in a taxonomy tree."""
-        ancestor_cond = and_(TaxonomyTerm.tree_id == self.tree_id,
-                             TaxonomyTerm.left > 1,     # do not take root
-                             TaxonomyTerm.left <= self.left,
-                             TaxonomyTerm.right >= self.right)
         path = [
-            x[0] for x in
-            db.session.query(TaxonomyTerm.slug).filter(ancestor_cond).order_by(TaxonomyTerm.left)
+            x[0] for x in self.ancestors_or_self.values(TaxonomyTerm.slug)
         ]
         if not path:
             return None
@@ -498,6 +493,22 @@ class TaxonomyTerm(db.Model):
             TaxonomyTerm.tree_id == self.tree_id,
             TaxonomyTerm.left >= self.left,
             TaxonomyTerm.right <= self.right).order_by('left')
+
+    @property
+    def ancestors(self):
+        ancestor_cond = and_(TaxonomyTerm.tree_id == self.tree_id,
+                             TaxonomyTerm.left > 1,     # do not take root
+                             TaxonomyTerm.left < self.left,
+                             TaxonomyTerm.right > self.right)
+        return TaxonomyTerm.query.filter(ancestor_cond).order_by(TaxonomyTerm.left)
+
+    @property
+    def ancestors_or_self(self):
+        ancestor_cond = and_(TaxonomyTerm.tree_id == self.tree_id,
+                             TaxonomyTerm.left > 1,     # do not take root
+                             TaxonomyTerm.left <= self.left,
+                             TaxonomyTerm.right >= self.right)
+        return TaxonomyTerm.query.filter(ancestor_cond).order_by(TaxonomyTerm.left)
 
     @property
     def link_self(self):

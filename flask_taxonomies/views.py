@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """TaxonomyTerm views."""
 from functools import wraps
+from typing import List
 from urllib.parse import urlsplit
 
 from flask import Blueprint, abort, current_app, jsonify, make_response, url_for
@@ -178,7 +179,8 @@ def jsonify_taxonomy(t: Taxonomy) -> dict:
 def jsonify_taxonomy_term(t: TaxonomyTerm,
                           taxonomy_code,
                           path: str,
-                          parent_path: str = None) -> dict:
+                          parent_path: str = None,
+                          parents: List = None) -> dict:
     """Prepare TaxonomyTerm to be easily jsonified."""
     if not path.startswith('/'):
         raise Exception()
@@ -202,6 +204,7 @@ def jsonify_taxonomy_term(t: TaxonomyTerm,
                 _external=True,
             )
         },
+        "level": t.level - 1
     }
     if parent_path is not None:
         if parent_path != '':
@@ -237,6 +240,9 @@ def jsonify_taxonomy_term(t: TaxonomyTerm,
                     _external=True,
                 )
             })
+
+    if parents:
+        result['ancestors'] = [*parents]
 
     descendants_count = (t.right - t.left - 1) / 2
     if descendants_count:
@@ -299,10 +305,19 @@ def taxonomy_get_roots(taxonomy, drilldown=False):
     return jsonify(ret)
 
 
-def build_tree_from_list(taxonomy_code, tree_as_list, parent_path=None):
+def format_ancestor(item):
+    return {
+        **(item.extra_data or {}),
+        'level': item.level - 1,
+        'slug': item.slug
+    }
+
+
+def build_tree_from_list(taxonomy_code, tree_as_list, parent_path=None, parents=None):
     ret = []
     stack = []
     root_level = None
+
     for item in tree_as_list:
         if root_level is None:
             root_level = item.level
@@ -320,7 +335,7 @@ def build_tree_from_list(taxonomy_code, tree_as_list, parent_path=None):
 
         item_json = jsonify_taxonomy_term(
             item, taxonomy_code, item_path,
-            parent_path if not stack else None)
+            parent_path if not stack else None, parents if not stack else None)
 
         if item.level == root_level:
             # top element in tree_as_list
@@ -332,6 +347,7 @@ def build_tree_from_list(taxonomy_code, tree_as_list, parent_path=None):
             stack[-1]['children'].append(item_json)
 
         stack.append(item_json)
+
     return ret
 
 
@@ -346,16 +362,17 @@ def build_tree_from_list(taxonomy_code, tree_as_list, parent_path=None):
 })
 def taxonomy_get_term(taxonomy, term, drilldown=False):
     """Get Taxonomy Term detail."""
+    parents = [format_ancestor(x) for x in term.ancestors]
     if not drilldown:
         return jsonify(
             jsonify_taxonomy_term(term, taxonomy.code, term.tree_path,
-                                  term.parent.tree_path or ''),
+                                  term.parent.tree_path or '', parents),
         )
     else:
         return jsonify(
             build_tree_from_list(taxonomy.code,
                                  term.descendants_or_self,
-                                 term.parent.tree_path or '')[0])
+                                 term.parent.tree_path or '', parents)[0])
 
 
 @blueprint.route("/<string:taxonomy_code>/", methods=("POST",))

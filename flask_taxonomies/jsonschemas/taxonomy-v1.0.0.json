@@ -3,6 +3,7 @@
     "TaxonomyTerm": {
       "$id": "#TaxonomyTerm",
       "type": "object",
+      "additionalProperties": true,
       "properties": {
         "id": {
           "description": "Internal taxonomy term identifier, do not use.",
@@ -17,6 +18,9 @@
         },
         "title": {
           "$ref": "multilingual-v1.0.0.json#/definitions/multilingualString"
+        },
+        "level": {
+          "type": "integer"
         },
         "links": {
           "type": "object",
@@ -33,6 +37,18 @@
             "parent_tree": {
               "type": "string"
             }
+          }
+        },
+        "ancestors": {
+          "type": "array",
+          "item": {
+            "type": "object",
+            "properties": {
+              "level": {
+                "type": "integer"
+              }
+            },
+            "additionalProperties": true
           }
         }
       }

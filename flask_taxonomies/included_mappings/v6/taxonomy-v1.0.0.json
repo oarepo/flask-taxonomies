@@ -1,36 +1,53 @@
 {
-    "TaxonomyTerm": {
+  "TaxonomyTerm": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "keyword"
+      },
+      "slug": {
+        "type": "keyword"
+      },
+      "path": {
+        "type": "text"
+      },
+      "title": {
+        "type": "multilingual-v1.0.0.json#/MultilingualString"
+      },
+      "level": {
+        "type": "integer"
+      },
+      "links": {
         "type": "object",
         "properties": {
-            "id": {
-                "type": "keyword"
-            },
-            "slug": {
-                "type": "keyword"
-            },
-            "path": {
-                "type": "text"
-            },
-            "title": {
-                "type": "multilingual-v1.0.0.json#/MultilingualString"
-            },
-            "links": {
-                "type": "nested",
-                "properties": {
-                    "self": {
-                        "type": "keyword"
-                    },
-                    "tree": {
-                        "type": "keyword"
-                    },
-                    "parent": {
-                        "type": "keyword"
-                    },
-                    "parent_tree": {
-                        "type": "keyword"
-                    }
-                }
-            }
+          "self": {
+            "type": "keyword"
+          },
+          "tree": {
+            "type": "keyword"
+          },
+          "parent": {
+            "type": "keyword"
+          },
+          "parent_tree": {
+            "type": "keyword"
+          }
         }
+      },
+      "ancestors": {
+        "type": "nested",
+        "properties": {
+          "slug": {
+            "type": "keyword"
+          },
+          "title": {
+            "type": "multilingual-v1.0.0.json#/MultilingualString"
+          },
+          "level": {
+            "type": "integer"
+          }
+        }
+      }
     }
+  }
 }
