@@ -58,6 +58,27 @@
       "items": {
         "$ref": "#/definitions/TaxonomyTerm"
       }
+    },
+    "TaxonomyTermOrReference": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/TaxonomyTerm"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "$ref": {
+              "type": "string"
+            }
+          }
+        }
+      ]
+    },
+    "TaxonomyTermOrReferenceArray": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/TaxonomyTermOrReference"
+      }
     }
   }
 }
