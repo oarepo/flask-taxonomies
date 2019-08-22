@@ -25,12 +25,11 @@ tests_require = [
     'isort>=4.3.3',
     'mock>=2.0.0',
     'pytest-cache>=1.0',
-    'pytest-invenio>=1.0.2,<1.1.0',
     'pytest-mock>=1.6.0',
     'pytest-cov>=1.8.0',
     'pytest-random-order>=0.5.4',
     'pytest-pep8>=1.0.6',
-    'invenio[{db},base,metadata,elasticsearch6,auth]=={version}'.format(
+    'invenio[{db},base,metadata,elasticsearch6,auth,tests]=={version}'.format(
         db=DATABASE, version=INVENIO_VERSION),
 ]
 
