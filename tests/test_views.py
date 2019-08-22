@@ -4,6 +4,7 @@
 # See: http://webtest.readthedocs.org/
 # """
 """Functional unit tests using WebTest."""
+import json
 import time
 
 import pytest
@@ -149,6 +150,15 @@ class TestTaxonomyAPI:
         assert res.json['links']['parent_tree'].endswith(
             '/taxonomies/root/top1/?drilldown=True')
 
+        assert 'ancestors' in res.json
+        assert len(res.json['ancestors']) == 1
+        assert res.json['ancestors'][0] == {
+            'level': 1,
+            'slug': 'top1'
+        }
+
+        assert res.json['level'] == 2
+
         res_child = res.json["children"][0]
         assert res_child["slug"] == "leafeaf"
         assert res_child["path"] == "/top1/leaf1/leafeaf"
@@ -157,6 +167,8 @@ class TestTaxonomyAPI:
             '/taxonomies/root/top1/leaf1/leafeaf/')
         assert res_child['links']['tree'].endswith(
             '/taxonomies/root/top1/leaf1/leafeaf/?drilldown=True')
+
+        assert 'ancestors' not in res_child
 
         # Test get parent/child details
         res = client.get("/taxonomies/{}/top1/?drilldown=True"
