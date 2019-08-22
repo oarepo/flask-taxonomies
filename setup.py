@@ -7,7 +7,7 @@ from setuptools import setup
 readme = open('README.rst').read()
 
 DATABASE = "postgresql"
-INVENIO_VERSION = "3.1.0"
+INVENIO_VERSION = "3.1.1"
 
 install_requires = [
     'python-slugify>=3.0.2',
