@@ -12,12 +12,7 @@ INVENIO_VERSION = "3.1.1"
 install_requires = [
     'python-slugify>=3.0.2',
     'webargs>=5.3.2',
-    'invenio[{db},base]~={version}'.format(
-        db=DATABASE, version=INVENIO_VERSION),
-    'invenio-access>=1.1.0',
     'wrapt>=1.11.0',
-    'invenio-records-rest>=1.4.2',
-    'invenio-search>=1.0.0'
 ]
 
 tests_require = [
@@ -35,6 +30,8 @@ tests_require = [
     'pytest-cov>=1.8.0',
     'pytest-random-order>=0.5.4',
     'pytest-pep8>=1.0.6',
+    'invenio[{db},base,metadata,elasticsearch6,auth]=={version}'.format(
+        db=DATABASE, version=INVENIO_VERSION),
 ]
 
 extras_require = {
