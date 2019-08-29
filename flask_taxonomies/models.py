@@ -73,7 +73,7 @@ class TaxonomyTerm(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     slug = db.Column(db.String(64), unique=False, index=True)
     extra_data = db.Column(db.JSON().with_variant(
-        sqlalchemy.dialects.postgresql.JSON, 'postgresql'))
+        sqlalchemy.dialects.postgresql.JSONB, 'postgresql'))
 
     tree_id = db.Column("tree_id", db.Integer, nullable=False)
     left = db.Column("left", db.Integer, nullable=False)
