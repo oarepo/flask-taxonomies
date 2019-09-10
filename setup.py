@@ -29,6 +29,7 @@ tests_require = [
     'pytest-cov>=1.8.0',
     'pytest-random-order>=0.5.4',
     'pytest-pep8>=1.0.6',
+    'openpyxl>=2.6.3',
     'invenio[{db},base,metadata,elasticsearch6,auth,tests]=={version}'.format(
         db=DATABASE, version=INVENIO_VERSION),
 ]
