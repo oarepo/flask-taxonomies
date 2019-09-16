@@ -533,6 +533,7 @@ def taxonomy_update(taxonomy, extra_data):
     """Update Taxonomy."""
     before_taxonomy_updated.send(taxonomy, extra_data=extra_data)
     taxonomy.update(extra_data)
+    db.session.commit()
     after_taxonomy_updated.send(taxonomy)
 
     return jsonify(jsonify_taxonomy(taxonomy))
@@ -557,6 +558,7 @@ def taxonomy_update_term(taxonomy, term, extra_data=None):
 
     before_taxonomy_term_updated.send(term, taxonomy=taxonomy, extra_data=extra_data)
     term.update(**changes)
+    db.session.commit()
     after_taxonomy_term_updated.send(term, taxonomy=taxonomy)
 
     return jsonify(
