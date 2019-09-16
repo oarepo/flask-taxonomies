@@ -4,7 +4,7 @@ from slugify import slugify
 from flask_taxonomies.models import Taxonomy
 
 
-def import_taxonomy(taxonomy_file, int_conversions, drop):
+def import_taxonomy(taxonomy_file, int_conversions, str_args, drop):
     from openpyxl import load_workbook
     wb = load_workbook(filename=taxonomy_file)
     ws = wb.active
@@ -16,12 +16,12 @@ def import_taxonomy(taxonomy_file, int_conversions, drop):
 
     taxonomy = create_update_taxonomy(taxonomy_header, drop)
 
-    create_update_terms(taxonomy, taxonomy_data, int_conversions)
+    create_update_terms(taxonomy, taxonomy_data, int_conversions, str_args)
 
 
-def create_update_terms(taxonomy, taxonomy_data, int_conversions):
+def create_update_terms(taxonomy, taxonomy_data, int_conversions, str_args):
     stack = [taxonomy]
-    for term_dict in convert_data_to_dict(taxonomy_data, int_conversions):
+    for term_dict in convert_data_to_dict(taxonomy_data, int_conversions, str_args):
         level = int(term_dict.pop('level'))
         slug = term_dict.pop('slug')
         while level < len(stack):
@@ -60,7 +60,7 @@ def create_update_taxonomy(data, drop):
     return taxonomy
 
 
-def convert_data_to_dict(data, int_conversions={}):
+def convert_data_to_dict(data, int_conversions={}, str_args={}):
     header = [x.split() if x else None for x in data[0]]
     for block in read_data_blocks(data[1:]):
         ret = {}
@@ -69,9 +69,10 @@ def convert_data_to_dict(data, int_conversions={}):
             for arridx, prop_path, val in zip(range(0, len(header)), header, block_row):
                 if not prop_path:
                     continue
-
                 if ' '.join(prop_path) in int_conversions:
                     val = int(val) if val else None
+                elif ' '.join(prop_path) in str_args:
+                    val = val if val else None
 
                 for part in reversed(prop_path):
                     if part[0] == '@':

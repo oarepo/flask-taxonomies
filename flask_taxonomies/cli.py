@@ -56,11 +56,12 @@ def all_modify():
 @taxonomies.command('import')
 @click.argument('taxonomy_file')
 @click.option('--int', 'int_conversions', multiple=True)
+@click.option('--str', 'str_args', multiple=True)
 @click.option('--drop/--no-drop', default=False)
 @with_appcontext
-def import_taxonomy(taxonomy_file, int_conversions, drop):
+def import_taxonomy(taxonomy_file, int_conversions, str_args, drop):
     from .import_export import import_taxonomy
-    import_taxonomy(taxonomy_file, int_conversions, drop)
+    import_taxonomy(taxonomy_file, int_conversions, str_args, drop)
 
 
 @taxonomies.command('list')
