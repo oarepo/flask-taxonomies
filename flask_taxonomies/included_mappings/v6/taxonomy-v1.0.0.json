@@ -17,6 +17,9 @@
       "level": {
         "type": "integer"
       },
+      "tooltip": {
+        "type": "string"
+      },
       "links": {
         "type": "object",
         "properties": {

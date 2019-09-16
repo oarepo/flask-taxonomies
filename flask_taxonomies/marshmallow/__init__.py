@@ -28,6 +28,7 @@ class TaxonomySchemaV1(StrictKeysMixin):
     slug = SanitizedUnicode(required=False)
     path = SanitizedUnicode(required=False)
     title = Nested(TaxonomyTitleSchemaV1(), many=True, required=False)
+    tooltip = SanitizedUnicode(required=False)
     level = Integer(required=False)
     links = Nested(TaxonomyLinksSchemaV1(), required=False)
     ref = SanitizedUnicode(required=False, dump_to='$ref', load_from='$ref', attribute="$ref")
