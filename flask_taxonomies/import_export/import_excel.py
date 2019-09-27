@@ -72,7 +72,7 @@ def convert_data_to_dict(data, int_conversions={}, str_args={}):
                 if ' '.join(prop_path) in int_conversions:
                     val = int(val) if val else None
                 elif ' '.join(prop_path) in str_args:
-                    val = val if val else None
+                    val = val if val else ""
 
                 for part in reversed(prop_path):
                     if part[0] == '@':
