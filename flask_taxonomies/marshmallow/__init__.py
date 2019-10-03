@@ -2,7 +2,7 @@
 """Flask Taxonomies Marshmallow schemas."""
 from invenio_records_rest.schemas import StrictKeysMixin
 from invenio_records_rest.schemas.fields import SanitizedUnicode
-from marshmallow import ValidationError, pre_load, post_dump
+from marshmallow import ValidationError, post_dump, pre_load
 from marshmallow.fields import Integer, Nested
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -22,6 +22,13 @@ class TaxonomyTitleSchemaV1(StrictKeysMixin):
     value = SanitizedUnicode(required=False)
 
 
+class TaxonomyAncestorSchemaV1(Schema):
+    # strict keys not present as the ancestor has many other application-dependent props
+    # do your own post-validation if required
+    slug = SanitizedUnicode(required=False)
+    level = Integer(required=False)
+
+
 class TaxonomySchemaV1(StrictKeysMixin):
     """Taxonomy schema."""
     id = Integer(required=False)
@@ -33,6 +40,8 @@ class TaxonomySchemaV1(StrictKeysMixin):
     links = Nested(TaxonomyLinksSchemaV1(), required=False)
     ref = SanitizedUnicode(required=False, dump_to='$ref', load_from='$ref', attribute="$ref")
     descendants_count = Integer(required=False, dump_only=True)
+    level = Integer(required=False)
+    ancestors = Nested(TaxonomyAncestorSchemaV1(), many=True, required=False)
 
     @pre_load
     def convert_ref(self, in_data, **kwargs):
