@@ -2,7 +2,7 @@
 """Flask Taxonomies Marshmallow schemas."""
 from invenio_records_rest.schemas import StrictKeysMixin
 from invenio_records_rest.schemas.fields import SanitizedUnicode
-from marshmallow import ValidationError, post_dump, pre_load
+from marshmallow import Schema, ValidationError, post_dump, pre_load
 from marshmallow.fields import Integer, Nested
 from sqlalchemy.orm.exc import NoResultFound
 
@@ -40,7 +40,6 @@ class TaxonomySchemaV1(StrictKeysMixin):
     links = Nested(TaxonomyLinksSchemaV1(), required=False)
     ref = SanitizedUnicode(required=False, dump_to='$ref', load_from='$ref', attribute="$ref")
     descendants_count = Integer(required=False, dump_only=True)
-    level = Integer(required=False)
     ancestors = Nested(TaxonomyAncestorSchemaV1(), many=True, required=False)
 
     @pre_load
