@@ -50,7 +50,8 @@ class TaxonomySchemaV1(StrictKeysMixin):
         elif 'links' in in_data:
             ref = (in_data['links'] or {}).get('self', None)
         if not ref:
-            raise ValidationError('Either links or $ref must be provided for a Taxonomy record')  # noqa
+            # No reference found - don't convert anything
+            return in_data
 
         path = url_to_path(ref)
         try:
