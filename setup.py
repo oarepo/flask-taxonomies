@@ -13,6 +13,7 @@ install_requires = [
     'python-slugify>=3.0.2',
     'webargs>=5.3.2',
     'wrapt>=1.11.0',
+    'oarepo-references>=1.0.0'
 ]
 
 tests_require = [

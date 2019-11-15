@@ -471,7 +471,7 @@ class TaxonomyTerm(db.Model):
 
     def __repr__(self):
         """Represent taxonomy term instance as a unique string."""
-        return "<TaxonomyTerm({slug}:{path})>" \
+        return "({slug}:{path})" \
             .format(slug=self.slug, path=self.id)
 
     @property

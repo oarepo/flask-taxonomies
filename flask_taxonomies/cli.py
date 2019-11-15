@@ -20,6 +20,7 @@ from flask_taxonomies.permissions import (
     taxonomy_term_update_all,
     taxonomy_update_all,
 )
+from flask_taxonomies.proxies import current_flask_taxonomies
 
 
 @click.group()
@@ -67,7 +68,7 @@ def import_taxonomy(taxonomy_file, int_conversions, str_args, drop):
 @taxonomies.command('list')
 @with_appcontext
 def list_taxonomies():
-    for t in Taxonomy.taxonomies():
+    for t in current_flask_taxonomies.taxonomy_list():
         print(t.code)
 
 
@@ -76,5 +77,4 @@ def list_taxonomies():
 @with_appcontext
 def delete_taxonomy(code):
     t = Taxonomy.get(code)
-    db.session.delete(t)
-    db.session.commit()
+    current_flask_taxonomies.delete_taxonomy(t)

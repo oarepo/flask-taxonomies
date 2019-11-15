@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Model unit tests."""
 import pytest
-from sqlalchemy import and_
 
 from flask_taxonomies.models import MovePosition, TaxonomyError
 
@@ -41,7 +40,6 @@ class TestTaxonomy:
 
     def test_update_taxonomy(self, db, root_taxonomy, TaxonomyTerm):
         """Update Taxonomy extra_data."""
-
         root_taxonomy.update(extra_data={"description": "updated"})
 
         retrieved_root = TaxonomyTerm.query.get(root_taxonomy.id)

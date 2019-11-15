@@ -26,6 +26,13 @@ from flask_taxonomies.permissions import (
     taxonomy_update_all,
 )
 from flask_taxonomies.views import blueprint
+from oarepo_references import OARepoReferences
+from oarepo_references.ext import _RecordReferencesState
+
+
+class RecordReferencesStateMock(_RecordReferencesState):
+    def reindex_referencing_records(self, reference):
+        print('reindexing records for: {}'.format(reference))
 
 
 class JsonClient(FlaskClient):
@@ -61,6 +68,8 @@ def base_app():
     InvenioAccounts(app_)
     InvenioAccess(app_)
     InvenioJSONSchemas(app_)
+    OARepoReferences(app_)
+    app_.extensions['oarepo-references'] = RecordReferencesStateMock(app_)
 
     return app_
 
