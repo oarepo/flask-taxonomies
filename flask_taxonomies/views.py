@@ -366,7 +366,7 @@ def taxonomy_move_term(taxonomy, term_path='', destination='', destination_order
         response.headers['Location'] = moved['links']['self']
         return response
     except AttributeError as e:
-        abort(400, e)
+        abort(400, str(e))
     except NoResultFound:
         abort(400, "Target path not found.")
 
@@ -389,7 +389,7 @@ def _taxonomy_create_term_internal(taxonomy, slug=None,
         response.status_code = 201
         return response
     except AttributeError as e:
-        abort(400, e)
+        abort(400, str(e))
     except IntegrityError:
         abort(400, 'Term with this slug already exists on this path.')
 
@@ -408,7 +408,7 @@ def taxonomy_delete(taxonomy):
         response.status_code = 204
         return response
     except ReferenceError as e:
-        abort(400, e)
+        abort(400, str(e))
 
 
 @blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("DELETE",))  # noqa
@@ -425,7 +425,7 @@ def taxonomy_delete_term(taxonomy, term):
         response.status_code = 204
         return response
     except ReferenceError as e:
-        abort(400, e)
+        abort(400, str(e))
 
 
 @blueprint.route("/<string:taxonomy_code>/", methods=("PATCH",))
