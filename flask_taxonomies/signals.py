@@ -26,10 +26,8 @@ def reindex_referencing_records(sender, taxonomy=None, term=None, *args, **kwarg
 def check_references_before_delete(sender, taxonomy=None, term=None, *args, **kwargs):
     records = []
     if taxonomy and not term:
-        # TODO: search for references of any term under a taxonomy
         records = current_oarepo_references.get_records(taxonomy.link_self)
     elif taxonomy and term:
-        # TODO: search for references of any term under a taxonomy
         links = current_flask_taxonomies.term_links(taxonomy.code, term.tree_path)
         records = current_oarepo_references.get_records(links['self'])
     if len(records) > 0:
