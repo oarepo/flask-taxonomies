@@ -62,7 +62,7 @@ class TaxonomyAPI(object):
     def delete_taxonomy(cls, taxonomy: Taxonomy):
         """Delete a taxonomy.
         :param taxonomy: taxonomy instance to be deleted
-        :raise ReferenceError
+        :raise TaxonomyDeleteError
         """
         before_taxonomy_deleted.send(taxonomy, taxonomy=taxonomy)
         check_references_before_delete(taxonomy, taxonomy=taxonomy)
@@ -200,7 +200,7 @@ class TaxonomyAPI(object):
         """Delete a taxonomy term.
         :param taxonomy: taxonomy of the term
         :param term: term instance to be deleted
-        :raise ReferenceError
+        :raise TaxonomyDeleteError
         """
         before_taxonomy_term_deleted.send(term, taxonomy=taxonomy, term=term)
         check_references_before_delete(term, taxonomy=taxonomy, term=term)

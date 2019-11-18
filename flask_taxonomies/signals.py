@@ -9,8 +9,7 @@
 
 from __future__ import absolute_import, print_function
 
-from werkzeug.exceptions import abort
-
+from flask_taxonomies.errors import TaxonomyDeleteError
 from flask_taxonomies.proxies import current_flask_taxonomies
 from oarepo_references.proxies import current_oarepo_references
 
@@ -31,4 +30,5 @@ def check_references_before_delete(sender, taxonomy=None, term=None, *args, **kw
         links = current_flask_taxonomies.term_links(taxonomy.code, term.tree_path)
         records = current_oarepo_references.get_records(links['self'])
     if len(records) > 0:
-        raise ReferenceError('Cannot Delete. Taxonomy is being referenced from some records.')
+        raise TaxonomyDeleteError(
+            'Cannot Delete. Taxonomy is being referenced from some records.', records)

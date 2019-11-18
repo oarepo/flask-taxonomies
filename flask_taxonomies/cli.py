@@ -1,8 +1,6 @@
 import click
-from flask import current_app
 from flask.cli import with_appcontext
 from invenio_access import ActionSystemRoles, any_user
-from invenio_accounts.models import Role, User
 from invenio_db import db
 
 #

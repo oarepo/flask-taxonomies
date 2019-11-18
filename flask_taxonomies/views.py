@@ -12,6 +12,7 @@ from webargs import fields
 from webargs.flaskparser import parser, use_kwargs
 from werkzeug.exceptions import BadRequest
 
+from flask_taxonomies.errors import TaxonomyDeleteError
 from flask_taxonomies.flask_routing_ext import accept_fallback
 from flask_taxonomies.permissions import (
     permission_taxonomy_create_all,
@@ -407,8 +408,8 @@ def taxonomy_delete(taxonomy):
         response = make_response()
         response.status_code = 204
         return response
-    except ReferenceError as e:
-        abort(400, str(e))
+    except TaxonomyDeleteError as e:
+        abort(409, {'reason': str(e), 'records': e.records})
 
 
 @blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("DELETE",))  # noqa
@@ -424,8 +425,8 @@ def taxonomy_delete_term(taxonomy, term):
         response = make_response()
         response.status_code = 204
         return response
-    except ReferenceError as e:
-        abort(400, str(e))
+    except TaxonomyDeleteError as e:
+        abort(409, {'reason': str(e), 'records': e.records})
 
 
 @blueprint.route("/<string:taxonomy_code>/", methods=("PATCH",))
