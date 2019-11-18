@@ -4,41 +4,22 @@ from functools import wraps
 from typing import List
 from urllib.parse import urlsplit
 
-from flask import Blueprint, abort, current_app, jsonify, make_response, url_for
+from flask import Blueprint, abort, jsonify, make_response, url_for
 from flask_login import current_user
-from invenio_db import db
-from slugify import slugify
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm.exc import NoResultFound
 from webargs import fields
 from webargs.flaskparser import parser, use_kwargs
 from werkzeug.exceptions import BadRequest
 
+from flask_taxonomies.errors import TaxonomyDeleteError
 from flask_taxonomies.flask_routing_ext import accept_fallback
-from flask_taxonomies.models import (
-    MovePosition,
-    after_taxonomy_created,
-    after_taxonomy_deleted,
-    after_taxonomy_term_created,
-    after_taxonomy_term_deleted,
-    after_taxonomy_term_moved,
-    after_taxonomy_term_updated,
-    after_taxonomy_updated,
-    before_taxonomy_created,
-    before_taxonomy_deleted,
-    before_taxonomy_term_created,
-    before_taxonomy_term_deleted,
-    before_taxonomy_term_moved,
-    before_taxonomy_term_updated,
-    before_taxonomy_updated,
-)
 from flask_taxonomies.permissions import (
     permission_taxonomy_create_all,
     permission_taxonomy_read_all,
     permission_term_create_all,
 )
-from flask_taxonomies.proxies import current_permission_factory
-
+from flask_taxonomies.proxies import current_permission_factory, current_flask_taxonomies
 from .models import Taxonomy, TaxonomyTerm
 
 blueprint = Blueprint("taxonomies", __name__, url_prefix="/taxonomies")
@@ -189,57 +170,9 @@ def jsonify_taxonomy_term(t: TaxonomyTerm,
         "id": t.id,
         "slug": t.slug,
         "path": path,
-        "links": {
-            "self": url_for(
-                "taxonomies.taxonomy_get_term",
-                taxonomy_code=taxonomy_code,
-                term_path=path[1:],
-                _external=True,
-            ),
-            "tree": url_for(
-                "taxonomies.taxonomy_get_term",
-                taxonomy_code=taxonomy_code,
-                term_path=path[1:],
-                drilldown=True,
-                _external=True,
-            )
-        },
+        "links": current_flask_taxonomies.term_links(taxonomy_code, path, parent_path),
         "level": t.level - 1
     }
-    if parent_path is not None:
-        if parent_path != '':
-            txc = taxonomy_code + parent_path
-            txc = txc.split('/', maxsplit=1)
-            result['links'].update({
-                "parent": url_for(
-                    "taxonomies.taxonomy_get_term",
-                    taxonomy_code=txc[0],
-                    term_path=txc[1],
-                    _external=True,
-                ),
-                "parent_tree": url_for(
-                    "taxonomies.taxonomy_get_term",
-                    taxonomy_code=txc[0],
-                    term_path=txc[1],
-                    drilldown=True,
-                    _external=True,
-                )
-            })
-        else:
-            # parent is a taxonomy
-            result['links'].update({
-                "parent": url_for(
-                    "taxonomies.taxonomy_get_roots",
-                    taxonomy_code=taxonomy_code,
-                    _external=True,
-                ),
-                "parent_tree": url_for(
-                    "taxonomies.taxonomy_get_roots",
-                    taxonomy_code=taxonomy_code,
-                    drilldown=True,
-                    _external=True,
-                )
-            })
 
     if parents:
         result['ancestors'] = [*parents]
@@ -255,7 +188,7 @@ def jsonify_taxonomy_term(t: TaxonomyTerm,
 @permission_taxonomy_read_all.require(http_exception=403)
 def taxonomy_list():
     """List all available taxonomies."""
-    return jsonify([jsonify_taxonomy(t) for t in Taxonomy.taxonomies()])
+    return jsonify([jsonify_taxonomy(t) for t in current_flask_taxonomies.taxonomy_list()])
 
 
 @blueprint.route("/", methods=("POST",))
@@ -269,11 +202,7 @@ def taxonomy_list():
 def taxonomy_create(code: str, extra_data: dict = None):
     """Create a new Taxonomy."""
     try:
-        before_taxonomy_created.send(current_app._get_current_object(),
-                                     code=code, extra_data=extra_data)
-        created = Taxonomy.create_taxonomy(code=code, extra_data=extra_data)
-        db.session.commit()
-        after_taxonomy_created.send(created)
+        created = current_flask_taxonomies.create_taxonomy(code=code, extra_data=extra_data)
         created_dict = jsonify_taxonomy(created)
 
         response = jsonify(created_dict)
@@ -421,40 +350,26 @@ def taxonomy_create_child_term(taxonomy, slug=None, term_path='', extra_data=Non
 )
 def taxonomy_move_term(taxonomy, term_path='', destination='', destination_order=''):
     """Create a Term inside a Taxonomy tree."""
+    target_path = None
     if not destination:
         abort(400, "No destination given.")
 
-    term = taxonomy.find_term(term_path)
-    if not term:
-        abort(400, "Invalid Term path given.")
-
-    target_path = None
-
     try:
         target_path = url_to_path(destination)
-        before_taxonomy_term_moved.send(
-            term, taxonomy=taxonomy,
-            target_path=target_path, order=destination_order)
     except ValueError:
         abort(400, 'Invalid target URL passed.')
 
-    if not target_path:
-        target_path = f'{taxonomy.code}/'
-
     try:
-        target_taxonomy, target_term = Taxonomy.find_taxonomy_and_term(target_path)
+        term, target_taxonomy, target_term = current_flask_taxonomies.move_term(
+            taxonomy, term_path, target_path, destination_order)
+        moved = jsonify_taxonomy_term(term, target_taxonomy.code, term.tree_path)
+        response = jsonify(moved)
+        response.headers['Location'] = moved['links']['self']
+        return response
+    except AttributeError as e:
+        abort(400, str(e))
     except NoResultFound:
         abort(400, "Target path not found.")
-
-    term.move(target_term, position=MovePosition(destination_order or 'inside'))
-    db.session.commit()
-
-    after_taxonomy_term_moved.send(term, taxonomy=taxonomy)
-    db.session.refresh(term)
-    moved = jsonify_taxonomy_term(term, target_taxonomy.code, term.tree_path)
-    response = jsonify(moved)
-    response.headers['Location'] = moved['links']['self']
-    return response
 
 
 def _taxonomy_create_term_internal(taxonomy, slug=None,
@@ -463,26 +378,20 @@ def _taxonomy_create_term_internal(taxonomy, slug=None,
     if not slug:
         abort(400, "No slug given for created element.")
 
-    term = taxonomy.find_term(term_path)
-    if not term:
-        abort(400, "Invalid Term path given.")
-
     try:
-        slug = slugify(slug)
-        before_taxonomy_term_created.send(taxonomy, slug=slug, extra_data=extra_data)
-        created = term.create_term(slug=slug, extra_data=extra_data)
-        db.session.commit()
-        after_taxonomy_term_created.send(term, taxonomy=taxonomy)
-
+        created = current_flask_taxonomies.create_term(taxonomy=taxonomy,
+                                                       term_path=term_path,
+                                                       slug=slug,
+                                                       extra_data=extra_data)
         created_dict = \
             jsonify_taxonomy_term(created, taxonomy.code, created.tree_path)
-
         response = jsonify(created_dict)
         response.headers['Location'] = created_dict['links']['self']
         response.status_code = 201
         return response
+    except AttributeError as e:
+        abort(400, str(e))
     except IntegrityError:
-        db.session.rollback()
         abort(400, 'Term with this slug already exists on this path.')
 
 
@@ -494,13 +403,13 @@ def _taxonomy_create_term_internal(taxonomy, slug=None,
 )
 def taxonomy_delete(taxonomy):
     """Delete whole taxonomy tree."""
-    before_taxonomy_deleted.send(taxonomy)
-    taxonomy.delete()
-    db.session.commit()
-    after_taxonomy_deleted.send(taxonomy)
-    response = make_response()
-    response.status_code = 204
-    return response
+    try:
+        current_flask_taxonomies.delete_taxonomy(taxonomy)
+        response = make_response()
+        response.status_code = 204
+        return response
+    except TaxonomyDeleteError as e:
+        abort(409, {'reason': str(e), 'records': e.records})
 
 
 @blueprint.route("/<string:taxonomy_code>/<path:term_path>/", methods=("DELETE",))  # noqa
@@ -511,13 +420,13 @@ def taxonomy_delete(taxonomy):
 )
 def taxonomy_delete_term(taxonomy, term):
     """Delete a Term subtree in a Taxonomy."""
-    before_taxonomy_term_deleted.send(term, taxonomy=taxonomy)
-    term.delete()
-    db.session.commit()
-    after_taxonomy_term_deleted.send(term, taxonomy=taxonomy)
-    response = make_response()
-    response.status_code = 204
-    return response
+    try:
+        current_flask_taxonomies.delete_term(taxonomy, term)
+        response = make_response()
+        response.status_code = 204
+        return response
+    except TaxonomyDeleteError as e:
+        abort(409, {'reason': str(e), 'records': e.records})
 
 
 @blueprint.route("/<string:taxonomy_code>/", methods=("PATCH",))
@@ -531,10 +440,7 @@ def taxonomy_delete_term(taxonomy, term):
 )
 def taxonomy_update(taxonomy, extra_data):
     """Update Taxonomy."""
-    before_taxonomy_updated.send(taxonomy, extra_data=extra_data)
-    taxonomy.update(extra_data)
-    db.session.commit()
-    after_taxonomy_updated.send(taxonomy)
+    taxonomy = current_flask_taxonomies.update_taxonomy(taxonomy, extra_data)
 
     return jsonify(jsonify_taxonomy(taxonomy))
 
@@ -556,10 +462,7 @@ def taxonomy_update_term(taxonomy, term, extra_data=None):
     if extra_data:
         changes["extra_data"] = extra_data
 
-    before_taxonomy_term_updated.send(term, taxonomy=taxonomy, extra_data=extra_data)
-    term.update(**changes)
-    db.session.commit()
-    after_taxonomy_term_updated.send(term, taxonomy=taxonomy)
+    term = current_flask_taxonomies.update_term(taxonomy, term, changes)
 
     return jsonify(
         jsonify_taxonomy_term(term, taxonomy.code, term.tree_path),

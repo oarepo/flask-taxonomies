@@ -30,7 +30,7 @@ if False:
 
 
 @pytest.mark.usefixtures("db")
-class TestTaxonomyAPI:
+class TestTaxonomyViews:
     """TaxonomyTerm functional test."""
 
     def test_list_taxonomies(self, db, client, root_taxonomy, Taxonomy, permissions):

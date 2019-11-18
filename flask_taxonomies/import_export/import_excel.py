@@ -15,7 +15,6 @@ def import_taxonomy(taxonomy_file, int_conversions, str_args, drop):
     taxonomy_data, row = read_block(data, row)
 
     taxonomy = create_update_taxonomy(taxonomy_header, drop)
-
     create_update_terms(taxonomy, taxonomy_data, int_conversions, str_args)
 
 
@@ -28,7 +27,6 @@ def create_update_terms(taxonomy, taxonomy_data, int_conversions, str_args):
             stack.pop()
         if not slug:
             slug = slugify(next(filter(lambda x: x['lang'] == 'cs', term_dict['title']))['value'])
-
         term = taxonomy.get_term(slug)
         if term:
             term.update(term_dict)
