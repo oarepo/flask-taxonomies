@@ -16,10 +16,10 @@ from oarepo_references.proxies import current_oarepo_references
 
 def reindex_referencing_records(sender, taxonomy=None, term=None, *args, **kwargs):
     if taxonomy and not term:
-        current_oarepo_references.reindex_referencing_records(taxonomy.link_self)
+        current_oarepo_references.reindex_referencing_records(ref=taxonomy.link_self)
     elif taxonomy and term:
         links = current_flask_taxonomies.term_links(taxonomy.code, term.tree_path)
-        current_oarepo_references.reindex_referencing_records(links['self'])
+        current_oarepo_references.reindex_referencing_records(ref=links['self'])
 
 
 def check_references_before_delete(sender, taxonomy=None, term=None, *args, **kwargs):
