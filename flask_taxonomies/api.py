@@ -208,10 +208,6 @@ class TaxonomyAPI(object):
         db.session.commit()
         after_taxonomy_term_deleted.send(term, taxonomy=taxonomy, term=term)
 
-    @classmethod
-    def reindex_referencing_records(cls, reference):
-        pass
-
 
 __all__ = (
     'TaxonomyAPI',
