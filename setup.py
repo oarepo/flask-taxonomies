@@ -14,7 +14,7 @@ install_requires = [
     'webargs>=5.3.2',
     'wrapt>=1.11.0',
     'openpyxl>=3.0.1',
-    'oarepo-references>=1.0.0'
+    'oarepo-references>=1.4.0'
 ]
 
 tests_require = [
