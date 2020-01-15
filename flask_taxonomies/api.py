@@ -111,7 +111,7 @@ class TaxonomyAPI(object):
         term.move(target_term, position=MovePosition(destination_order or 'inside'))
         db.session.commit()
 
-        after_taxonomy_term_moved.send(term, taxonomy=taxonomy)
+        after_taxonomy_term_moved.send(term, taxonomy=taxonomy, term=term)
         db.session.refresh(term)
         return (term, target_taxonomy, target_term)
 
@@ -135,7 +135,7 @@ class TaxonomyAPI(object):
             before_taxonomy_term_created.send(taxonomy, slug=slug, extra_data=extra_data)
             created = term.create_term(slug=slug, extra_data=extra_data)
             db.session.commit()
-            after_taxonomy_term_created.send(term, taxonomy=taxonomy)
+            after_taxonomy_term_created.send(term, taxonomy=taxonomy, term=term)
             return created
         except IntegrityError as ie:
             db.session.rollback()
