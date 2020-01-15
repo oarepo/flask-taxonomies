@@ -31,8 +31,8 @@ from oarepo_references.ext import _RecordReferencesState
 
 
 class RecordReferencesStateMock(_RecordReferencesState):
-    def reindex_referencing_records(self, reference):
-        print('reindexing records for: {}'.format(reference))
+    def reindex_referencing_records(cls, ref, ref_obj=None):
+        print('reindexing records for: {}'.format(ref))
 
 
 class JsonClient(FlaskClient):
