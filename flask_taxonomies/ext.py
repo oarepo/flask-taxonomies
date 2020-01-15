@@ -53,7 +53,6 @@ class _FlaskTaxonomiesState(object):
     def delete_term(self, taxonomy, term):
         self.api.delete_term(taxonomy, term)
 
-
     @cached_property
     def permission_factory(self):
         """Load default permission factory for Flask Taxonomies."""

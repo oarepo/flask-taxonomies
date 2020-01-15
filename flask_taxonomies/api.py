@@ -203,7 +203,8 @@ class TaxonomyAPI(object):
         :param extra_data: new term metadata
         :return TaxonomyTerm: updated taxonomy term
         """
-        before_taxonomy_term_updated.send(term, term=term, taxonomy=taxonomy, extra_data=changes['extra_data'])
+        before_taxonomy_term_updated.send(term, term=term, taxonomy=taxonomy,
+                                          extra_data=changes['extra_data'])
         term.update(**changes)
         db.session.commit()
         after_taxonomy_term_updated.send(term, term=term, taxonomy=taxonomy)

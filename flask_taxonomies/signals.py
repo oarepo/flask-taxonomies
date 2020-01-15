@@ -17,7 +17,8 @@ from flask_taxonomies.proxies import current_flask_taxonomies
 
 def reindex_referencing_records(sender, taxonomy=None, term=None, *args, **kwargs):
     if taxonomy and not term:
-        current_oarepo_references.reindex_referencing_records(ref=taxonomy.link_self, ref_obj=taxonomy)
+        current_oarepo_references.reindex_referencing_records(ref=taxonomy.link_self,
+                                                              ref_obj=taxonomy)
     elif taxonomy and term:
         links = current_flask_taxonomies.term_links(taxonomy.code, term.tree_path)
         current_oarepo_references.reindex_referencing_records(ref=links['self'], ref_obj=term)
