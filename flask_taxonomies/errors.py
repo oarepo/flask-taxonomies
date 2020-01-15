@@ -11,4 +11,3 @@ class TaxonomyDeleteError(Exception):
 
     def __repr__(self):
         return self.message
-

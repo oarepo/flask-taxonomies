@@ -9,9 +9,10 @@
 
 from __future__ import absolute_import, print_function
 
+from oarepo_references.proxies import current_oarepo_references
+
 from flask_taxonomies.errors import TaxonomyDeleteError
 from flask_taxonomies.proxies import current_flask_taxonomies
-from oarepo_references.proxies import current_oarepo_references
 
 
 def reindex_referencing_records(sender, taxonomy=None, term=None, *args, **kwargs):

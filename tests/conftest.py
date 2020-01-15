@@ -11,6 +11,8 @@ from invenio_accounts.testutils import create_test_user
 from invenio_db import InvenioDB
 from invenio_db import db as _db
 from invenio_jsonschemas import InvenioJSONSchemas
+from oarepo_references import OARepoReferences
+from oarepo_references.ext import _RecordReferencesState
 from sqlalchemy_utils import create_database, database_exists
 
 from flask_taxonomies.ext import FlaskTaxonomies
@@ -26,8 +28,6 @@ from flask_taxonomies.permissions import (
     taxonomy_update_all,
 )
 from flask_taxonomies.views import blueprint
-from oarepo_references import OARepoReferences
-from oarepo_references.ext import _RecordReferencesState
 
 
 class RecordReferencesStateMock(_RecordReferencesState):

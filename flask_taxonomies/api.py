@@ -14,11 +14,25 @@ from invenio_db import db
 from slugify import slugify
 from sqlalchemy.exc import IntegrityError
 
-from flask_taxonomies.models import Taxonomy, before_taxonomy_created, after_taxonomy_created, \
-    before_taxonomy_term_moved, MovePosition, after_taxonomy_term_moved, TaxonomyTerm, after_taxonomy_term_created, \
-    before_taxonomy_term_created, before_taxonomy_deleted, after_taxonomy_deleted, before_taxonomy_term_deleted, \
-    after_taxonomy_term_deleted, before_taxonomy_updated, after_taxonomy_updated, before_taxonomy_term_updated, \
-    after_taxonomy_term_updated
+from flask_taxonomies.models import (
+    MovePosition,
+    Taxonomy,
+    TaxonomyTerm,
+    after_taxonomy_created,
+    after_taxonomy_deleted,
+    after_taxonomy_term_created,
+    after_taxonomy_term_deleted,
+    after_taxonomy_term_moved,
+    after_taxonomy_term_updated,
+    after_taxonomy_updated,
+    before_taxonomy_created,
+    before_taxonomy_deleted,
+    before_taxonomy_term_created,
+    before_taxonomy_term_deleted,
+    before_taxonomy_term_moved,
+    before_taxonomy_term_updated,
+    before_taxonomy_updated,
+)
 from flask_taxonomies.signals import check_references_before_delete
 
 

@@ -4,9 +4,17 @@ from werkzeug.utils import cached_property
 
 from flask_taxonomies import config
 from flask_taxonomies.api import TaxonomyAPI
-from flask_taxonomies.models import after_taxonomy_updated, before_taxonomy_deleted, after_taxonomy_term_moved, \
-    after_taxonomy_term_updated, before_taxonomy_term_deleted
-from flask_taxonomies.signals import reindex_referencing_records, check_references_before_delete
+from flask_taxonomies.models import (
+    after_taxonomy_term_moved,
+    after_taxonomy_term_updated,
+    after_taxonomy_updated,
+    before_taxonomy_deleted,
+    before_taxonomy_term_deleted,
+)
+from flask_taxonomies.signals import (
+    check_references_before_delete,
+    reindex_referencing_records,
+)
 from flask_taxonomies.utils import load_or_import_from_config
 
 
