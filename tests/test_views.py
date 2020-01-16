@@ -301,8 +301,8 @@ class TestTaxonomyViews:
         res = client.post("/taxonomies/{}/top1/".format(root_taxonomy.code),
                           json={"title": {"en": "Leaf"}, "slug": "leaf 2"})
         assert res.status_code == 201
-        assert res.headers['location'] == \
-               'http://localhost/taxonomies/{}/top1/leaf-2-1/'.format(root_taxonomy.code)
+        assert res.headers['location'] == 'http://localhost/taxonomies/{}/top1/leaf-2-1/'.\
+            format(root_taxonomy.code)
 
         # Test create in non-existent taxonomy fails
         res = client.post("/taxonomies/none/",
