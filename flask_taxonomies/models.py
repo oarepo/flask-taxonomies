@@ -459,6 +459,9 @@ class TaxonomyTerm(db.Model):
         term = TaxonomyTerm.query.filter_by(tree_id=self.tree_id, level=1).one()
         return Taxonomy(term)
 
+    def lock(self):
+        TaxonomyTerm.query.filter_by(tree_id=self.tree_id).with_for_update()
+
     @property
     def tree_path(self) -> [str, None]:
         """Get path in a taxonomy tree."""

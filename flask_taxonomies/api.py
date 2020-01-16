@@ -95,6 +95,7 @@ class TaxonomyAPI(object):
         :raise NoResultFound
         :return Tuple(Taxonomy, Taxonomy, Optional[Taxonomy]): target taxonomy and moved term
         """
+        taxonomy.lock()
         term = taxonomy.find_term(term_path)
         if not term:
             raise AttributeError('Invalid Term path given.')
@@ -126,13 +127,20 @@ class TaxonomyAPI(object):
         :raise IntegrityError
         :return TaxonomyTerm
         """
+        taxonomy.lock()
         term = taxonomy.find_term(term_path)
         if not term:
             raise AttributeError('Invalid Term path given.')
 
         try:
-            slug = slugify(slug)
+            orig_slug = slug = slugify(slug)
+            slug_idx = 0
+            while taxonomy.get_term(slug, required=False):
+                slug_idx += 1
+                slug = "%s-%s" % (orig_slug, slug_idx)
+
             before_taxonomy_term_created.send(taxonomy, slug=slug, extra_data=extra_data)
+            # check if the slug exists and if so, create a new slug (append -1, -2, ... until ok)
             created = term.create_term(slug=slug, extra_data=extra_data)
             db.session.commit()
             after_taxonomy_term_created.send(term, taxonomy=taxonomy, term=term)
@@ -203,6 +211,7 @@ class TaxonomyAPI(object):
         :param extra_data: new term metadata
         :return TaxonomyTerm: updated taxonomy term
         """
+        taxonomy.lock()
         before_taxonomy_term_updated.send(term, term=term, taxonomy=taxonomy,
                                           extra_data=changes['extra_data'])
         term.update(**changes)
@@ -217,6 +226,7 @@ class TaxonomyAPI(object):
         :param term: term instance to be deleted
         :raise TaxonomyDeleteError
         """
+        taxonomy.lock()
         before_taxonomy_term_deleted.send(term, taxonomy=taxonomy, term=term)
         check_references_before_delete(term, taxonomy=taxonomy, term=term)
         term.delete()
