@@ -460,7 +460,8 @@ class TaxonomyTerm(db.Model):
         return Taxonomy(term)
 
     def lock(self):
-        TaxonomyTerm.query.filter_by(tree_id=self.tree_id).with_for_update()
+        # lock the whole tree
+        TreeId.query.filter_by(id=self.tree_id).with_for_update()
 
     @property
     def tree_path(self) -> [str, None]:
