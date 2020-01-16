@@ -297,10 +297,12 @@ class TestTaxonomyViews:
         assert created.parent == top1
         root_taxonomy.check()
 
-        # Test create duplicit slug fails
+        # Test create duplicit slug creates a new slug
         res = client.post("/taxonomies/{}/top1/".format(root_taxonomy.code),
                           json={"title": {"en": "Leaf"}, "slug": "leaf 2"})
-        assert res.status_code == 400
+        assert res.status_code == 201
+        assert res.headers['location'] == \
+               'http://localhost/taxonomies/{}/top1/leaf-2-1/'.format(root_taxonomy.code)
 
         # Test create in non-existent taxonomy fails
         res = client.post("/taxonomies/none/",
