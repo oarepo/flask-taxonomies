@@ -7,7 +7,7 @@ from setuptools import setup
 readme = open('README.rst').read()
 
 DATABASE = "postgresql"
-INVENIO_VERSION = "3.1.1"
+OAREPO_VERSION = os.environ.get('OAREPO_VERSION', '3.1.1')
 
 install_requires = [
     'python-slugify>=3.0.2',
@@ -19,22 +19,23 @@ install_requires = [
 
 tests_require = [
     'pytest>=4.6.3',
-    'factory-boy>=2.12.0',
-    'pdbpp>=0.10.0',
-    'pydocstyle>=1.0.0,<5.0.0',
-    'check-manifest>=0.25',
-    'coverage>=4.0',
-    'isort>=4.3.3',
-    'mock>=2.0.0',
-    'pytest-cache>=1.0',
-    'pytest-mock>=1.6.0',
-    'pytest-cov>=1.8.0',
-    'pytest-random-order>=0.5.4',
-    'pytest-pep8>=1.0.6',
-    'openpyxl>=2.6.3',
-    'invenio[{db},base,metadata,elasticsearch6,auth,tests]=={version}'.format(
-        db=DATABASE, version=INVENIO_VERSION),
 ]
+
+# tests_require = [
+#     'factory-boy>=2.12.0',
+#     'pdbpp>=0.10.0',
+#     'pydocstyle>=1.0.0,<5.0.0',
+#     'check-manifest>=0.25',
+#     'coverage>=4.0',
+#     'isort>=4.3.3',
+#     'mock>=2.0.0',
+#     'pytest-cache>=1.0',
+#     'pytest-mock>=1.6.0',
+#     'pytest-cov>=1.8.0',
+#     'pytest-random-order>=0.5.4',
+#     'pytest-pep8>=1.0.6',
+#     'openpyxl>=2.6.3',
+# ]
 
 extras_require = {
     'postgresql': [
@@ -46,7 +47,14 @@ extras_require = {
     'sqlite': [
         'invenio-db>=1.0.0b3',
     ],
-    'tests': tests_require,
+    'tests': [
+        *tests_require,
+        'oarepo[tests]~={version}'.format(
+            version=OAREPO_VERSION)],
+    'tests-es7': [
+        *tests_require,
+        'oarepo[tests-es7]~={version}'.format(
+            version=OAREPO_VERSION)],
 }
 
 setup_requires = [
@@ -56,7 +64,7 @@ setup_requires = [
 g = {}
 with open(os.path.join('flask_taxonomies', 'version.py'), 'rt') as fp:
     exec(fp.read(), g)
-    version = g['__version__']
+version = g['__version__']
 
 setup(
     name="flask_taxonomies",
