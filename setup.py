@@ -21,22 +21,6 @@ tests_require = [
     'pytest>=4.6.3',
 ]
 
-# tests_require = [
-#     'factory-boy>=2.12.0',
-#     'pdbpp>=0.10.0',
-#     'pydocstyle>=1.0.0,<5.0.0',
-#     'check-manifest>=0.25',
-#     'coverage>=4.0',
-#     'isort>=4.3.3',
-#     'mock>=2.0.0',
-#     'pytest-cache>=1.0',
-#     'pytest-mock>=1.6.0',
-#     'pytest-cov>=1.8.0',
-#     'pytest-random-order>=0.5.4',
-#     'pytest-pep8>=1.0.6',
-#     'openpyxl>=2.6.3',
-# ]
-
 extras_require = {
     'postgresql': [
         'invenio-db[postgresql]>=1.0.0b3',
