@@ -7,6 +7,7 @@ from marshmallow.fields import Integer, Nested
 from sqlalchemy.orm.exc import NoResultFound
 
 from flask_taxonomies.models import Taxonomy
+from flask_taxonomies.utils import load_dump
 from flask_taxonomies.views import url_to_path
 
 
@@ -34,13 +35,13 @@ class TaxonomySchemaV1(StrictKeysMixin):
     id = Integer(required=False)
     slug = SanitizedUnicode(required=False)
     path = SanitizedUnicode(required=False)
-    title = Nested(TaxonomyTitleSchemaV1(), many=True, required=False)
+    title = Nested(TaxonomyTitleSchemaV1, many=True, required=False)
     tooltip = SanitizedUnicode(required=False)
     level = Integer(required=False)
-    links = Nested(TaxonomyLinksSchemaV1(), required=False)
-    ref = SanitizedUnicode(required=False, dump_to='$ref', load_from='$ref', attribute="$ref")
+    links = Nested(TaxonomyLinksSchemaV1, required=False)
+    ref = SanitizedUnicode(required=False, attribute='$ref', **load_dump('$ref'))
     descendants_count = Integer(required=False, dump_only=True)
-    ancestors = Nested(TaxonomyAncestorSchemaV1(), many=True, required=False)
+    ancestors = Nested(TaxonomyAncestorSchemaV1, many=True, required=False)
 
     @pre_load
     def convert_ref(self, in_data, **kwargs):

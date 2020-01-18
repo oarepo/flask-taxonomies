@@ -9,6 +9,11 @@ from werkzeug.utils import import_string
 
 from flask_taxonomies.models import TaxonomyTerm
 
+try:
+    from marshmallow import __version_info__ as marshmallow_version
+except:
+    marshmallow_version = (2, 'x')
+
 
 def obj_or_import_string(value, default=None):
     """
@@ -58,7 +63,15 @@ def find_in_json_contains(search_term: str, taxonomy, tree_address="aliases"):
     :param tree_address: Address of searched field.
     :return: SQLAlchemy BaseQuery
     """
-    expr = sqlalchemy.cast(TaxonomyTerm.extra_data[tree_address], sqlalchemy.String).\
+    expr = sqlalchemy.cast(TaxonomyTerm.extra_data[tree_address], sqlalchemy.String). \
         contains(search_term)
     query = taxonomy.descendants.filter(expr)
     return query
+
+
+if marshmallow_version[0] >= 3:
+    def load_dump(x):
+        return dict(data_key=x)
+else:
+    def load_dump(x):
+        return dict(load_from=x, dump_to=x)
