@@ -26,11 +26,16 @@ def jsonresolver_loader(url_map):
 
     Injected into Invenio-Records JSON resolver.
     """
-    url_map.add(Rule(
-        "/api/taxonomies/<string:code>/<path:slug>",
-        endpoint=get_taxonomy_term,
-        host=current_app.config.get('SERVER_NAME')
-    ))
+    taxonomy_server_names = current_app.config.get('TAXONOMY_SERVER_NAMES') or [
+        current_app.config.get('TAXONOMY_SERVER_NAME') or current_app.config.get('SERVER_NAME')
+    ]
+
+    for host in taxonomy_server_names:
+        url_map.add(Rule(
+            "/api/taxonomies/<string:code>/<path:slug>",
+            endpoint=get_taxonomy_term,
+            host=host
+        ))
 
 
 def get_taxonomy_term(code=None, slug=None):
