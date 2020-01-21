@@ -16,7 +16,11 @@ import jsonresolver
 from flask import current_app
 from werkzeug.routing import Rule
 
-from flask_taxonomies.models import Taxonomy
+from flask_taxonomies.models import (
+    Taxonomy,
+    after_taxonomy_jsonresolve,
+    before_taxonomy_jsonresolve,
+)
 from flask_taxonomies.views import format_ancestor, jsonify_taxonomy_term
 
 
@@ -39,7 +43,10 @@ def jsonresolver_loader(url_map):
 
 
 def get_taxonomy_term(code=None, slug=None):
-
+    resp = before_taxonomy_jsonresolve.send(None, code=code, slug=slug)
+    for r in resp:
+        if r[1] is not None:
+            return r[1]
     try:
         taxonomy = Taxonomy.get(code)
         term = taxonomy.find_term(slug)
@@ -47,5 +54,7 @@ def get_taxonomy_term(code=None, slug=None):
     except:
         traceback.print_exc()
         raise ValueError("The taxonomy term does not exist.")
-    return jsonify_taxonomy_term(term, taxonomy.code, term.tree_path,
+    resp = jsonify_taxonomy_term(term, taxonomy.code, term.tree_path,
                                  term.parent.tree_path or '', parents)
+    after_taxonomy_jsonresolve.send(None, code=code, slug=slug, taxonomy_term=resp)
+    return resp

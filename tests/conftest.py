@@ -61,6 +61,7 @@ def base_app():
         FILES_REST_MULTIPART_MAX_PARTS=100,
         FILES_REST_TASK_WAIT_INTERVAL=0.1,
         FILES_REST_TASK_WAIT_MAX_SECONDS=1,
+        TAXONOMY_SERVER_NAME='taxonomy-server.com'
     )
     app.test_client_class = JsonClient
 

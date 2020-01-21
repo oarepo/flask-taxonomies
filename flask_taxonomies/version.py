@@ -4,4 +4,4 @@
 
 from __future__ import absolute_import, print_function
 
-__version__ = '6.7.4'
+__version__ = '6.8.0'
