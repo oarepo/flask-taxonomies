@@ -6,7 +6,11 @@ from marshmallow import Schema, ValidationError, post_dump, pre_load
 from marshmallow.fields import Integer, Nested
 from sqlalchemy.orm.exc import NoResultFound
 
-from flask_taxonomies.models import Taxonomy
+from flask_taxonomies.models import (
+    Taxonomy,
+    before_taxonomy_marshmallow,
+    after_taxonomy_marshmallow
+)
 from flask_taxonomies.utils import load_dump
 from flask_taxonomies.views import url_to_path
 
@@ -54,14 +58,19 @@ class TaxonomySchemaV1(StrictKeysMixin):
             # No reference found - don't convert anything
             return in_data
 
+        resp = before_taxonomy_marshmallow.send(self, ref=ref)
+        for r in resp:
+            if r[1]:
+                if r[1] is True:
+                    return {'$ref': ref}
+                return r[1]
+
         path = url_to_path(ref)
-        try:
-            tax, term = Taxonomy.find_taxonomy_and_term(path)
-        except NoResultFound:
+        term = Taxonomy.get_taxonomy_term(path)
+        if not term:
             raise ValidationError('Taxonomy $ref link is invalid: {}'.format(ref))  # noqa
 
-        if not tax:
-            raise ValidationError('Taxonomy $ref link is invalid: {}'.format(ref))  # noqa
+        after_taxonomy_marshmallow.send(self, ref=ref, taxonomy_term=term)
 
         return {'$ref': ref}
 

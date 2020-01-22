@@ -10,7 +10,7 @@ from flask import url_for
 from invenio_db import db
 from sqlalchemy import and_
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, aliased
 from sqlalchemy.orm.exc import NoResultFound
 
 logger = logging.getLogger('taxonomies')
@@ -41,6 +41,9 @@ after_taxonomy_term_moved = taxonomy_signals.signal('after-taxonomy-term-moved')
 
 before_taxonomy_jsonresolve = taxonomy_signals.signal('before_taxonomy_json_resolve')
 after_taxonomy_jsonresolve = taxonomy_signals.signal('after_taxonomy_json_resolve')
+
+before_taxonomy_marshmallow = taxonomy_signals.signal('before_taxonomy_marshmallow')
+after_taxonomy_marshmallow = taxonomy_signals.signal('after_taxonomy_marshmallow')
 
 
 class MovePosition(Enum):
@@ -623,6 +626,19 @@ class Taxonomy(wrapt.ObjectProxy):
         if not taxonomy:
             raise NoResultFound('No result for path %s' % path)
         return taxonomy, term
+
+    @classmethod
+    def get_taxonomy_term(cls, path):
+        parts = _parse_path(path)
+        taxonomy_table = aliased(TaxonomyTerm)
+        term_table = aliased(TaxonomyTerm)
+        q = db.session.query(term_table).\
+            join(taxonomy_table, term_table.tree_id == taxonomy_table.tree_id)  # join tables
+        # noinspection PyComparisonWithNone
+        q = q.filter(taxonomy_table.slug == parts[0],
+                     taxonomy_table.parent == None)  # get the correct taxonomy # noqa
+        q = q.filter(term_table.slug == parts[-1])  # and get the node
+        return q.one_or_none()
 
     def find_term(self, path):
 
