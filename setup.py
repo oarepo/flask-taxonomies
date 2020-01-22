@@ -72,9 +72,11 @@ setup(
         ],
         'invenio_base.apps': [
             'flask_taxonomies = flask_taxonomies.ext:FlaskTaxonomies',
+            'flask_taxonomies_redis = flask_taxonomies.redis.ext:FlaskTaxonomiesRedis',
         ],
         'invenio_base.api_apps': [
             'flask_taxonomies = flask_taxonomies.ext:FlaskTaxonomies',
+            'flask_taxonomies_redis = flask_taxonomies.redis.ext:FlaskTaxonomiesRedis',
         ],
         'invenio_jsonschemas.schemas': [
             'flask_taxonomies = flask_taxonomies.jsonschemas'
