@@ -8,8 +8,8 @@ from sqlalchemy.orm.exc import NoResultFound
 
 from flask_taxonomies.models import (
     Taxonomy,
+    after_taxonomy_marshmallow,
     before_taxonomy_marshmallow,
-    after_taxonomy_marshmallow
 )
 from flask_taxonomies.utils import load_dump
 from flask_taxonomies.views import url_to_path

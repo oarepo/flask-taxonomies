@@ -10,7 +10,7 @@ from flask import url_for
 from invenio_db import db
 from sqlalchemy import and_
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import relationship, aliased
+from sqlalchemy.orm import aliased, relationship
 from sqlalchemy.orm.exc import NoResultFound
 
 logger = logging.getLogger('taxonomies')
