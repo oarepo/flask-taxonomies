@@ -50,3 +50,6 @@ class TaxonomyRedisCache:
                 match=self.taxonomy_key(taxonomy) + "*"
         ):
             self.delete_key(key)
+
+    def clear(self):
+        self.cache.clear()

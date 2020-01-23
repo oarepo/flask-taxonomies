@@ -14,15 +14,15 @@ def cache_after_taxonomy_deleted(taxonomy, **kwargs):
 
 
 def cache_after_taxonomy_term_updated(sender, term=None, taxonomy=None, **kwargs):
-    current_flask_taxonomies_redis.cache.delete(term.slug)
+    current_flask_taxonomies_redis.cache.delete(taxonomy.slug + '/' + term.slug)
 
 
 def cache_after_taxonomy_term_deleted(sender, term=None, taxonomy=None, **kwargs):
-    current_flask_taxonomies_redis.cache.delete(term.slug)
+    current_flask_taxonomies_redis.cache.delete(taxonomy.slug + '/' + term.slug)
 
 
 def cache_after_taxonomy_term_moved(sender, term=None, taxonomy=None, **kwargs):
-    current_flask_taxonomies_redis.cache.delete(term.slug)
+    current_flask_taxonomies_redis.cache.delete(taxonomy.slug + '/' + term.slug)
 
 
 def cache_before_taxonomy_jsonresolve(sender, code=None, slug=None, **kwargs):

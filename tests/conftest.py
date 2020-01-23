@@ -27,6 +27,7 @@ from flask_taxonomies.permissions import (
     taxonomy_term_update_all,
     taxonomy_update_all,
 )
+from flask_taxonomies.proxies import current_flask_taxonomies_redis
 from flask_taxonomies.redis.ext import FlaskTaxonomiesRedis
 from flask_taxonomies.views import blueprint
 
@@ -83,8 +84,8 @@ def app(base_app):
     FlaskTaxonomies(base_app)
     FlaskTaxonomiesRedis(base_app)
     base_app.register_blueprint(blueprint)
-
     with base_app.app_context():
+        current_flask_taxonomies_redis.clear()
         return base_app
 
 

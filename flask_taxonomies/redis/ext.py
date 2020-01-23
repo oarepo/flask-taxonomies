@@ -18,6 +18,8 @@ class FlaskTaxonomiesRedisState:
             from .signals import connect_signals
             connect_signals()
 
+    def clear(self):
+        self.cache.clear()
 
 class FlaskTaxonomiesRedis:
 
