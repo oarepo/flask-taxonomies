@@ -21,6 +21,7 @@ class FlaskTaxonomiesRedisState:
     def clear(self):
         self.cache.clear()
 
+
 class FlaskTaxonomiesRedis:
 
     def __init__(self, app=None, db=None):
