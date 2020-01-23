@@ -5,18 +5,28 @@ from redis import StrictRedis
 from werkzeug.contrib.cache import RedisCache
 
 
+class JSONRedisCache(RedisCache):
+
+    def dump_object(self, value):
+        return json.dumps(value).encode('utf-8')
+
+    def load_object(self, value):
+        if value is None:
+            return None
+        if value.startswith(b'!'):
+            return json.loads(super().load_object(value).decode('utf-8'))
+        return json.loads(value.decode('utf-8'))
+
+
 class TaxonomyRedisCache:
     def __init__(self, redis_url, prefix):
-        self.cache = RedisCache(
+        self.cache = JSONRedisCache(
             host=StrictRedis.from_url(redis_url),
             key_prefix=prefix
         )
 
     def get(self, slug):
-        ret = self.cache.get(self.slug_to_key(slug))
-        if ret:
-            return json.loads(ret.decode('utf-8'))
-        return None
+        return self.cache.get(self.slug_to_key(slug))
 
     @staticmethod
     def slug_to_key(slug):
@@ -36,8 +46,7 @@ class TaxonomyRedisCache:
         return key
 
     def set(self, slug, taxonomy_term_json):
-        self.cache.set(self.slug_to_key(slug),
-                       json.dumps(taxonomy_term_json).encode('utf-8'))
+        self.cache.set(self.slug_to_key(slug), taxonomy_term_json)
 
     def delete(self, slug):
         self.delete_key(self.slug_to_key(slug))
