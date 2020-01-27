@@ -4,7 +4,7 @@ from slugify import slugify
 from flask_taxonomies.models import Taxonomy
 
 
-def import_taxonomy(taxonomy_file, int_conversions, str_args, drop):
+def import_taxonomy(taxonomy_file, int_conversions, str_args, bool_args, drop):
     from openpyxl import load_workbook
     wb = load_workbook(filename=taxonomy_file)
     ws = wb.active
@@ -15,12 +15,12 @@ def import_taxonomy(taxonomy_file, int_conversions, str_args, drop):
     taxonomy_data, row = read_block(data, row)
 
     taxonomy = create_update_taxonomy(taxonomy_header, drop)
-    create_update_terms(taxonomy, taxonomy_data, int_conversions, str_args)
+    create_update_terms(taxonomy, taxonomy_data, int_conversions, str_args, bool_args)
 
 
-def create_update_terms(taxonomy, taxonomy_data, int_conversions, str_args):
+def create_update_terms(taxonomy, taxonomy_data, int_conversions, str_args, bool_args):
     stack = [taxonomy]
-    for term_dict in convert_data_to_dict(taxonomy_data, int_conversions, str_args):
+    for term_dict in convert_data_to_dict(taxonomy_data, int_conversions, str_args, bool_args):
         level = int(term_dict.pop('level'))
         slug = term_dict.pop('slug')
         while level < len(stack):
@@ -58,7 +58,7 @@ def create_update_taxonomy(data, drop):
     return taxonomy
 
 
-def convert_data_to_dict(data, int_conversions={}, str_args={}):
+def convert_data_to_dict(data, int_conversions={}, str_args={}, bool_args={}):
     header = [x.split() if x else None for x in data[0]]
     for block in read_data_blocks(data[1:]):
         ret = {}
@@ -71,6 +71,9 @@ def convert_data_to_dict(data, int_conversions={}, str_args={}):
                     val = int(val) if val else None
                 elif ' '.join(prop_path) in str_args:
                     val = val if val else ""
+                elif ' '.join(prop_path) in bool_args:
+                    print(val)
+                    val = val == 'TRUE'
 
                 for part in reversed(prop_path):
                     if part[0] == '@':
