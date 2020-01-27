@@ -72,8 +72,10 @@ def convert_data_to_dict(data, int_conversions={}, str_args={}, bool_args={}):
                 elif ' '.join(prop_path) in str_args:
                     val = val if val else ""
                 elif ' '.join(prop_path) in bool_args:
-                    print(val)
-                    val = val == 'TRUE'
+                    if val != '':
+                        val = val == 'True'
+                    else:
+                        continue
 
                 for part in reversed(prop_path):
                     if part[0] == '@':
