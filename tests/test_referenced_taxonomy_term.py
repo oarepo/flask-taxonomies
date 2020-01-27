@@ -12,7 +12,7 @@ def test_referenced_taxonomy_term(db, root_taxonomy, mkt):
     db.session.refresh(nested)
 
     jsonRes = JSONResolver(entry_point_group='invenio_records.jsonresolver')
-    document = jsonRes.resolve("http://localhost/api/taxonomies/root/leaf")
+    document = jsonRes.resolve("http://taxonomy-server.com/api/taxonomies/root/leaf")
     assert document == {
         'descendants_count': 1.0,
         'id': leaf.id,

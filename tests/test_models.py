@@ -498,3 +498,11 @@ class TestTaxonomyTerm:
         with pytest.raises(TaxonomyError,
                            match='Can not move a term inside its own descendants'):
             t1.move(t12, MovePosition.AFTER)
+
+    def test_get_taxonomy_term(self, db, root_taxonomy, Taxonomy):
+        t1 = root_taxonomy.create_term(slug="1")
+        t11 = t1.create_term(slug="11")
+        t12 = t1.create_term(slug="12")
+
+        term = Taxonomy.get_taxonomy_term(f'/{root_taxonomy.slug}/1/12')
+        assert term.id == t12.id

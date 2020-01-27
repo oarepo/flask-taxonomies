@@ -11,3 +11,7 @@ current_flask_taxonomies = LocalProxy(
 current_permission_factory = LocalProxy(
     lambda: current_flask_taxonomies.permission_factory)
 """Helper proxy to access to the configured permission factory."""
+
+current_flask_taxonomies_redis = LocalProxy(
+    lambda: current_app.extensions['flask-taxonomies-redis'])
+"""Helper proxy to access flask taxonomies state object."""

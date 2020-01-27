@@ -27,6 +27,8 @@ from flask_taxonomies.permissions import (
     taxonomy_term_update_all,
     taxonomy_update_all,
 )
+from flask_taxonomies.proxies import current_flask_taxonomies_redis
+from flask_taxonomies.redis.ext import FlaskTaxonomiesRedis
 from flask_taxonomies.views import blueprint
 
 
@@ -61,6 +63,8 @@ def base_app():
         FILES_REST_MULTIPART_MAX_PARTS=100,
         FILES_REST_TASK_WAIT_INTERVAL=0.1,
         FILES_REST_TASK_WAIT_MAX_SECONDS=1,
+        TAXONOMY_SERVER_NAME='taxonomy-server.com',
+        TAXONOMY_REDIS_URL='redis://localhost:6379/15',
     )
     app.test_client_class = JsonClient
 
@@ -78,9 +82,10 @@ def base_app():
 def app(base_app):
     """Flask application fixture."""
     FlaskTaxonomies(base_app)
+    FlaskTaxonomiesRedis(base_app)
     base_app.register_blueprint(blueprint)
-
     with base_app.app_context():
+        current_flask_taxonomies_redis.clear()
         return base_app
 
 
