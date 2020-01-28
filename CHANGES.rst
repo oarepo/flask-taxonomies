@@ -1,6 +1,10 @@
 Changes
 =======
 
+[Version 6.7.2]
+===============
+  - Add support for bool flags in excel imports
+
 [Version 6.2.1]
 ===============
   - Add --drop option to import_taxonomy cli command
