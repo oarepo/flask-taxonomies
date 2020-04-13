@@ -1,5 +1,3 @@
-from typing import List
-
 import jsonpatch
 import sqlalchemy
 from flask_sqlalchemy import get_state
@@ -354,7 +352,6 @@ class Api:
     def mark_busy(self, terms, status=None, session=None):
         session = session or self.session
         with session.begin_nested():
-            print('mark busy', list(terms))
             if status:
                 terms.update({
                     TaxonomyTerm.busy_count: TaxonomyTerm.busy_count + 1,
@@ -368,7 +365,6 @@ class Api:
     def unmark_busy(self, terms, session=None):
         session = session or self.session
         with session.begin_nested():
-            print('unmark busy', list(terms))
             terms.update({TaxonomyTerm.busy_count: TaxonomyTerm.busy_count - 1},
                          synchronize_session=False)
             # delete those that are marked as 'delete_pending'
