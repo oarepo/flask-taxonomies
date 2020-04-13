@@ -6,7 +6,8 @@ requires = [
     'blinker',
     'sqlalchemy-utils',
     'python-slugify',
-    'jsonpatch'
+    'jsonpatch',
+    'flask-migrate'
 ]
 
 tests_require = [

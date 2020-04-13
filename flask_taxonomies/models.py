@@ -101,15 +101,3 @@ class TaxonomyTerm(Base):
 
     def __repr__(self):
         return str(self)
-
-
-class DeletedTaxonomyTerm(Base):
-    """
-    When a taxonomy term needs to be deleted and its busy_count > 0,
-    create an instance of DeletedTaxonomyTerm. Then, when the busy_count
-    reaches 0, API will cause the term to be really deleted
-    """
-    __tablename__ = 'taxonomy_term_deleted'
-
-    deleted_term_id = Column(Integer, ForeignKey(TaxonomyTerm.id), primary_key=True)
-    deleted_term = relationship("TaxonomyTerm")
