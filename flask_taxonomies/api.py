@@ -1,3 +1,5 @@
+from typing import List
+
 import sqlalchemy
 from flask_sqlalchemy import get_state
 from slugify import slugify
@@ -43,7 +45,7 @@ class Api:
             after_taxonomy_created.send(created)
         return created
 
-    def update_taxonomy(self, taxonomy: Taxonomy, extra_data, session=None) -> Taxonomy:
+    def update_taxonomy(self, taxonomy: [Taxonomy, str], extra_data, session=None) -> Taxonomy:
         """Updates a taxonomy.
         :param taxonomy: taxonomy instance to be updated
         :param extra_data: new taxonomy metadata
@@ -51,7 +53,9 @@ class Api:
         :return Taxonomy: updated taxonomy
         """
         session = session or self.session
-        with session.begin_nested:
+        if isinstance(taxonomy, str):
+            taxonomy = session.query(Taxonomy).filter(Taxonomy.code == taxonomy).one()
+        with session.begin_nested():
             before_taxonomy_updated.send(taxonomy, taxonomy=taxonomy, extra_data=extra_data)
             taxonomy.extra_data = extra_data
             session.add(taxonomy)
