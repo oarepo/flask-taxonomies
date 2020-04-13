@@ -1,3 +1,4 @@
+import sqlalchemy
 from flask_sqlalchemy import get_state
 from slugify import slugify
 from sqlalchemy.util import deprecated
@@ -24,7 +25,7 @@ class Api:
 
     @deprecated(version='7.0.0')
     def taxonomy_list(self):
-        return self.list_taxonomies()
+        return self.list_taxonomies()  # pragma: no cover
 
     def create_taxonomy(self, code, extra_data=None, url=None, session=None) -> Taxonomy:
         """Creates a new taxonomy.
@@ -103,31 +104,46 @@ class Api:
             after_taxonomy_term_created.send(parent, taxonomy=taxonomy, term=parent)
             return parent
 
-    def descendants(self, taxonomy=None, parent=None, slug=None, levels=None):
-        return self._descendants(taxonomy=taxonomy, parent=parent, slug=slug, levels=levels, return_term=False)
+    def descendants(self, taxonomy=None, parent=None, slug=None, levels=None,
+                    status_cond=TaxonomyTerm.status == TermStatusEnum.alive):
+        return self._descendants(taxonomy=taxonomy, parent=parent, slug=slug, levels=levels,
+                                 return_term=False, status_cond=status_cond)
 
-    def descendants_or_self(self, taxonomy=None, parent=None, slug=None, levels=None):
-        return self._descendants(taxonomy=taxonomy, parent=parent, slug=slug, levels=levels, return_term=True)
+    def descendants_or_self(self, taxonomy=None, parent=None, slug=None, levels=None, removed=False,
+                            status_cond=TaxonomyTerm.status == TermStatusEnum.alive):
+        return self._descendants(taxonomy=taxonomy, parent=parent, slug=slug, levels=levels,
+                                 return_term=True, status_cond=status_cond)
 
-    def _descendants(self, taxonomy=None, parent=None, slug=None, levels=None, return_term=True):
+    def _descendants(self, taxonomy=None, parent=None, slug=None, levels=None,
+                     return_term=True, status_cond=None):
+
         if parent and isinstance(parent, TaxonomyTerm):
+            levels_query = []
+            if levels != None:
+                levels_query = [
+                    TaxonomyTerm.level <= levels + parent.level
+                ]
+            if not return_term:
+                return_term_query = [
+                    TaxonomyTerm.level > parent.level
+                ]
+            else:
+                return_term_query = []
             if slug:
                 return self.session.query(TaxonomyTerm).filter(
                     TaxonomyTerm.taxonomy_id == parent.taxonomy_id,
-                    TaxonomyTerm.slug.descendant_of(parent.slug + '/' + slug)
+                    TaxonomyTerm.slug.descendant_of(parent.slug + '/' + slug),
+                    status_cond,
+                    *return_term_query,
+                    *levels_query
                 ).order_by(TaxonomyTerm.slug)
             else:
-                if not return_term:
-                    return_term_query = [
-                        TaxonomyTerm.level > parent.level
-                    ]
-                else:
-                    return_term_query = []
-
                 return self.session.query(TaxonomyTerm).filter(
                     TaxonomyTerm.taxonomy_id == parent.taxonomy_id,
                     TaxonomyTerm.slug.descendant_of(parent.slug),
-                    *return_term_query
+                    status_cond,
+                    *return_term_query,
+                    *levels_query
                 ).order_by(TaxonomyTerm.slug)
 
         if parent:
@@ -151,7 +167,7 @@ class Api:
         if not parent:
             # list the whole taxonomy
             levels_query = []
-            if levels:
+            if levels != None:
                 levels_query = [
                     TaxonomyTerm.level < levels
                 ]
@@ -159,18 +175,20 @@ class Api:
             if isinstance(taxonomy, str):
                 return self.session.query(TaxonomyTerm).join(Taxonomy).filter(
                     Taxonomy.code == taxonomy,
+                    status_cond,
                     *levels_query
                 ).order_by(TaxonomyTerm.slug)
             else:
                 # it is taxonomy id
                 return self.session.query(TaxonomyTerm).filter(
                     TaxonomyTerm.taxonomy_id == taxonomy,
+                    status_cond,
                     *levels_query
                 ).order_by(TaxonomyTerm.slug)
 
         # list specific path inside the taxonomy
         levels_query = []
-        if levels:
+        if levels != None:
             levels_query = [
                 TaxonomyTerm.level < levels + len(parent.split('/'))
             ]
@@ -187,6 +205,7 @@ class Api:
             return self.session.query(TaxonomyTerm).join(Taxonomy).filter(
                 Taxonomy.code == taxonomy,
                 TaxonomyTerm.slug.descendant_of(parent),
+                status_cond,
                 *levels_query,
                 *return_term_query
             ).order_by(TaxonomyTerm.slug)
@@ -194,17 +213,19 @@ class Api:
             return self.session.query(TaxonomyTerm).filter(
                 TaxonomyTerm.taxonomy_id == taxonomy,
                 TaxonomyTerm.slug.descendant_of(parent),
+                status_cond,
                 *levels_query,
                 *return_term_query
             )
 
-    def ancestors(self, taxonomy=None, term=None, slug=None):
-        return self._ancestors(taxonomy=taxonomy, term=term, slug=slug, return_term=False)
+    def ancestors(self, taxonomy=None, term=None, slug=None, status_cond=TaxonomyTerm.status == TermStatusEnum.alive):
+        return self._ancestors(taxonomy=taxonomy, term=term, slug=slug, return_term=False, status_cond=status_cond)
 
-    def ancestors_or_self(self, taxonomy=None, term=None, slug=None):
-        return self._ancestors(taxonomy=taxonomy, term=term, slug=slug, return_term=True)
+    def ancestors_or_self(self, taxonomy=None, term=None, slug=None,
+                          status_cond=TaxonomyTerm.status == TermStatusEnum.alive):
+        return self._ancestors(taxonomy=taxonomy, term=term, slug=slug, return_term=True, status_cond=status_cond)
 
-    def _ancestors(self, taxonomy=None, term=None, slug=None, return_term=True):
+    def _ancestors(self, taxonomy=None, term=None, slug=None, return_term=True, status_cond=None):
         if term is not None and isinstance(term, TaxonomyTerm):
             if return_term:
                 return_term_query = []
@@ -215,9 +236,44 @@ class Api:
             return self.session.query(TaxonomyTerm).filter(
                 TaxonomyTerm.taxonomy_id == term.taxonomy_id,
                 TaxonomyTerm.slug.ancestor_of(term.slug),
+                status_cond,
                 *return_term_query
             )
-        raise NotImplementedError()
+        if term:
+            if slug:
+                term = term + '/' + slug
+        else:
+            term = slug
+            if not term:
+                return self.session.query(TaxonomyTerm).filter(sqlalchemy.sql.false())
+
+        if taxonomy is None:
+            if '/' not in term:
+                # only taxonomy given => return empty QS
+                return self.session.query(TaxonomyTerm).filter(sqlalchemy.sql.false())
+            taxonomy, term = term.split('/', maxsplit=1)
+
+        if return_term:
+            return_term_query = []
+        else:
+            return_term_query = [
+                TaxonomyTerm.slug != term
+            ]
+
+        if isinstance(taxonomy, Taxonomy):
+            return self.session.query(TaxonomyTerm).filter(
+                TaxonomyTerm.taxonomy_id == taxonomy.id,
+                TaxonomyTerm.slug.ancestor_of(term),
+                status_cond,
+                *return_term_query
+            )
+        else:
+            return self.session.query(TaxonomyTerm).join(Taxonomy).filter(
+                Taxonomy.code == taxonomy,
+                TaxonomyTerm.slug.ancestor_of(term),
+                status_cond,
+                *return_term_query
+            )
 
     def delete_term(self, taxonomy=None, parent=None, slug=None, remove_after_delete=True):
         session = self.session

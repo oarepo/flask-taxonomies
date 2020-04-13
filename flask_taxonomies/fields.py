@@ -39,7 +39,7 @@ class PostgresSlugType(LtreeType):
             return value.replace('.', '/')
 
 
-ESCAPE_CHAR = '\x00'
+ESCAPE_CHAR = '\x01'  # as low as possible, \x00 is handled incorrectly in sqlite3
 
 
 class SlugType(types.TypeDecorator):
