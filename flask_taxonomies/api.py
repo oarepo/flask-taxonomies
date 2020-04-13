@@ -4,7 +4,7 @@ from slugify import slugify
 from sqlalchemy.util import deprecated
 from sqlalchemy_utils import Ltree
 
-from .models import Taxonomy, TaxonomyTerm, TermStatusEnum
+from .models import Taxonomy, TaxonomyTerm, TermStatusEnum, TaxonomyError
 from .signals import before_taxonomy_created, after_taxonomy_created, before_taxonomy_updated, \
     after_taxonomy_updated, before_taxonomy_deleted, after_taxonomy_deleted, before_taxonomy_term_created, \
     after_taxonomy_term_created, before_taxonomy_term_deleted, after_taxonomy_term_deleted
@@ -88,7 +88,7 @@ class Api:
         with session.begin_nested():
             if parent:
                 if parent.status != TermStatusEnum.alive:
-                    raise ValueError('Can not create term inside inactive parent')
+                    raise TaxonomyError('Can not create term inside inactive parent')
                 taxonomy_id, parent_id, level, parent_path = parent.taxonomy_id, parent.id, parent.level, parent.slug
             else:
                 taxonomy_id, parent_id, level, parent_path = self._find_term_id(session, taxonomy, parent_path)
@@ -105,14 +105,22 @@ class Api:
             return parent
 
     def descendants(self, taxonomy=None, parent=None, slug=None, levels=None,
-                    status_cond=TaxonomyTerm.status == TermStatusEnum.alive):
-        return self._descendants(taxonomy=taxonomy, parent=parent, slug=slug, levels=levels,
-                                 return_term=False, status_cond=status_cond)
+                    status_cond=TaxonomyTerm.status == TermStatusEnum.alive,
+                    order=True):
+        ret = self._descendants(taxonomy=taxonomy, parent=parent, slug=slug, levels=levels,
+                                return_term=False, status_cond=status_cond)
+        if order:
+            return ret.order_by(TaxonomyTerm.slug)
+        return ret  # pragma: no cover
 
     def descendants_or_self(self, taxonomy=None, parent=None, slug=None, levels=None, removed=False,
-                            status_cond=TaxonomyTerm.status == TermStatusEnum.alive):
-        return self._descendants(taxonomy=taxonomy, parent=parent, slug=slug, levels=levels,
-                                 return_term=True, status_cond=status_cond)
+                            status_cond=TaxonomyTerm.status == TermStatusEnum.alive,
+                            order=True):
+        ret = self._descendants(taxonomy=taxonomy, parent=parent, slug=slug, levels=levels,
+                                return_term=True, status_cond=status_cond)
+        if order:
+            return ret.order_by(TaxonomyTerm.slug)
+        return ret
 
     def _descendants(self, taxonomy=None, parent=None, slug=None, levels=None,
                      return_term=True, status_cond=None):
@@ -136,7 +144,7 @@ class Api:
                     status_cond,
                     *return_term_query,
                     *levels_query
-                ).order_by(TaxonomyTerm.slug)
+                )
             else:
                 return self.session.query(TaxonomyTerm).filter(
                     TaxonomyTerm.taxonomy_id == parent.taxonomy_id,
@@ -144,7 +152,7 @@ class Api:
                     status_cond,
                     *return_term_query,
                     *levels_query
-                ).order_by(TaxonomyTerm.slug)
+                )
 
         if parent:
             if slug:
@@ -157,7 +165,7 @@ class Api:
                 taxonomy = taxonomy.id
         else:
             if not parent:
-                raise ValueError('Taxonomy or full slug must be passed')
+                raise TaxonomyError('Taxonomy or full slug must be passed')
             if '/' in parent:
                 taxonomy, parent = parent.split('/', maxsplit=1)
             else:
@@ -177,14 +185,14 @@ class Api:
                     Taxonomy.code == taxonomy,
                     status_cond,
                     *levels_query
-                ).order_by(TaxonomyTerm.slug)
+                )
             else:
                 # it is taxonomy id
                 return self.session.query(TaxonomyTerm).filter(
                     TaxonomyTerm.taxonomy_id == taxonomy,
                     status_cond,
                     *levels_query
-                ).order_by(TaxonomyTerm.slug)
+                )
 
         # list specific path inside the taxonomy
         levels_query = []
@@ -208,7 +216,7 @@ class Api:
                 status_cond,
                 *levels_query,
                 *return_term_query
-            ).order_by(TaxonomyTerm.slug)
+            )
         else:
             return self.session.query(TaxonomyTerm).filter(
                 TaxonomyTerm.taxonomy_id == taxonomy,
@@ -275,11 +283,15 @@ class Api:
                 *return_term_query
             )
 
-    def delete_term(self, taxonomy=None, parent=None, slug=None, remove_after_delete=True):
+    def delete_term(self, taxonomy=None, term=None, slug=None, remove_after_delete=True):
         session = self.session
         with session.begin_nested():
-            terms = self.descendants_or_self(taxonomy=taxonomy, parent=parent, slug=slug)
+            terms = self.descendants_or_self(taxonomy=taxonomy, parent=term, slug=slug,
+                                             order=False, status_cond=sqlalchemy.sql.true())
             locked_terms = terms.with_for_update().values('id')  # get ids to actually lock the terms
+            if terms.filter(TaxonomyTerm.busy_count > 0).count():
+                raise TaxonomyError('Can not delete busy terms')
+
             term = terms.first()
             self.mark_busy(terms, TermStatusEnum.delete_pending if remove_after_delete else TermStatusEnum.deleted)
             # can call mark_busy if the deletion should be postponed
@@ -290,22 +302,30 @@ class Api:
     def mark_busy(self, terms, status=None, session=None):
         session = session or self.session
         with session.begin_nested():
+            print('mark busy', list(terms))
             if status:
                 terms.update({
                     TaxonomyTerm.busy_count: TaxonomyTerm.busy_count + 1,
                     TaxonomyTerm.status: status
-                })
+                }, synchronize_session=False)
             else:
-                terms.update({TaxonomyTerm.busy_count: TaxonomyTerm.busy_count + 1})
+                terms.update({TaxonomyTerm.busy_count: TaxonomyTerm.busy_count + 1},
+                             synchronize_session=False)
+        session.expire_all()
 
     def unmark_busy(self, terms, session=None):
         session = session or self.session
         with session.begin_nested():
-            terms.update({TaxonomyTerm.busy_count: TaxonomyTerm.busy_count - 1})
+            print('unmark busy', list(terms))
+            terms.update({TaxonomyTerm.busy_count: TaxonomyTerm.busy_count - 1},
+                         synchronize_session=False)
             # delete those that are marked as 'delete_pending'
             terms.filter(
                 TaxonomyTerm.busy_count <= 0,
-                TaxonomyTerm.status == TermStatusEnum.delete_pending).delete()
+                TaxonomyTerm.status == TermStatusEnum.delete_pending).delete(
+                synchronize_session=False
+            )
+        session.expire_all()
 
     def _find_term_id(self, session, taxonomy, term_path):
         """
@@ -317,7 +337,7 @@ class Api:
         """
         if not taxonomy:
             if not term_path:
-                raise ValueError('At least a taxonomy or path starting with taxonomy must be provided')
+                raise TaxonomyError('At least a taxonomy or path starting with taxonomy must be provided')
             if '/' in term_path:
                 taxonomy, term_path = term_path.split('/', maxsplit=1)
             else:
