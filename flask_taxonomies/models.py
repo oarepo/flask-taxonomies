@@ -11,12 +11,6 @@ from flask_taxonomies.fields import SlugType, PostgresSlugType
 logger = logging.getLogger('taxonomies')
 
 
-class MovePosition(Enum):
-    INSIDE = 'inside'
-    BEFORE = 'before'
-    AFTER = 'after'
-
-
 class TaxonomyError(Exception):
     pass
 

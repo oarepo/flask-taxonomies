@@ -105,6 +105,13 @@ class TermIdentification:
         if self.term:
             return self.term.slug.split('/')[-1]
 
+    @property
+    def whole_slug(self):
+        if self.slug:
+            return self.slug
+        if self.term:
+            return self.term.slug
+
     def get_taxonomy(self, session):
         if isinstance(self.taxonomy, Taxonomy):
             return self.taxonomy
@@ -148,6 +155,11 @@ class TermIdentification:
         if self.term:
             return self.term.level
         return len(self.slug.split('/')) - 1
+
+    def contains(self, other):
+        if self.whole_slug == other.whole_slug:
+            return True
+        return other.whole_slug.startswith(self.whole_slug + '/')
 
 
 def _coerce_tax(tax, target):
@@ -403,9 +415,14 @@ class Api:
 
     def move_term(self, ti: TermIdentification, new_parent=None,
                   remove_after_delete=True, session=None):
+        session = session or self.session
         ti = _coerce_ti(ti)
-        elements = self.descendants_or_self(ti, status_cond=sqlalchemy.sql.true(), order=False)
-        new_parent = self.filter_term(TermIdentification(ti.taxonomy, slug=new_parent))
+        if new_parent:
+            new_parent = _coerce_ti(new_parent)
+            if ti.contains(new_parent):
+                raise TaxonomyError('Can not move inside self')
+            new_parent = self.filter_term(new_parent, session=session)
+        elements = self.descendants_or_self(ti, status_cond=sqlalchemy.sql.true(), order=False, session=session)
         return self._rename_or_move(elements, parent_query=new_parent,
                                     remove_after_delete=remove_after_delete, session=session)
 
@@ -417,8 +434,10 @@ class Api:
                 raise TaxonomyError('/ is not allowed when renaming term')
             root = elements.order_by(TaxonomyTerm.slug).first()
 
-            if not parent_query and root.parent_id:
-                parent_query = session.query(TaxonomyTerm).filter(TaxonomyTerm.id == root.parent_id)
+            if slug:
+                if not parent_query and root.parent_id:
+                    parent_query = session.query(TaxonomyTerm).filter(TaxonomyTerm.id == root.parent_id)
+
             parent = None
             if parent_query:
                 parent = parent_query.with_for_update().one()
