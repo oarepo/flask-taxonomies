@@ -1,17 +1,18 @@
 import sqlalchemy
 
+from flask_taxonomies.api import TermIdentification
 from flask_taxonomies.models import Taxonomy, TaxonomyTerm
 
 
 def to_json(api, taxonomy_or_term):
     if isinstance(taxonomy_or_term, Taxonomy):
-        elements = api.descendants_or_self(
-            taxonomy=taxonomy_or_term,
+        elements = api.list_taxonomy(
+            taxonomy_or_term,
             status_cond=sqlalchemy.sql.true()
         )
     else:
         elements = api.descendants_or_self(
-            parent=taxonomy_or_term,
+            TermIdentification(term=taxonomy_or_term),
             status_cond=sqlalchemy.sql.true()
         )
     stack = None

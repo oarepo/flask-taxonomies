@@ -1,12 +1,13 @@
 import json
 
+from flask_taxonomies.api import TermIdentification
 from flask_taxonomies.models import TermStatusEnum
 from flask_taxonomies.utils import to_json
 
 
 def root_rename_test(api, test_taxonomy):
-    root = api.create_term(test_taxonomy, slug='a')
-    api.rename_term(taxonomy=test_taxonomy, slug='a', new_slug='b')
+    root = api.create_term(TermIdentification(taxonomy=test_taxonomy, slug='a'))
+    api.rename_term(TermIdentification(taxonomy=test_taxonomy, slug='a'), new_slug='b')
     assert to_json(api, test_taxonomy) == [
         {
             'children': [],
@@ -18,8 +19,8 @@ def root_rename_test(api, test_taxonomy):
 
 
 def root_rename_no_delete_test(api, test_taxonomy):
-    root = api.create_term(test_taxonomy, slug='a')
-    api.rename_term(taxonomy=test_taxonomy, slug='a', new_slug='b', remove_after_delete=False)
+    root = api.create_term(TermIdentification(taxonomy=test_taxonomy, slug='a'))
+    api.rename_term(TermIdentification(taxonomy=test_taxonomy, slug='a'), new_slug='b', remove_after_delete=False)
     assert to_json(api, test_taxonomy) == [
         {
             'children': [],
@@ -38,10 +39,10 @@ def root_rename_no_delete_test(api, test_taxonomy):
 
 
 def root_rename_hierarchy_test(api, test_taxonomy):
-    root = api.create_term(test_taxonomy, slug='a')
-    r1 = api.create_term(test_taxonomy, parent=root, slug='a')
-    r2 = api.create_term(test_taxonomy, parent=r1, slug='a')
-    api.rename_term(taxonomy=test_taxonomy, slug='a', new_slug='b')
+    root = api.create_term(TermIdentification(taxonomy=test_taxonomy, slug='a'))
+    r1 = api.create_term(TermIdentification(parent=root, slug='a'))
+    r2 = api.create_term(TermIdentification(parent=r1, slug='a'))
+    api.rename_term(TermIdentification(taxonomy=test_taxonomy, slug='a'), new_slug='b')
     assert to_json(api, test_taxonomy) == [
         {
             'level': 0,
@@ -67,10 +68,10 @@ def root_rename_hierarchy_test(api, test_taxonomy):
 
 
 def root_rename_hierarchy_no_delete_test(api, test_taxonomy):
-    root = api.create_term(test_taxonomy, slug='a')
-    r1 = api.create_term(test_taxonomy, parent=root, slug='a')
-    r2 = api.create_term(test_taxonomy, parent=r1, slug='a')
-    api.rename_term(taxonomy=test_taxonomy, slug='a', new_slug='b', remove_after_delete=False)
+    root = api.create_term(TermIdentification(taxonomy=test_taxonomy, slug='a'))
+    r1 = api.create_term(TermIdentification(parent=root, slug='a'))
+    r2 = api.create_term(TermIdentification(parent=r1, slug='a'))
+    api.rename_term(TermIdentification(taxonomy=test_taxonomy, slug='a'), new_slug='b', remove_after_delete=False)
     assert to_json(api, test_taxonomy) == [
         {
             'level': 0,
@@ -119,9 +120,9 @@ def root_rename_hierarchy_no_delete_test(api, test_taxonomy):
 
 
 def nested_rename_test(api, test_taxonomy):
-    root = api.create_term(test_taxonomy, slug='a')
-    nested = api.create_term(test_taxonomy, parent=root, slug='a')
-    api.rename_term(taxonomy=test_taxonomy, slug='a/a', new_slug='b')
+    root = api.create_term(TermIdentification(taxonomy=test_taxonomy, slug='a'))
+    nested = api.create_term(TermIdentification(parent=root, slug='a'))
+    api.rename_term(TermIdentification(taxonomy=test_taxonomy, slug='a/a'), new_slug='b')
     assert to_json(api, test_taxonomy) == [
         {
             'level': 0,
@@ -140,9 +141,9 @@ def nested_rename_test(api, test_taxonomy):
 
 
 def nested_rename_no_delete_test(api, test_taxonomy):
-    root = api.create_term(test_taxonomy, slug='a')
-    nested = api.create_term(test_taxonomy, parent=root, slug='a')
-    api.rename_term(taxonomy=test_taxonomy, slug='a/a', new_slug='b', remove_after_delete=False)
+    root = api.create_term(TermIdentification(taxonomy=test_taxonomy, slug='a'))
+    nested = api.create_term(TermIdentification(parent=root, slug='a'))
+    api.rename_term(TermIdentification(taxonomy=test_taxonomy, slug='a/a'), new_slug='b', remove_after_delete=False)
     assert to_json(api, test_taxonomy) == [
         {
             'level': 0,
@@ -168,11 +169,11 @@ def nested_rename_no_delete_test(api, test_taxonomy):
 
 
 def nested_rename_hierarchy_test(api, test_taxonomy):
-    root = api.create_term(test_taxonomy, slug='a')
-    nested = api.create_term(test_taxonomy, parent=root, slug='a')
-    r1 = api.create_term(test_taxonomy, parent=nested, slug='a')
-    r2 = api.create_term(test_taxonomy, parent=r1, slug='a')
-    api.rename_term(taxonomy=test_taxonomy, slug='a/a', new_slug='b')
+    root = api.create_term(TermIdentification(taxonomy=test_taxonomy, slug='a'))
+    nested = api.create_term(TermIdentification(parent=root, slug='a'))
+    r1 = api.create_term(TermIdentification(parent=nested, slug='a'))
+    r2 = api.create_term(TermIdentification(parent=r1, slug='a'))
+    api.rename_term(TermIdentification(taxonomy=test_taxonomy, slug='a/a'), new_slug='b')
     assert to_json(api, test_taxonomy) == [
         {
             'level': 0,
@@ -205,11 +206,11 @@ def nested_rename_hierarchy_test(api, test_taxonomy):
 
 
 def nested_rename_hierarchy_no_delete_test(api, test_taxonomy):
-    root = api.create_term(test_taxonomy, slug='a')
-    nested = api.create_term(test_taxonomy, parent=root, slug='a')
-    r1 = api.create_term(test_taxonomy, parent=nested, slug='a')
-    r2 = api.create_term(test_taxonomy, parent=r1, slug='a')
-    api.rename_term(taxonomy=test_taxonomy, slug='a/a', new_slug='b', remove_after_delete=False)
+    root = api.create_term(TermIdentification(taxonomy=test_taxonomy, slug='a'))
+    nested = api.create_term(TermIdentification(parent=root, slug='a'))
+    r1 = api.create_term(TermIdentification(parent=nested, slug='a'))
+    r2 = api.create_term(TermIdentification(parent=r1, slug='a'))
+    api.rename_term(TermIdentification(taxonomy=test_taxonomy, slug='a/a'), new_slug='b', remove_after_delete=False)
     assert to_json(api, test_taxonomy) == [
         {
             'level': 0,

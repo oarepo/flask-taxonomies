@@ -13,6 +13,161 @@ from .signals import before_taxonomy_created, after_taxonomy_created, before_tax
     before_taxonomy_term_updated, after_taxonomy_term_updated, before_taxonomy_term_moved, after_taxonomy_term_moved
 
 
+class TermIdentification:
+    def __init__(self, taxonomy=None, parent=None, slug=None, term=None):
+        if term:
+            if parent:
+                raise TaxonomyError('`parent` should not be used when `term` is specified')
+            if taxonomy:
+                raise TaxonomyError('`taxonomy` should not be used when `term` is specified')
+            if slug:
+                raise TaxonomyError('`slug` should not be used when `term` is specified')
+        elif parent:
+            if not slug:
+                raise TaxonomyError('`slug` must be used when `parent` is specified')
+            if taxonomy:
+                raise TaxonomyError('`taxonomy` must not be used when `parent` is specified')
+        elif taxonomy:
+            if not slug:
+                raise TaxonomyError('`slug` must be used when `taxonomy` is specified')
+        else:
+            if not slug or '/' not in slug:
+                raise TaxonomyError(
+                    '`slug` including taxonomy code must be used when no other parameters are specified')
+
+        if not term:
+            if not parent:
+                if taxonomy is None:
+                    taxonomy, slug = slug.split('/', maxsplit=1)
+            elif isinstance(parent, str):
+                slug = parent + '/' + slug
+                taxonomy, slug = slug.split('/', maxsplit=1)
+            else:
+                slug = parent.slug + '/' + slug
+                taxonomy = parent.taxonomy_id
+
+        self.term = term
+        self.taxonomy = taxonomy
+        self.slug = slug
+
+    def _filter_taxonomy(self, query):
+        if isinstance(self.taxonomy, Taxonomy):
+            return query.filter(TaxonomyTerm.taxonomy_id == self.taxonomy.id)
+        elif isinstance(self.taxonomy, str):
+            return query.join(Taxonomy).filter(Taxonomy.code == self.taxonomy)
+        else:
+            return query.filter(TaxonomyTerm.taxonomy_id == self.taxonomy)
+
+    def parent_identification(self):
+        if self.term:
+            if not self.term.parent_id:
+                return None
+            return TermIdentification(term=self.term.parent)
+        if '/' not in self.slug:
+            return None
+        return TermIdentification(taxonomy=self.taxonomy, slug='/'.join(self.slug.split('/')[:-1]))
+
+    def term_query(self, session):
+        ret = session.query(TaxonomyTerm)
+        if self.term:
+            return ret.filter(TaxonomyTerm.id == self.term.id)
+        ret = self._filter_taxonomy(ret)
+        if self.slug:
+            ret = ret.filter(TaxonomyTerm.slug == self.slug)
+        return ret
+
+    def descendant_query(self, session):
+        ret = session.query(TaxonomyTerm)
+        if self.term:
+            return ret.filter(
+                TaxonomyTerm.taxonomy_id == self.term.taxonomy_id,
+                TaxonomyTerm.slug.descendant_of(self.term.slug),
+            )
+        ret = self._filter_taxonomy(ret)
+        if self.slug:
+            ret = ret.filter(TaxonomyTerm.slug.descendant_of(self.slug))
+        return ret
+
+    def ancestor_query(self, session):
+        ret = session.query(TaxonomyTerm)
+        if self.term:
+            return ret.filter(
+                TaxonomyTerm.taxonomy_id == self.term.taxonomy_id,
+                TaxonomyTerm.slug.ancestor_of(self.term.slug),
+            )
+        ret = self._filter_taxonomy(ret)
+        return ret.filter(TaxonomyTerm.slug.ancestor_of(self.slug))
+
+    @property
+    def leaf_slug(self):
+        if self.slug:
+            return self.slug.split('/')[-1]
+        if self.term:
+            return self.term.slug.split('/')[-1]
+
+    def get_taxonomy(self, session):
+        if isinstance(self.taxonomy, Taxonomy):
+            return self.taxonomy
+        if self.term:
+            return self.term.taxonomy
+        if isinstance(self.taxonomy, str):
+            return session.query(Taxonomy).filter(Taxonomy.code == self.taxonomy).one()
+        else:
+            return session.query(Taxonomy).filter(Taxonomy.id == self.taxonomy).one()
+
+    def __eq__(self, other):
+        if not isinstance(other, TermIdentification):
+            return False
+        if self.term:
+            if other.term:
+                return self.term == other.term
+            # other is taxonomy, slug
+            if other.slug != self.term.slug:
+                return False
+            # check if in the same taxonomy
+            if isinstance(other.taxonomy, Taxonomy):
+                return other.taxonomy.id == self.term.taxonomy_id
+            if isinstance(other.taxonomy, str):
+                return other.taxonomy == self.term.taxonomy.code
+            return other.taxonomy == self.term.taxonomy_id
+        if other.term:
+            return other == self
+        # note: taxonomy
+        self_tax = _coerce_tax(self.taxonomy, other.taxonomy)
+        other_tax = _coerce_tax(other.taxonomy, self_tax)
+
+        if type(self_tax) != type(other_tax):
+            raise ValueError('Can not compare different types of taxonomy identification: %s(%s), %s(%s)' % (
+                self_tax, type(self_tax), other_tax, type(other_tax)
+            ))
+
+        return self_tax == other_tax and self.slug == other.slug
+
+    @property
+    def level(self):
+        if self.term:
+            return self.term.level
+        return len(self.slug.split('/')) - 1
+
+
+def _coerce_tax(tax, target):
+    if isinstance(target, Taxonomy):
+        return tax
+    if isinstance(tax, Taxonomy):
+        if isinstance(target, str):
+            return tax.code
+        return tax.id
+    return tax
+
+
+def _coerce_ti(ti):
+    if isinstance(ti, TermIdentification):
+        return ti
+    if isinstance(ti, TaxonomyTerm):
+        return TermIdentification(term=ti)
+    return TermIdentification(slug=ti)
+
+
 class Api:
     def __init__(self, app=None):
         self.app = app
@@ -76,88 +231,65 @@ class Api:
             session.delete(taxonomy)
             after_taxonomy_deleted.send(taxonomy)
 
-    def create_term(self, taxonomy: [Taxonomy, str] = None,
-                    parent_path=None, parent: TaxonomyTerm = None,
-                    slug: str = None, extra_data=None,
-                    session=None):
-        """Creates a taxonomy term.
-        :param taxonomy: taxonomy in which to create a term, if None, term or term_path must be set
-        :param parent_path: path on which to create a term; if taxonomy is None, first part is taxonomy code
-        :param parent: create as a direct child of this term
-        :param slug: term slug
-        :param extra_data: term metadata]
-        :raise AttributeError
-        :raise IntegrityError
-        :return TaxonomyTerm
+    def list_taxonomy(self, taxonomy: [Taxonomy, str], levels=None,
+                      status_cond=TaxonomyTerm.status == TermStatusEnum.alive,
+                      order=True, session=None):
+        session = session or self.session
+        if isinstance(taxonomy, Taxonomy):
+            query = session.query(TaxonomyTerm).filter(TaxonomyTerm.taxonomy_id == taxonomy.id)
+        else:
+            query = session.query(TaxonomyTerm).join(Taxonomy).filter(Taxonomy.code == taxonomy)
+        if status_cond is not None:
+            query = query.filter(status_cond)
+        if levels is not None:
+            query = query.filter(TaxonomyTerm.level < levels)
+        if order:
+            query = query.order_by(TaxonomyTerm.slug)
+        return query
+
+    def create_term(self, ti: TermIdentification, extra_data=None, session=None):
+        """Creates a taxonomy term identified by term identification
         """
+        ti = _coerce_ti(ti)
         session = session or self.session
         with session.begin_nested():
-            if parent:
+            parent_identification = ti.parent_identification()
+            if parent_identification:
+                parent = parent_identification.term_query(session).one()
                 if parent.status != TermStatusEnum.alive:
                     raise TaxonomyError('Can not create term inside inactive parent')
-                taxonomy_id, parent_id, level, parent_path = parent.taxonomy_id, parent.id, parent.level, parent.slug
             else:
-                taxonomy_id, parent_id, level, parent_path = self._find_term_id(session, taxonomy, parent_path)
+                parent = None
 
-            slug = self._slugify(parent_path, slug)
-
+            slug = self._slugify(parent.slug if parent else None, ti.leaf_slug)
+            taxonomy = ti.get_taxonomy(session)
             before_taxonomy_term_created.send(taxonomy, slug=slug, extra_data=extra_data)
-            # check if the slug exists and if so, create a new slug (append -1, -2, ... until ok)
-            parent = TaxonomyTerm(slug=self._database_slug(session, slug),
-                                  extra_data=extra_data, level=level + 1,
-                                  parent_id=parent_id, taxonomy_id=taxonomy_id)
+
+            parent = TaxonomyTerm(slug=slug,
+                                  extra_data=extra_data,
+                                  level=(parent.level + 1) if parent else 0,
+                                  parent_id=parent.id if parent else None,
+                                  taxonomy_id=taxonomy.id)
             session.add(parent)
             after_taxonomy_term_created.send(parent, taxonomy=taxonomy, term=parent)
             return parent
 
-    def filter_term(self, taxonomy=None, parent=None, slug=None,
-                    status_cond=TaxonomyTerm.status == TermStatusEnum.alive):
+    def filter_term(self, ti: TermIdentification,
+                    status_cond=TaxonomyTerm.status == TermStatusEnum.alive,
+                    session=None):
+        ti = _coerce_ti(ti)
+        session = session or self.session
+        return ti.term_query(session).filter(status_cond)
 
-        if parent and isinstance(parent, TaxonomyTerm):
-            if slug:
-                return self.session.query(TaxonomyTerm).filter(
-                    TaxonomyTerm.taxonomy_id == parent.taxonomy_id,
-                    TaxonomyTerm.slug == parent.slug + '/' + slug,
-                    status_cond)
-            else:
-                # just return the parent as slug is not set
-                return self.session.query(TaxonomyTerm).filter(
-                    TaxonomyTerm.taxonomy_id == parent.taxonomy_id,
-                    TaxonomyTerm.slug == parent.slug,
-                    status_cond
-                )
-
-        taxonomy, parent = self._get_taxonomy_and_slug(taxonomy, parent, slug)
-
-        if not parent:
-            raise TaxonomyError('Please specify taxonomy term slug')
-
-        # it is slug from taxonomy
-        if isinstance(taxonomy, str):
-            return self.session.query(TaxonomyTerm).join(Taxonomy).filter(
-                Taxonomy.code == taxonomy,
-                TaxonomyTerm.slug == parent,
-                status_cond
-            )
-        else:
-            return self.session.query(TaxonomyTerm).filter(
-                TaxonomyTerm.taxonomy_id == taxonomy,
-                TaxonomyTerm.slug == parent,
-                status_cond
-            )
-
-    def update_term(self, taxonomy=None, parent=None, slug=None,
+    def update_term(self, ti: TermIdentification,
                     status_cond=TaxonomyTerm.status == TermStatusEnum.alive,
                     extra_data=None, patch=False, session=None):
+        ti = _coerce_ti(ti)
         session = session or self.session
         with session.begin_nested():
-            if isinstance(parent, TaxonomyTerm) and not slug:
-                term = parent
-            else:
-                term = self.filter_term(taxonomy=taxonomy, parent=parent, slug=slug,
-                                        status_cond=status_cond).one()
+            term = self.filter_term(ti, status_cond=status_cond, session=session).one()
 
-            before_taxonomy_term_updated.send(term, term=term, taxonomy=taxonomy,
+            before_taxonomy_term_updated.send(term, term=term, taxonomy=term.taxonomy,
                                               extra_data=extra_data)
             if patch:
                 # apply json patch
@@ -167,176 +299,62 @@ class Api:
                 term.extra_data = extra_data
             flag_modified(term, "extra_data")
             session.add(term)
-            after_taxonomy_term_updated.send(term, term=term, taxonomy=taxonomy)
+            after_taxonomy_term_updated.send(term, term=term, taxonomy=term.taxonomy)
             return term
 
-    def descendants(self, taxonomy=None, parent=None, slug=None, levels=None,
+    def descendants(self, ti: TermIdentification, levels=None,
                     status_cond=TaxonomyTerm.status == TermStatusEnum.alive,
-                    order=True):
-        ret = self._descendants(taxonomy=taxonomy, parent=parent, slug=slug, levels=levels,
-                                return_term=False, status_cond=status_cond)
+                    order=True, session=None):
+        ret = self._descendants(ti, levels=levels, return_term=False,
+                                status_cond=status_cond, session=session)
         if order:
             return ret.order_by(TaxonomyTerm.slug)
         return ret  # pragma: no cover
 
-    def descendants_or_self(self, taxonomy=None, parent=None, slug=None, levels=None, removed=False,
+    def descendants_or_self(self, ti: TermIdentification, levels=None,
                             status_cond=TaxonomyTerm.status == TermStatusEnum.alive,
-                            order=True):
-        ret = self._descendants(taxonomy=taxonomy, parent=parent, slug=slug, levels=levels,
-                                return_term=True, status_cond=status_cond)
+                            order=True, session=None):
+        ret = self._descendants(ti, levels=levels, return_term=True,
+                                status_cond=status_cond, session=session)
         if order:
             return ret.order_by(TaxonomyTerm.slug)
         return ret
 
-    def _descendants(self, taxonomy=None, parent=None, slug=None, levels=None,
-                     return_term=True, status_cond=None):
-
-        if parent and isinstance(parent, TaxonomyTerm):
-            levels_query = []
-            if levels != None:
-                levels_query = [
-                    TaxonomyTerm.level <= levels + parent.level
-                ]
-            if not return_term:
-                return_term_query = [
-                    TaxonomyTerm.level > parent.level
-                ]
-            else:
-                return_term_query = []
-            if slug:
-                return self.session.query(TaxonomyTerm).filter(
-                    TaxonomyTerm.taxonomy_id == parent.taxonomy_id,
-                    TaxonomyTerm.slug.descendant_of(parent.slug + '/' + slug),
-                    status_cond,
-                    *return_term_query,
-                    *levels_query
-                )
-            else:
-                return self.session.query(TaxonomyTerm).filter(
-                    TaxonomyTerm.taxonomy_id == parent.taxonomy_id,
-                    TaxonomyTerm.slug.descendant_of(parent.slug),
-                    status_cond,
-                    *return_term_query,
-                    *levels_query
-                )
-
-        taxonomy, parent = self._get_taxonomy_and_slug(taxonomy, parent, slug)
-
-        if not parent:
-            # list the whole taxonomy
-            levels_query = []
-            if levels != None:
-                levels_query = [
-                    TaxonomyTerm.level < levels
-                ]
-            # list taxonomy
-            if isinstance(taxonomy, str):
-                return self.session.query(TaxonomyTerm).join(Taxonomy).filter(
-                    Taxonomy.code == taxonomy,
-                    status_cond,
-                    *levels_query
-                )
-            else:
-                # it is taxonomy id
-                return self.session.query(TaxonomyTerm).filter(
-                    TaxonomyTerm.taxonomy_id == taxonomy,
-                    status_cond,
-                    *levels_query
-                )
-
-        # list specific path inside the taxonomy
-        levels_query = []
-        if levels != None:
-            levels_query = [
-                TaxonomyTerm.level < levels + len(parent.split('/'))
-            ]
-
+    def _descendants(self, ti: TermIdentification, levels=None,
+                     return_term=True, status_cond=None, session=None):
+        ti = _coerce_ti(ti)
+        session = session or self.session
+        query = ti.descendant_query(session)
+        if levels is not None:
+            query = query.filter(TaxonomyTerm.level <= ti.level + levels)
         if not return_term:
-            return_term_query = [
-                TaxonomyTerm.level >= len(parent.split('/'))
-            ]
-        else:
-            return_term_query = []
+            query = query.filter(TaxonomyTerm.level > ti.level)
+        if status_cond is not None:
+            query = query.filter(status_cond)
+        return query
 
-        # it is slug from taxonomy
-        if isinstance(taxonomy, str):
-            return self.session.query(TaxonomyTerm).join(Taxonomy).filter(
-                Taxonomy.code == taxonomy,
-                TaxonomyTerm.slug.descendant_of(parent),
-                status_cond,
-                *levels_query,
-                *return_term_query
-            )
-        else:
-            return self.session.query(TaxonomyTerm).filter(
-                TaxonomyTerm.taxonomy_id == taxonomy,
-                TaxonomyTerm.slug.descendant_of(parent),
-                status_cond,
-                *levels_query,
-                *return_term_query
-            )
+    def ancestors(self, ti: TermIdentification, status_cond=TaxonomyTerm.status == TermStatusEnum.alive, session=None):
+        return self._ancestors(ti, return_term=False, status_cond=status_cond, session=session)
 
-    def ancestors(self, taxonomy=None, term=None, slug=None, status_cond=TaxonomyTerm.status == TermStatusEnum.alive):
-        return self._ancestors(taxonomy=taxonomy, term=term, slug=slug, return_term=False, status_cond=status_cond)
+    def ancestors_or_self(self, ti: TermIdentification,
+                          status_cond=TaxonomyTerm.status == TermStatusEnum.alive, session=None):
+        return self._ancestors(ti, return_term=True, status_cond=status_cond, session=session)
 
-    def ancestors_or_self(self, taxonomy=None, term=None, slug=None,
-                          status_cond=TaxonomyTerm.status == TermStatusEnum.alive):
-        return self._ancestors(taxonomy=taxonomy, term=term, slug=slug, return_term=True, status_cond=status_cond)
+    def _ancestors(self, ti: TermIdentification, return_term=True, status_cond=None, session=session):
+        ti = _coerce_ti(ti)
+        session = session or self.session
+        query = ti.ancestor_query(session)
+        if status_cond is not None:
+            query = query.filter(status_cond)
+        if not return_term:
+            query = query.filter(TaxonomyTerm.level < ti.level)
+        return query
 
-    def _ancestors(self, taxonomy=None, term=None, slug=None, return_term=True, status_cond=None):
-        if term is not None and isinstance(term, TaxonomyTerm):
-            if return_term:
-                return_term_query = []
-            else:
-                return_term_query = [
-                    TaxonomyTerm.slug != term.slug
-                ]
-            return self.session.query(TaxonomyTerm).filter(
-                TaxonomyTerm.taxonomy_id == term.taxonomy_id,
-                TaxonomyTerm.slug.ancestor_of(term.slug),
-                status_cond,
-                *return_term_query
-            )
-        if term:
-            if slug:
-                term = term + '/' + slug
-        else:
-            term = slug
-            if not term:
-                return self.session.query(TaxonomyTerm).filter(sqlalchemy.sql.false())
-
-        if taxonomy is None:
-            if '/' not in term:
-                # only taxonomy given => return empty QS
-                return self.session.query(TaxonomyTerm).filter(sqlalchemy.sql.false())
-            taxonomy, term = term.split('/', maxsplit=1)
-
-        if return_term:
-            return_term_query = []
-        else:
-            return_term_query = [
-                TaxonomyTerm.slug != term
-            ]
-
-        if isinstance(taxonomy, Taxonomy):
-            return self.session.query(TaxonomyTerm).filter(
-                TaxonomyTerm.taxonomy_id == taxonomy.id,
-                TaxonomyTerm.slug.ancestor_of(term),
-                status_cond,
-                *return_term_query
-            )
-        else:
-            return self.session.query(TaxonomyTerm).join(Taxonomy).filter(
-                Taxonomy.code == taxonomy,
-                TaxonomyTerm.slug.ancestor_of(term),
-                status_cond,
-                *return_term_query
-            )
-
-    def delete_term(self, taxonomy=None, term=None, slug=None, remove_after_delete=True):
-        session = self.session
+    def delete_term(self, ti: TermIdentification, remove_after_delete=True, session=None):
+        ti = _coerce_ti(ti)
+        session = session or self.session
         with session.begin_nested():
-            terms = self.descendants_or_self(taxonomy=taxonomy, parent=term, slug=slug,
+            terms = self.descendants_or_self(ti,
                                              order=False, status_cond=sqlalchemy.sql.true())
             locked_terms = terms.with_for_update().values('id')  # get ids to actually lock the terms
             if terms.filter(TaxonomyTerm.busy_count > 0).count():
@@ -345,6 +363,7 @@ class Api:
             term = terms.first()
             self.mark_busy(terms, TermStatusEnum.delete_pending if remove_after_delete else TermStatusEnum.deleted)
             # can call mark_busy if the deletion should be postponed
+            taxonomy = term.taxonomy
             before_taxonomy_term_deleted.send(term, taxonomy=taxonomy, term=term, terms=terms)
             self.unmark_busy(terms)
             after_taxonomy_term_deleted.send(term, taxonomy=taxonomy, term=term)
@@ -375,19 +394,18 @@ class Api:
             )
         session.expire_all()
 
-    def rename_term(self, taxonomy=None, parent=None, slug=None, new_slug=None,
+    def rename_term(self, ti: TermIdentification, new_slug=None,
                     remove_after_delete=True, session=None):
-        elements = self.descendants_or_self(taxonomy=taxonomy, parent=parent, slug=slug,
-                                            status_cond=sqlalchemy.sql.true(), order=False)
+        ti = _coerce_ti(ti)
+        elements = self.descendants_or_self(ti, status_cond=sqlalchemy.sql.true(), order=False)
         return self._rename_or_move(elements, parent_query=None, slug=new_slug,
                                     remove_after_delete=remove_after_delete, session=session)
 
-    def move_term(self, taxonomy=None, parent=None, slug=None, new_parent=None,
+    def move_term(self, ti: TermIdentification, new_parent=None,
                   remove_after_delete=True, session=None):
-        elements = self.descendants_or_self(taxonomy=taxonomy, parent=parent, slug=slug,
-                                            status_cond=sqlalchemy.sql.true(),
-                                            order=False)
-        new_parent = self.filter_term(taxonomy=taxonomy, parent=new_parent)
+        ti = _coerce_ti(ti)
+        elements = self.descendants_or_self(ti, status_cond=sqlalchemy.sql.true(), order=False)
+        new_parent = self.filter_term(TermIdentification(ti.taxonomy, slug=new_parent))
         return self._rename_or_move(elements, parent_query=new_parent,
                                     remove_after_delete=remove_after_delete, session=session)
 
@@ -445,84 +463,12 @@ class Api:
                        session)
         return new_term
 
-    def _find_term_id(self, session, taxonomy, term_path):
-        """
-
-        :param session:
-        :param taxonomy:
-        :param term_path:
-        :return: (taxonomy_id, term_id, term_level, term_slug)
-        """
-        if not taxonomy:
-            if not term_path:
-                raise TaxonomyError('At least a taxonomy or path starting with taxonomy must be provided')
-            if '/' in term_path:
-                taxonomy, term_path = term_path.split('/', maxsplit=1)
-            else:
-                taxonomy = term_path
-                term_path = None
-
-        if not term_path:
-            if isinstance(taxonomy, Taxonomy):
-                return taxonomy.id, None, -1, None
-            return session.query(Taxonomy.id).filter(Taxonomy.code == taxonomy).one()[0], None, -1, None
-
-        parent_database_slug = self._database_slug(session, term_path)
-        if isinstance(taxonomy, Taxonomy):
-            return (
-                session.query(TaxonomyTerm.taxonomy_id, TaxonomyTerm.id, TaxonomyTerm.level, TaxonomyTerm.slug).
-                    filter(
-                    TaxonomyTerm.busy_count == 0,  # can not create term inside a busy term
-                    TaxonomyTerm.obsoleted_by_id.is_(None),  # can not create term inside obsoleted term
-                    TaxonomyTerm.slug == parent_database_slug,
-                    TaxonomyTerm.taxonomy_id == taxonomy.id,
-                    TaxonomyTerm.status == TermStatusEnum.alive).
-                    one()
-            )
-        return (
-            session.query(TaxonomyTerm.taxonomy_id, TaxonomyTerm.id, TaxonomyTerm.level, TaxonomyTerm.slug).join(
-                Taxonomy).
-                filter(
-                TaxonomyTerm.busy_count == 0,  # can not create term inside a busy term
-                TaxonomyTerm.obsoleted_by_id.is_(None),  # can not create term inside obsoleted term
-                TaxonomyTerm.slug == parent_database_slug,
-                Taxonomy.code == taxonomy,
-                TaxonomyTerm.status == TermStatusEnum.alive).
-                one()
-        )
-
-    @staticmethod
-    def _database_slug(session, slug):
-        if session.bind.dialect.name == 'postgresql':
-            return Ltree(slug.replace('/', '.'))
-        return slug
-
     @staticmethod
     def _slugify(parent_path, slug):
         slug = slugify(slug)
         if parent_path:
             return parent_path + '/' + slug
         return slug
-
-    @staticmethod
-    def _get_taxonomy_and_slug(taxonomy, parent, slug):
-        if parent:
-            if slug:
-                parent = parent + '/' + slug
-        else:
-            parent = slug
-        if taxonomy:
-            if isinstance(taxonomy, Taxonomy):
-                taxonomy = taxonomy.id
-        else:
-            if not parent:
-                raise TaxonomyError('Taxonomy or full slug must be passed')
-            if '/' in parent:
-                taxonomy, parent = parent.split('/', maxsplit=1)
-            else:
-                taxonomy = parent
-                parent = None
-        return taxonomy, parent
 
     @staticmethod
     def _last_slug_element(slug):
