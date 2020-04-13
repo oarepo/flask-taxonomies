@@ -1,9 +1,8 @@
 import enum
 import logging
-from enum import Enum
 
 import sqlalchemy.dialects
-from sqlalchemy import Column, Integer, String, JSON, ForeignKey, Index, Enum
+from sqlalchemy import Column, Integer, String, JSON, ForeignKey, Index, Enum, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
@@ -69,7 +68,7 @@ class TaxonomyTerm(Base):
 
     id = Column(Integer, primary_key=True)
     slug = Column(SlugType(1024).with_variant(PostgresSlugType(), 'postgresql'),
-                  unique=True, index=True)
+                  unique=False, index=True)
     extra_data = Column(JSON().with_variant(
         sqlalchemy.dialects.postgresql.JSONB, 'postgresql'))
     level = Column(Integer)
@@ -93,6 +92,7 @@ class TaxonomyTerm(Base):
 
     __table_args__ = (
         Index('index_term_slug', slug, postgresql_using="gist"),
+        UniqueConstraint(taxonomy_id, slug, name='unique_taxonomy_slug')
     )
 
     def __str__(self):

@@ -1,8 +1,8 @@
 """Initial version
 
-Revision ID: c4f7f7b28eb4
+Revision ID: c1ae4cd55c2a
 Revises: 
-Create Date: 2020-04-13 12:41:27.109154
+Create Date: 2020-04-13 12:46:54.333814
 
 """
 from alembic import op
@@ -11,7 +11,7 @@ import flask_taxonomies.fields
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = 'c4f7f7b28eb4'
+revision = 'c1ae4cd55c2a'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -23,7 +23,7 @@ def upgrade():
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('code', sa.String(length=256), nullable=True),
     sa.Column('url', sa.String(length=1024), nullable=True),
-    sa.Column('extra_data', sa.JSON().with_variant(postgresql.JSONB(), 'postgresql'), nullable=True),
+    sa.Column('extra_data', sa.JSON().with_variant(postgresql.JSONB(astext_type=Text()), 'postgresql'), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_taxonomy_taxonomy_code'), 'taxonomy_taxonomy', ['code'], unique=True)
@@ -31,7 +31,7 @@ def upgrade():
     op.create_table('taxonomy_term',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('slug', flask_taxonomies.fields.SlugType().with_variant(flask_taxonomies.fields.PostgresSlugType(), 'postgresql'), nullable=True),
-    sa.Column('extra_data', sa.JSON().with_variant(postgresql.JSONB(), 'postgresql'), nullable=True),
+    sa.Column('extra_data', sa.JSON().with_variant(postgresql.JSONB(astext_type=Text()), 'postgresql'), nullable=True),
     sa.Column('level', sa.Integer(), nullable=True),
     sa.Column('parent_id', sa.Integer(), nullable=True),
     sa.Column('taxonomy_id', sa.Integer(), nullable=True),
@@ -41,10 +41,11 @@ def upgrade():
     sa.ForeignKeyConstraint(['obsoleted_by_id'], ['taxonomy_term.id'], ),
     sa.ForeignKeyConstraint(['parent_id'], ['taxonomy_term.id'], ),
     sa.ForeignKeyConstraint(['taxonomy_id'], ['taxonomy_taxonomy.id'], ),
-    sa.PrimaryKeyConstraint('id')
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('taxonomy_id', 'slug', name='unique_taxonomy_slug')
     )
     op.create_index('index_term_slug', 'taxonomy_term', ['slug'], unique=False, postgresql_using='gist')
-    op.create_index(op.f('ix_taxonomy_term_slug'), 'taxonomy_term', ['slug'], unique=True)
+    op.create_index(op.f('ix_taxonomy_term_slug'), 'taxonomy_term', ['slug'], unique=False)
     # ### end Alembic commands ###
 
 
