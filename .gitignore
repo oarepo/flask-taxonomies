@@ -73,3 +73,6 @@ dist/
 run\.sh
 
 pytest-local\.ini
+
+*sqlite3
+pytestdebug.log
