@@ -1,15 +1,18 @@
 from typing import List
 
+import jsonpatch
 import sqlalchemy
 from flask_sqlalchemy import get_state
 from slugify import slugify
+from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.util import deprecated
 from sqlalchemy_utils import Ltree
 
 from .models import Taxonomy, TaxonomyTerm, TermStatusEnum, TaxonomyError
 from .signals import before_taxonomy_created, after_taxonomy_created, before_taxonomy_updated, \
     after_taxonomy_updated, before_taxonomy_deleted, after_taxonomy_deleted, before_taxonomy_term_created, \
-    after_taxonomy_term_created, before_taxonomy_term_deleted, after_taxonomy_term_deleted
+    after_taxonomy_term_created, before_taxonomy_term_deleted, after_taxonomy_term_deleted, \
+    before_taxonomy_term_updated, after_taxonomy_term_updated
 
 
 class Api:
@@ -58,6 +61,7 @@ class Api:
         with session.begin_nested():
             before_taxonomy_updated.send(taxonomy, taxonomy=taxonomy, extra_data=extra_data)
             taxonomy.extra_data = extra_data
+            flag_modified(taxonomy, "extra_data")
             session.add(taxonomy)
             after_taxonomy_updated.send(taxonomy, taxonomy=taxonomy)
         return taxonomy
@@ -143,6 +147,30 @@ class Api:
                 TaxonomyTerm.slug == parent,
                 status_cond
             )
+
+    def update_term(self, taxonomy=None, parent=None, slug=None,
+                    status_cond=TaxonomyTerm.status == TermStatusEnum.alive,
+                    extra_data=None, patch=False, session=None):
+        session = session or self.session
+        with session.begin_nested():
+            if isinstance(parent, TaxonomyTerm) and not slug:
+                term = parent
+            else:
+                term = self.filter_term(taxonomy=taxonomy, parent=parent, slug=slug,
+                                        status_cond=status_cond).one()
+
+            before_taxonomy_term_updated.send(term, term=term, taxonomy=taxonomy,
+                                              extra_data=extra_data)
+            if patch:
+                # apply json patch
+                term.extra_data = jsonpatch.apply_patch(
+                    term.extra_data or {}, extra_data, in_place=True)
+            else:
+                term.extra_data = extra_data
+            flag_modified(term, "extra_data")
+            session.add(term)
+            after_taxonomy_term_updated.send(term, term=term, taxonomy=taxonomy)
+            return term
 
     def descendants(self, taxonomy=None, parent=None, slug=None, levels=None,
                     status_cond=TaxonomyTerm.status == TermStatusEnum.alive,

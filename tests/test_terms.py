@@ -136,3 +136,32 @@ def simple_op_test(api, test_taxonomy):
     # check no more there
     assert not api.session.query(TaxonomyTerm).filter(TaxonomyTerm.id == term11_id).first()
     api.session.commit()
+
+
+def update_test(api, test_taxonomy):
+    term = api.create_term(taxonomy=test_taxonomy, slug='b')
+    api.update_term(taxonomy=test_taxonomy, slug='b', extra_data={
+        'a': 'b'
+    })
+    api.session.commit()
+    api.session.refresh(term)
+    assert term.extra_data == {'a': 'b'}
+
+    api.update_term(parent=term, extra_data=[{
+        'op': 'replace',
+        'path': '/a',
+        'value': 'c'
+    }], patch=True)
+    api.session.commit()
+    api.session.refresh(term)
+    assert term.extra_data == {'a': 'c'}
+
+    term = api.create_term(taxonomy=test_taxonomy, slug='a')
+    api.update_term(parent=term, extra_data=[{
+        'op': 'add',
+        'path': '/a',
+        'value': 'c'
+    }], patch=True)
+    api.session.commit()
+    api.session.refresh(term)
+    assert term.extra_data == {'a': 'c'}
