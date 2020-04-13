@@ -10,7 +10,7 @@ from .models import Taxonomy, TaxonomyTerm, TermStatusEnum, TaxonomyError
 from .signals import before_taxonomy_created, after_taxonomy_created, before_taxonomy_updated, \
     after_taxonomy_updated, before_taxonomy_deleted, after_taxonomy_deleted, before_taxonomy_term_created, \
     after_taxonomy_term_created, before_taxonomy_term_deleted, after_taxonomy_term_deleted, \
-    before_taxonomy_term_updated, after_taxonomy_term_updated
+    before_taxonomy_term_updated, after_taxonomy_term_updated, before_taxonomy_term_moved, after_taxonomy_term_moved
 
 
 class Api:
@@ -375,6 +375,76 @@ class Api:
             )
         session.expire_all()
 
+    def rename_term(self, taxonomy=None, parent=None, slug=None, new_slug=None,
+                    remove_after_delete=True, session=None):
+        elements = self.descendants_or_self(taxonomy=taxonomy, parent=parent, slug=slug,
+                                            status_cond=sqlalchemy.sql.true(), order=False)
+        return self._rename_or_move(elements, parent_query=None, slug=new_slug,
+                                    remove_after_delete=remove_after_delete, session=session)
+
+    def move_term(self, taxonomy=None, parent=None, slug=None, new_parent=None,
+                  remove_after_delete=True, session=None):
+        elements = self.descendants_or_self(taxonomy=taxonomy, parent=parent, slug=slug,
+                                            status_cond=sqlalchemy.sql.true(),
+                                            order=False)
+        new_parent = self.filter_term(taxonomy=taxonomy, parent=new_parent)
+        return self._rename_or_move(elements, parent_query=new_parent,
+                                    remove_after_delete=remove_after_delete, session=session)
+
+    def _rename_or_move(self, elements, parent_query=None, slug=None,
+                        remove_after_delete=False, session=None):
+        session = session or self.session
+        with session.begin_nested():
+            if slug and '/' in slug:
+                raise TaxonomyError('/ is not allowed when renaming term')
+            root = elements.order_by(TaxonomyTerm.slug).first()
+
+            if not parent_query and root.parent_id:
+                parent_query = session.query(TaxonomyTerm).filter(TaxonomyTerm.id == root.parent_id)
+            parent = None
+            if parent_query:
+                parent = parent_query.with_for_update().one()
+
+            if slug:
+                if parent:
+                    target_path = parent.slug + '/' + slug
+                else:
+                    target_path = slug
+            elif parent:
+                target_path = parent.slug + '/' + self._last_slug_element(root.slug)
+            else:
+                target_path = self._last_slug_element(root.slug)
+
+            self.mark_busy(elements.with_for_update(),
+                           status=(
+                               TermStatusEnum.delete_pending
+                               if remove_after_delete else TermStatusEnum.deleted
+                           ))
+            before_taxonomy_term_moved.send(root, target_path=target_path, terms=elements)
+            target_root = self._copy(root, parent, target_path, session)
+            self.unmark_busy(elements)
+            after_taxonomy_term_moved.send(root, term=root, new_term=target_root)
+            return root, target_root
+
+    def _copy(self, term: TaxonomyTerm, parent, target_path, session):
+        new_term = TaxonomyTerm(
+            taxonomy_id=term.taxonomy_id,
+            parent_id=parent.id if parent else None,
+            slug=target_path,
+            level=parent.level + 1 if parent else 0,
+            extra_data=term.extra_data
+        )
+        session.add(new_term)
+        session.flush()
+        assert new_term.id > 0
+        term.obsoleted_by_id = new_term.id
+        session.add(term)
+        for child in term.children:
+            self._copy(child, new_term,
+                       target_path + '/' + self._last_slug_element(child.slug),
+                       session)
+        return new_term
+
     def _find_term_id(self, session, taxonomy, term_path):
         """
 
@@ -453,3 +523,7 @@ class Api:
                 taxonomy = parent
                 parent = None
         return taxonomy, parent
+
+    @staticmethod
+    def _last_slug_element(slug):
+        return slug.split('/')[-1]

@@ -1,6 +1,7 @@
 import pytest
 
 from flask_taxonomies.models import TermStatusEnum, TaxonomyTerm, TaxonomyError
+from flask_taxonomies.utils import to_json
 
 
 def simple_op_test(api, test_taxonomy):
@@ -110,6 +111,42 @@ def simple_op_test(api, test_taxonomy):
     term11_id = term11.id
     api.session.refresh(term11)
     assert term11.busy_count == 0
+
+    assert to_json(api, test_taxonomy) == [
+        {
+            'level': 0,
+            'slug': 'a',
+            'status': TermStatusEnum.alive.value,
+            'children': [
+                {
+                    'children': [],
+                    'level': 1,
+                    'slug': 'a/aa',
+                    'status': TermStatusEnum.alive.value,
+                }
+            ],
+        },
+        {
+            'level': 0,
+            'slug': 'b',
+            'status': TermStatusEnum.alive.value,
+            'children': [
+                {
+                    'children': [],
+                    'level': 1,
+                    'status': TermStatusEnum.alive.value,
+                    'slug': 'b/bb'
+                },
+
+                {
+                    'children': [],
+                    'level': 1,
+                    'status': TermStatusEnum.alive.value,
+                    'slug': 'b/cc'
+                }
+            ],
+        }
+    ]
 
     # try to delete busy terms
     api.mark_busy(api.descendants_or_self(parent=term11, order=False))

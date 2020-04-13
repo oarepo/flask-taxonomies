@@ -27,7 +27,7 @@ Base = declarative_base()
 class Taxonomy(Base):
     __tablename__ = 'taxonomy_taxonomy'
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     code = Column(String(256), unique=True, index=True)
     url = Column(String(1024), unique=True, index=True)
     """
@@ -66,7 +66,7 @@ class TermStatusEnum(enum.Enum):
 class TaxonomyTerm(Base):
     __tablename__ = 'taxonomy_term'
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     slug = Column(SlugType(1024).with_variant(PostgresSlugType(), 'postgresql'),
                   unique=False, index=True)
     extra_data = Column(JSON().with_variant(
@@ -77,7 +77,8 @@ class TaxonomyTerm(Base):
     parent = relationship("TaxonomyTerm", back_populates="children",
                           remote_side=id, foreign_keys=parent_id)
     children = relationship("TaxonomyTerm", back_populates="parent",
-                            lazy="dynamic", foreign_keys=parent_id)
+                            lazy="dynamic", foreign_keys=parent_id,
+                            order_by=slug)
 
     taxonomy_id = Column(Integer, ForeignKey(Taxonomy.__tablename__ + '.id'))
     taxonomy = relationship("Taxonomy", back_populates="terms")

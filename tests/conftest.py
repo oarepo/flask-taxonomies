@@ -31,6 +31,10 @@ def db(app):
         try:
             yield db
         finally:
+            try:
+                db.session.commit()
+            except:
+                pass
             Base.metadata.drop_all(db.engine)
             db.session.commit()
 
