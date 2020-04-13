@@ -27,6 +27,26 @@ def simple_op_test(api, test_taxonomy):
     with pytest.raises(TaxonomyError):
         api.descendants_or_self()
 
+    # term filter
+
+    with pytest.raises(TaxonomyError):
+        api.filter_term(taxonomy=test_taxonomy)
+
+    assert list(api.filter_term(taxonomy=test_taxonomy, parent=term2)) == [term2]
+    assert list(api.filter_term(taxonomy=test_taxonomy, parent=term2, slug='bb')) == [term21]
+
+    assert list(api.filter_term(taxonomy=test_taxonomy, slug='b')) == [term2]
+    assert list(api.filter_term(taxonomy=test_taxonomy, parent='b')) == [term2]
+    assert list(api.filter_term(taxonomy=test_taxonomy, parent='b', slug='bb')) == [term21]
+
+    assert list(api.filter_term(taxonomy='test', slug='b')) == [term2]
+    assert list(api.filter_term(taxonomy='test', parent='b')) == [term2]
+    assert list(api.filter_term(taxonomy='test', parent='b', slug='bb')) == [term21]
+
+    assert list(api.filter_term(slug='test/b')) == [term2]
+    assert list(api.filter_term(parent='test/b')) == [term2]
+    assert list(api.filter_term(parent='test/b', slug='bb')) == [term21]
+
     # different ways of listing taxonomy
     assert list(api.descendants_or_self(taxonomy=test_taxonomy)) == [term1, term11, term2, term21, term22]
     assert list(api.descendants_or_self(taxonomy='test')) == [term1, term11, term2, term21, term22]

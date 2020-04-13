@@ -108,6 +108,42 @@ class Api:
             after_taxonomy_term_created.send(parent, taxonomy=taxonomy, term=parent)
             return parent
 
+    def filter_term(self, taxonomy=None, parent=None, slug=None,
+                    status_cond=TaxonomyTerm.status == TermStatusEnum.alive):
+
+        if parent and isinstance(parent, TaxonomyTerm):
+            if slug:
+                return self.session.query(TaxonomyTerm).filter(
+                    TaxonomyTerm.taxonomy_id == parent.taxonomy_id,
+                    TaxonomyTerm.slug == parent.slug + '/' + slug,
+                    status_cond)
+            else:
+                # just return the parent as slug is not set
+                return self.session.query(TaxonomyTerm).filter(
+                    TaxonomyTerm.taxonomy_id == parent.taxonomy_id,
+                    TaxonomyTerm.slug == parent.slug,
+                    status_cond
+                )
+
+        taxonomy, parent = self._get_taxonomy_and_slug(taxonomy, parent, slug)
+
+        if not parent:
+            raise TaxonomyError('Please specify taxonomy term slug')
+
+        # it is slug from taxonomy
+        if isinstance(taxonomy, str):
+            return self.session.query(TaxonomyTerm).join(Taxonomy).filter(
+                Taxonomy.code == taxonomy,
+                TaxonomyTerm.slug == parent,
+                status_cond
+            )
+        else:
+            return self.session.query(TaxonomyTerm).filter(
+                TaxonomyTerm.taxonomy_id == taxonomy,
+                TaxonomyTerm.slug == parent,
+                status_cond
+            )
+
     def descendants(self, taxonomy=None, parent=None, slug=None, levels=None,
                     status_cond=TaxonomyTerm.status == TermStatusEnum.alive,
                     order=True):
@@ -158,23 +194,7 @@ class Api:
                     *levels_query
                 )
 
-        if parent:
-            if slug:
-                parent = parent + '/' + slug
-        else:
-            parent = slug
-
-        if taxonomy:
-            if isinstance(taxonomy, Taxonomy):
-                taxonomy = taxonomy.id
-        else:
-            if not parent:
-                raise TaxonomyError('Taxonomy or full slug must be passed')
-            if '/' in parent:
-                taxonomy, parent = parent.split('/', maxsplit=1)
-            else:
-                taxonomy = parent
-                parent = None
+        taxonomy, parent = self._get_taxonomy_and_slug(taxonomy, parent, slug)
 
         if not parent:
             # list the whole taxonomy
@@ -389,3 +409,23 @@ class Api:
         if parent_path:
             return parent_path + '/' + slug
         return slug
+
+    @staticmethod
+    def _get_taxonomy_and_slug(taxonomy, parent, slug):
+        if parent:
+            if slug:
+                parent = parent + '/' + slug
+        else:
+            parent = slug
+        if taxonomy:
+            if isinstance(taxonomy, Taxonomy):
+                taxonomy = taxonomy.id
+        else:
+            if not parent:
+                raise TaxonomyError('Taxonomy or full slug must be passed')
+            if '/' in parent:
+                taxonomy, parent = parent.split('/', maxsplit=1)
+            else:
+                taxonomy = parent
+                parent = None
+        return taxonomy, parent
