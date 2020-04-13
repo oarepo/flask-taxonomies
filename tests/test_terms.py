@@ -60,9 +60,22 @@ def simple_op_test(api, test_taxonomy):
     assert list(api.ancestors_or_self(term=term11)) == [term1, term11]
     assert list(api.ancestors(term=term11)) == [term1]
 
+    # empty ancestor of a taxonomy (term not given)
+    assert list(api.ancestors(taxonomy=test_taxonomy)) == []
+    assert list(api.ancestors(taxonomy=test_taxonomy, term='')) == []
+    assert list(api.ancestors(taxonomy=test_taxonomy, slug='')) == []
+    assert list(api.ancestors(term='test')) == []
+    assert list(api.ancestors(slug='test')) == []
+
+    # empty ancestor of root term
+    assert list(api.ancestors(taxonomy=test_taxonomy, term='a')) == []
+    assert list(api.ancestors(taxonomy=test_taxonomy, slug='a')) == []
+
     assert list(api.ancestors(taxonomy=test_taxonomy, term='a/aa')) == [term1]
     assert list(api.ancestors(taxonomy=test_taxonomy, slug='a/aa')) == [term1]
     assert list(api.ancestors(taxonomy=test_taxonomy, term='a', slug='aa')) == [term1]
+
+    assert list(api.ancestors_or_self(taxonomy=test_taxonomy, term='a/aa')) == [term1, term11]
 
     assert list(api.ancestors(term='test/a/aa')) == [term1]
     assert list(api.ancestors(slug='test/a/aa')) == [term1]
