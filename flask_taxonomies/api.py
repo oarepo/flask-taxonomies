@@ -1,16 +1,23 @@
 import jsonpatch
+import jsonpointer
 import sqlalchemy
+from flask import current_app
 from flask_sqlalchemy import get_state
 from slugify import slugify
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.util import deprecated
 from sqlalchemy_utils import Ltree
 
+from .constants import INCLUDE_DATA, INCLUDE_DESCENDANTS
 from .models import Taxonomy, TaxonomyTerm, TermStatusEnum, TaxonomyError
 from .signals import before_taxonomy_created, after_taxonomy_created, before_taxonomy_updated, \
     after_taxonomy_updated, before_taxonomy_deleted, after_taxonomy_deleted, before_taxonomy_term_created, \
     after_taxonomy_term_created, before_taxonomy_term_deleted, after_taxonomy_term_deleted, \
     before_taxonomy_term_updated, after_taxonomy_term_updated, before_taxonomy_term_moved, after_taxonomy_term_moved
+
+import logging
+
+log = logging.getLogger(__name__)
 
 
 class TermIdentification:
@@ -259,6 +266,25 @@ class Api:
             query = query.order_by(TaxonomyTerm.slug)
         return query
 
+    def taxonomy_url(self, taxonomy: [Taxonomy, str], descendants=False):
+        proto = current_app.config.get('FLASK_TAXONOMIES_PROTOCOL')
+        prefix = current_app.config.get('FLASK_TAXONOMIES_URL_PREFIX')
+        base = current_app.config.get('FLASK_TAXONOMIES_SERVER_NAME')
+        if not base:
+            base = current_app.config.get('SERVER_NAME')
+        if not base:
+            log.error('Error retrieving taxonomies, FLASK_TAXONOMIES_SERVER_NAME nor SERVER_NAME set')
+            base = 'localhost'
+        ret = '{}://{}{}{}/'.format(
+            proto,
+            base,
+            prefix,
+            taxonomy.code if isinstance(taxonomy, Taxonomy) else taxonomy
+        )
+        if descendants:
+            ret = ret + '?representation:include=' + INCLUDE_DESCENDANTS
+        return ret
+
     def create_term(self, ti: TermIdentification, extra_data=None, session=None):
         """Creates a taxonomy term identified by term identification
         """
@@ -425,6 +451,25 @@ class Api:
         elements = self.descendants_or_self(ti, status_cond=sqlalchemy.sql.true(), order=False, session=session)
         return self._rename_or_move(elements, parent_query=new_parent,
                                     remove_after_delete=remove_after_delete, session=session)
+
+    def extract_data(self, representation, obj):
+        data = obj.extra_data or {}
+        if INCLUDE_DATA not in representation:
+            return {}
+        if representation.selectors is None:
+            # include everything
+            return data
+
+        # include selected data
+        ret = {}
+        for sel in representation.selectors:
+            if not representation.startswith('/'):
+                sel = '/' + sel
+            ptr = jsonpointer.JsonPointer(sel)
+            selected_data = ptr.resolve(data)
+            if selected_data:
+                ret[ptr.path[-1]] = selected_data
+        return ret
 
     def _rename_or_move(self, elements, parent_query=None, slug=None,
                         remove_after_delete=False, session=None):

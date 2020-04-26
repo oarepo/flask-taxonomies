@@ -7,7 +7,9 @@ requires = [
     'sqlalchemy-utils',
     'python-slugify',
     'jsonpatch',
-    'flask-migrate'
+    'flask-migrate',
+    'webargs',
+    'jsonpointer'
 ]
 
 tests_require = [

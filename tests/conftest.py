@@ -6,6 +6,7 @@ from flask_sqlalchemy import SQLAlchemy
 
 from flask_taxonomies.ext import FlaskTaxonomies
 from flask_taxonomies.proxies import current_flask_taxonomies
+from flask_taxonomies.views import blueprint
 
 
 @pytest.fixture
@@ -42,9 +43,24 @@ def db(app):
 @pytest.fixture
 def api(app, db):
     FlaskTaxonomies(app)
+    app.register_blueprint(blueprint) #, prefix=app.config['FLASK_TAXONOMIES_URL_PREFIX'])
     yield current_flask_taxonomies
 
 
 @pytest.fixture
 def test_taxonomy(api):
     return api.create_taxonomy('test')
+
+
+@pytest.fixture
+def client(app, api):
+    with app.test_client() as client:
+        yield client
+
+
+@pytest.fixture
+def sample_taxonomy(api):
+    tax = api.create_taxonomy(code='test', extra_data={
+        'title': 'Test taxonomy'
+    })
+    return tax
