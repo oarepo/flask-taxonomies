@@ -29,11 +29,13 @@ FLASK_TAXONOMIES_REPRESENTATION = {
     'minimal': {
         'include': [],
         'exclude': [],
-        'selectors': None
+        'selectors': None,
+        'options': {}
     },
     'representation': {
         'include': [INCLUDE_DATA, INCLUDE_ANCESTORS, INCLUDE_URL, INCLUDE_DESCENDANTS_URL],
         'exclude': [],
-        'selectors': None
+        'selectors': None,
+        'options': {}
     }
 }

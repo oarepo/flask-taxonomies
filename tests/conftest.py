@@ -4,6 +4,7 @@ import pytest
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 
+from flask_taxonomies.api import TermIdentification
 from flask_taxonomies.ext import FlaskTaxonomies
 from flask_taxonomies.proxies import current_flask_taxonomies
 from flask_taxonomies.views import blueprint
@@ -63,4 +64,14 @@ def sample_taxonomy(api):
     tax = api.create_taxonomy(code='test', extra_data={
         'title': 'Test taxonomy'
     })
+    api.create_term(TermIdentification(taxonomy=tax, slug='b'), extra_data={
+        'title': 'B'
+    })
+    api.create_term(TermIdentification(taxonomy=tax, slug='a'), extra_data={
+        'title': 'A'
+    })
+    api.create_term(TermIdentification(taxonomy=tax, slug='a/aa'), extra_data={
+        'title': 'AA'
+    })
+
     return tax

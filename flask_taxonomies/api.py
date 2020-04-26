@@ -196,13 +196,18 @@ class Api:
         db = get_state(self.app).db
         return db.session
 
-    def list_taxonomies(self):
+    def list_taxonomies(self, session=None):
         """Return a list of all available taxonomies."""
+        session = session or self.session
         return self.session.query(Taxonomy)
 
     @deprecated(version='7.0.0')
     def taxonomy_list(self):
         return self.list_taxonomies()  # pragma: no cover
+
+    def get_taxonomy(self, code, session=None):
+        session = session or self.session
+        return session.query(Taxonomy).filter(Taxonomy.code == code).one()
 
     def create_taxonomy(self, code, extra_data=None, url=None, session=None) -> Taxonomy:
         """Creates a new taxonomy.
@@ -285,6 +290,13 @@ class Api:
             ret = ret + '?representation:include=' + INCLUDE_DESCENDANTS
         return ret
 
+    def taxonomy_term_url(self, taxonomy_term: TaxonomyTerm, descendants=False):
+        taxonomy_url = self.taxonomy_url(taxonomy_term.taxonomy_code)
+        ret = taxonomy_url + taxonomy_term.slug
+        if descendants:
+            ret = ret + '?representation:include=' + INCLUDE_DESCENDANTS
+        return ret
+
     def create_term(self, ti: TermIdentification, extra_data=None, session=None):
         """Creates a taxonomy term identified by term identification
         """
@@ -307,7 +319,8 @@ class Api:
                                   extra_data=extra_data,
                                   level=(parent.level + 1) if parent else 0,
                                   parent_id=parent.id if parent else None,
-                                  taxonomy_id=taxonomy.id)
+                                  taxonomy_id=taxonomy.id,
+                                  taxonomy_code=taxonomy.code)
             session.add(parent)
             after_taxonomy_term_created.send(parent, taxonomy=taxonomy, term=parent)
             return parent

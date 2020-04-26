@@ -1,7 +1,7 @@
 import re
 
 from marshmallow import utils, Schema, EXCLUDE
-from marshmallow.fields import Field
+from marshmallow.fields import Field, Integer
 from werkzeug.http import parse_options_header
 
 from flask_taxonomies.models import Representation, DEFAULT_REPRESENTATION
@@ -47,9 +47,8 @@ class PreferQueryField(Field):
         "invalid_utf8": "Not a valid utf-8 string.",
     }
 
-    def __init__(self, type=None, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.repr_type = type
 
     def _serialize(self, value, attr, obj, **kwargs):
         raise NotImplementedError()
@@ -62,10 +61,7 @@ class PreferQueryField(Field):
         except UnicodeDecodeError as error:
             raise self.make_error("invalid_utf8") from error
         value = [x.strip() for x in re.split(r'[ ,]', value)]
-        return Representation(
-            'representation',
-            **{self.repr_type:value}
-        )
+        return value
 
 
 class HeaderSchema(Schema):
@@ -76,9 +72,10 @@ class HeaderSchema(Schema):
 
 
 class QuerySchema(Schema):
-    include = PreferQueryField(type='include', missing=None, data_key='representation:include')
-    exclude = PreferQueryField(type='exclude', missing=None, data_key='representation:exclude')
-    selectors = PreferQueryField(type='selectors', missing=None, data_key='representation:selectors')
+    include = PreferQueryField(missing=None, data_key='representation:include')
+    exclude = PreferQueryField(missing=None, data_key='representation:exclude')
+    selectors = PreferQueryField(missing=None, data_key='representation:selectors')
+    levels = Integer(missing=None, data_key='representation:levels')
 
     class Meta:
         unknown = EXCLUDE

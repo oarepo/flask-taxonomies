@@ -40,12 +40,13 @@ class Representation:
         INCLUDE_DESCENDANTS
     }
 
-    def __init__(self, representation, include=None, exclude=None, selectors=None):
+    def __init__(self, representation, include=None, exclude=None, selectors=None, options=None):
         self.representation = representation
 
         self._include = include
         self._exclude = exclude
         self._selectors = selectors
+        self._options = options
 
     @cached_property
     def include(self):
@@ -69,12 +70,17 @@ class Representation:
             return self_selectors
 
     @cached_property
+    def options(self):
+        return self._options or self._config['options'] or {}
+
+    @cached_property
     def _config(self):
         return current_app.config['FLASK_TAXONOMIES_REPRESENTATION'].get(
             self.representation, {
                 'include': set(),
                 'exclude': set(),
-                'selectors': None
+                'selectors': None,
+                'options': {}
             })
 
     def __contains__(self, item):
@@ -82,22 +88,26 @@ class Representation:
 
     def as_query(self):
         ret = {
-            'representation': self.representation,
+            'representation:representation': self.representation,
         }
         if self.include:
-            ret['include'] = list(self.include)
+            ret['representation:include'] = list(self.include)
         if self.exclude:
-            ret['exclude'] = list(self.exclude)
+            ret['representation:exclude'] = list(self.exclude)
         if self.selectors:
-            ret['selectors'] = list(self.selectors)
+            ret['representation:selectors'] = list(self.selectors)
+        if self.options:
+            for k, v in self.options.items():
+                ret['representation:' + k] = str(v)
         return ret
 
-    def copy(self, representation=None, include=None, exclude=None, selectors=None):
+    def copy(self, representation=None, include=None, exclude=None, selectors=None, options=None):
         return Representation(representation or self.representation,
                               include or self.include, exclude or self.exclude,
-                              selectors or self.selectors)
+                              selectors or self.selectors,
+                              options or self.options)
 
-    def extend(self, include=None, exclude=None, selectors=None):
+    def extend(self, include=None, exclude=None, selectors=None, options=None):
         if include:
             include = self.include | set(include)
         else:
@@ -110,20 +120,12 @@ class Representation:
             selectors = set(self.selectors or []) | set(selectors)
         else:
             selectors = self.selectors
-        return Representation(self.representation, include, exclude, selectors)
+        if options:
+            options = {**self.options, **options}
+        else:
+            options = {**self.options}
+        return Representation(self.representation, include, exclude, selectors, options)
 
-    def overwrite(self, *representations):
-        curr = self.copy()
-        for repr in representations:
-            if not repr:
-                continue
-            if repr._include is not None:
-                curr._include = repr._include
-            if repr._exclude is not None:
-                curr._exclude = repr._exclude
-            if repr._selectors is not None:
-                curr._selectors = repr._selectors
-        return curr
 
 DEFAULT_REPRESENTATION = Representation('representation')
 PRETTY_REPRESENTATION = Representation('representation', include=[PRETTY_PRINT])
@@ -208,6 +210,7 @@ class TaxonomyTerm(Base):
 
     taxonomy_id = Column(Integer, ForeignKey(Taxonomy.__tablename__ + '.id'))
     taxonomy = relationship("Taxonomy", back_populates="terms")
+    taxonomy_code = Column(String(256))
 
     busy_count = Column(Integer, default=0)
     obsoleted_by_id = Column(Integer, ForeignKey(__tablename__ + '.id'))
@@ -228,3 +231,26 @@ class TaxonomyTerm(Base):
 
     def __repr__(self):
         return str(self)
+
+    def json(self, representation=DEFAULT_REPRESENTATION):
+        resp = {}
+        if INCLUDE_SLUG in representation:
+            resp['slug'] = self.taxonomy_code + '/' + self.slug
+        if INCLUDE_LEVEL in representation:
+            resp['level'] = self.level
+
+        links = {}
+        if INCLUDE_URL in representation:
+            links['self'] = current_flask_taxonomies.taxonomy_term_url(self)
+
+        if INCLUDE_DESCENDANTS_URL in representation:
+            links['tree'] = current_flask_taxonomies.taxonomy_term_url(self, descendants=True)
+
+        if links:
+            resp['links'] = links
+
+        if INCLUDE_ID in representation:
+            resp['id'] = self.id
+        if INCLUDE_DATA in representation and self.extra_data:
+            resp.update(current_flask_taxonomies.extract_data(representation, self))
+        return resp
