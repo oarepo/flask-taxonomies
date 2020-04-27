@@ -174,3 +174,38 @@ def get_taxonomy_descendants_level_test(api, client, sample_taxonomy):
             }
         ]
     }
+
+
+def get_taxonomy_descendants_level_slug_test(api, client, sample_taxonomy):
+    taxonomy = client.get('/api/1.0/taxonomies/test?representation:include=dsc,slug,lvl&representation:levels=1')
+    if taxonomy.status_code != 200:
+        print(taxonomy.data)
+    assert taxonomy.status_code == 200
+    assert json.loads(taxonomy.data) == {
+        'code': 'test',
+        'links': {
+            'self': 'https://localhost/api/1.0/taxonomies/test/',
+            'tree': 'https://localhost/api/1.0/taxonomies/test/?representation:include=dsc'
+        },
+        'title': 'Test taxonomy',
+        'children': [
+            {
+                'title': 'A',
+                'slug': 'test/a',
+                'level': 0,
+                'links': {
+                    'self': 'https://localhost/api/1.0/taxonomies/test/a',
+                    'tree': 'https://localhost/api/1.0/taxonomies/test/a?representation:include=dsc'
+                }
+            },
+            {
+                'title': 'B',
+                'slug': 'test/b',
+                'level': 0,
+                'links': {
+                    'self': 'https://localhost/api/1.0/taxonomies/test/b',
+                    'tree': 'https://localhost/api/1.0/taxonomies/test/b?representation:include=dsc'
+                }
+            }
+        ]
+    }
