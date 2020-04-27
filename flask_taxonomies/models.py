@@ -225,6 +225,12 @@ class TaxonomyTerm(Base):
         UniqueConstraint(taxonomy_id, slug, name='unique_taxonomy_slug')
     )
 
+    @property
+    def parent_slug(self):
+        if '/' in self.slug:
+            return self.slug.rsplit('/')[0]
+        return None
+
     def __str__(self):
         return 'TaxonomyTerm[tax {}, lev {}, slug {}]'.format(
             self.taxonomy.code, self.level, self.slug)

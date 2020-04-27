@@ -5,6 +5,7 @@ from flask import Blueprint, jsonify, abort
 from sqlalchemy.orm.exc import NoResultFound
 from webargs.flaskparser import use_kwargs
 
+from flask_taxonomies.api import TermIdentification
 from flask_taxonomies.constants import INCLUDE_DESCENDANTS, INCLUDE_DELETED
 from flask_taxonomies.marshmallow import HeaderSchema, QuerySchema
 from flask_taxonomies.models import TaxonomyTerm, TermStatusEnum
@@ -40,23 +41,77 @@ def with_prefer(func):
     return wrapped
 
 
+class Paginator:
+    def __init__(self, data, page, size, json_converter):
+        self.data = data
+        self.page = page
+        self.size = size
+        self.count = None
+        self.json_converter = json_converter
+
+    def paginate(self):
+        if self.size:
+            self.count = self.data.count()
+            return self.data[(self.page - 1) * self.size: self.page * self.size]
+        return self.data
+
+    @property
+    def paginated_data(self):
+        resp = self.json_converter(self.paginate())
+        if not self.size:
+            return resp
+        return {
+            'page': self.page,
+            'size': self.size,
+            'total': self.count,
+            'data': resp
+        }
+
+    @property
+    def no_pagination(self):
+        return not self.size
+
+
 @blueprint.route('/')
 @use_kwargs(HeaderSchema, location="headers")
 @use_kwargs(QuerySchema, location="query")
 @with_prefer
-def list_taxonomies(prefer=None):
-    taxonomies = [
-        x.json(representation=prefer) for x in current_flask_taxonomies.list_taxonomies()
-    ]
-    return jsonify(taxonomies)
+def list_taxonomies(prefer=None, page=None, size=None):
+    taxonomies = current_flask_taxonomies.list_taxonomies()
+    paginator = Paginator(taxonomies, page, size, lambda data: [
+        x.json(representation=prefer) for x in data
+    ])
+    return jsonify(paginator.paginated_data)
 
 
-def build_descendants(descendants, representation):
-    stack = []
-    tops = []
+def build_ancestors(term, tops, stack, representation, root_slug):
+    if INCLUDE_DELETED in representation:
+        status_cond = None
+    else:
+        status_cond = TaxonomyTerm.status == TermStatusEnum.alive
+
+    ancestors = current_flask_taxonomies.ancestors(
+        TermIdentification(term=term), status_cond=status_cond
+    )
+    if root_slug is not None:
+        ancestors = ancestors.filter(TaxonomyTerm.slug > root_slug)
+    ancestors = ancestors.order_by(TaxonomyTerm.slug)
+    build_descendants(ancestors, representation, root_slug, stack=stack, tops=tops)
+
+
+def build_descendants(descendants, representation, root_slug, stack=None, tops=None):
+    if stack is None:
+        stack = []
+    if tops is None:
+        tops = []
+
     for desc in descendants:
         while stack and not desc.slug.startswith(stack[-1][0]):
             stack.pop()
+        if not stack and desc.parent_slug != root_slug:
+            # ancestors are missing, serialize them before this element
+            build_ancestors(desc, tops, stack, representation, root_slug)
+
         desc_repr = desc.json(representation)
         if stack:
             stack[-1][1].setdefault('children', []).append(desc_repr)
@@ -70,7 +125,7 @@ def build_descendants(descendants, representation):
 @use_kwargs(HeaderSchema, location="headers")
 @use_kwargs(QuerySchema, location="query")
 @with_prefer
-def get_taxonomy(code=None, prefer=None):
+def get_taxonomy(code=None, prefer=None, page=None, size=None):
     try:
         taxonomy = current_flask_taxonomies.get_taxonomy(code)
         taxonomy_repr = taxonomy.json(representation=prefer)
@@ -79,12 +134,22 @@ def get_taxonomy(code=None, prefer=None):
                 status_cond = None
             else:
                 status_cond = TaxonomyTerm.status == TermStatusEnum.alive
-            taxonomy_repr['children'] = build_descendants(current_flask_taxonomies.list_taxonomy(
+
+            paginator = Paginator(current_flask_taxonomies.list_taxonomy(
                 taxonomy,
                 levels=prefer.options.get('levels', None),
                 status_cond=status_cond
-            ), prefer)
+            ), page, size, lambda data: build_descendants(data, prefer, root_slug=None))
+            if paginator.no_pagination:
+                taxonomy_repr['children'] = paginator.paginated_data
+            else:
+                # move page, size, total to top-level to follow paginated response pattern
+                data = paginator.paginated_data
+                taxonomy_repr['children'] = data['data']
+                data['data'] = taxonomy_repr
+                taxonomy_repr = data
         return jsonify(taxonomy_repr)
+
     except NoResultFound:
         abort(404)
     except:

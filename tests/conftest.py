@@ -44,7 +44,7 @@ def db(app):
 @pytest.fixture
 def api(app, db):
     FlaskTaxonomies(app)
-    app.register_blueprint(blueprint) #, prefix=app.config['FLASK_TAXONOMIES_URL_PREFIX'])
+    app.register_blueprint(blueprint)  # , prefix=app.config['FLASK_TAXONOMIES_URL_PREFIX'])
     yield current_flask_taxonomies
 
 
@@ -75,3 +75,11 @@ def sample_taxonomy(api):
     })
 
     return tax
+
+
+@pytest.fixture
+def many_taxonomies(api):
+    for t in range(100):
+        tax = api.create_taxonomy(code=f'test-{t + 1}', extra_data={
+            'title': f'Test taxonomy #{t + 1}'
+        })
