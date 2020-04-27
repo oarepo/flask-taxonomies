@@ -128,6 +128,7 @@ def build_descendants(descendants, representation, root_slug, stack=None, tops=N
 def get_taxonomy(code=None, prefer=None, page=None, size=None):
     try:
         taxonomy = current_flask_taxonomies.get_taxonomy(code)
+        prefer = taxonomy.merge_select(prefer)
         taxonomy_repr = taxonomy.json(representation=prefer)
         if INCLUDE_DESCENDANTS in prefer:
             if INCLUDE_DELETED in prefer:

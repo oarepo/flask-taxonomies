@@ -352,3 +352,39 @@ def get_taxonomy_paginated_descendants_test(api, client, sample_taxonomy):
         }
     }
 
+
+def get_excluded_title_descendants(api, client, excluded_title_sample_taxonomy):
+    taxonomy = client.get('/api/1.0/taxonomies/test?representation:include=dsc')
+    if taxonomy.status_code != 200:
+        print(taxonomy.data)
+    assert taxonomy.status_code == 200
+    assert json.loads(taxonomy.data) == {
+        'code': 'test',
+        'links': {
+            'self': 'https://localhost/api/1.0/taxonomies/test/',
+            'tree': 'https://localhost/api/1.0/taxonomies/test/?representation:include=dsc'
+        },
+        'title': 'Test taxonomy',
+        'children': [
+            {
+                'links': {
+                    'self': 'https://localhost/api/1.0/taxonomies/test/a',
+                    'tree': 'https://localhost/api/1.0/taxonomies/test/a?representation:include=dsc'
+                },
+                'children': [
+                    {
+                        'links': {
+                            'self': 'https://localhost/api/1.0/taxonomies/test/a/aa',
+                            'tree': 'https://localhost/api/1.0/taxonomies/test/a/aa?representation:include=dsc'
+                        }
+                    }
+                ]
+            },
+            {
+                'links': {
+                    'self': 'https://localhost/api/1.0/taxonomies/test/b',
+                    'tree': 'https://localhost/api/1.0/taxonomies/test/b?representation:include=dsc'
+                }
+            }
+        ]
+    }

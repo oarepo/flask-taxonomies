@@ -184,10 +184,14 @@ class Taxonomy(Base):
         if INCLUDE_ID in representation:
             resp['id'] = self.id
         if INCLUDE_DATA in representation and self.extra_data:
-            if self.select is not None and not representation.has_select:
-                representation = representation.copy(select=self.select)
+            representation = self.merge_select(representation)
             resp.update(current_flask_taxonomies.extract_data(representation, self))
         return resp
+
+    def merge_select(self, representation: Representation):
+        if self.select is not None and not representation.has_select:
+            return representation.copy(select=self.select)
+        return representation
 
 
 class TermStatusEnum(enum.Enum):
