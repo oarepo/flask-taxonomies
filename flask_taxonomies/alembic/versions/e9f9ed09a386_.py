@@ -1,17 +1,18 @@
 """empty message
 
-Revision ID: 2c7563c3162b
+Revision ID: e9f9ed09a386
 Revises: 
-Create Date: 2020-04-26 23:32:14.765897
+Create Date: 2020-04-27 09:43:25.766541
 
 """
 from alembic import op
 import sqlalchemy as sa
 import flask_taxonomies.fields
+from sqlalchemy import Text
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '2c7563c3162b'
+revision = 'e9f9ed09a386'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -24,6 +25,7 @@ def upgrade():
     sa.Column('code', sa.String(length=256), nullable=True),
     sa.Column('url', sa.String(length=1024), nullable=True),
     sa.Column('extra_data', sa.JSON().with_variant(postgresql.JSONB(astext_type=Text()), 'postgresql'), nullable=True),
+    sa.Column('select', sa.JSON().with_variant(postgresql.JSONB(astext_type=Text()), 'postgresql'), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_taxonomy_taxonomy_code'), 'taxonomy_taxonomy', ['code'], unique=True)

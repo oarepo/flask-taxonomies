@@ -28,13 +28,13 @@ def with_prefer(func):
         prefer = kwargs.pop('prefer')
         include = kwargs.pop('include')
         exclude = kwargs.pop('exclude')
-        selectors = kwargs.pop('selectors')
+        select = kwargs.pop('select')
         levels = kwargs.pop('levels')
 
         options = {}
         if levels is not None:
             options['levels'] = int(levels)
-        prefer = prefer.copy(include=include, exclude=exclude, selectors=selectors, options=options or None)
+        prefer = prefer.copy(include=include, exclude=exclude, select=select, options=options or None)
         kwargs['prefer'] = prefer
         return func(*args, **kwargs)
 

@@ -73,7 +73,7 @@ def taxonomy_list_no_urls_in_query_test(api, client, sample_taxonomy):
 def taxonomy_list_selector_test(api, client, sample_taxonomy):
     taxonomies = client.get('/api/1.0/taxonomies/',
                             headers={
-                                'prefer': 'return=representation; selectors=; exclude=url drl'
+                                'prefer': 'return=representation; select=; exclude=url drl'
                             })
     if taxonomies.status_code != 200:
         print(taxonomies.data)
@@ -81,6 +81,37 @@ def taxonomy_list_selector_test(api, client, sample_taxonomy):
     assert json.loads(taxonomies.data) == [
         {
             'code': 'test'
+        }
+    ]
+
+
+def taxonomy_list_default_selector_test(api, client, excluded_title_sample_taxonomy):
+    taxonomies = client.get('/api/1.0/taxonomies/',
+                            headers={
+                                'prefer': 'return=representation; select=; exclude=url drl'
+                            })
+    if taxonomies.status_code != 200:
+        print(taxonomies.data)
+    assert taxonomies.status_code == 200
+    assert json.loads(taxonomies.data) == [
+        {
+            'code': 'test'
+        }
+    ]
+
+
+def taxonomy_list_overwrite_default_selector_test(api, client, excluded_title_sample_taxonomy):
+    taxonomies = client.get('/api/1.0/taxonomies/',
+                            headers={
+                                'prefer': 'return=representation; select=/title; exclude=url drl'
+                            })
+    if taxonomies.status_code != 200:
+        print(taxonomies.data)
+    assert taxonomies.status_code == 200
+    assert json.loads(taxonomies.data) == [
+        {
+            'code': 'test',
+            'title': 'Test taxonomy'
         }
     ]
 

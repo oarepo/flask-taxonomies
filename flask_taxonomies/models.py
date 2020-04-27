@@ -40,13 +40,25 @@ class Representation:
         INCLUDE_DESCENDANTS
     }
 
-    def __init__(self, representation, include=None, exclude=None, selectors=None, options=None):
+    def __init__(self, representation, include=None, exclude=None, select=None, options=None):
         self.representation = representation
 
         self._include = include
         self._exclude = exclude
-        self._selectors = selectors
+        self._select = select
         self._options = options
+
+    @property
+    def has_include(self):
+        return self._include is not None
+
+    @property
+    def has_exclude(self):
+        return self._exclude is not None
+
+    @property
+    def has_select(self):
+        return self._select is not None
 
     @cached_property
     def include(self):
@@ -57,17 +69,17 @@ class Representation:
         return _cast_set(self._exclude) | _cast_set(self._config['exclude'])
 
     @cached_property
-    def selectors(self):
-        config_selectors = _cast_set(self._config['selectors'], return_none=True)
-        self_selectors = _cast_set(self._selectors, return_none=True)
+    def select(self):
+        config_select = _cast_set(self._config['select'], return_none=True)
+        self_select = _cast_set(self._select, return_none=True)
 
-        if config_selectors is not None:
-            if self_selectors is not None:
-                return self_selectors | config_selectors
+        if config_select is not None:
+            if self_select is not None:
+                return self_select | config_select
             else:
-                return config_selectors
-        elif self_selectors is not None:
-            return self_selectors
+                return config_select
+        elif self_select is not None:
+            return self_select
 
     @cached_property
     def options(self):
@@ -79,7 +91,7 @@ class Representation:
             self.representation, {
                 'include': set(),
                 'exclude': set(),
-                'selectors': None,
+                'select': None,
                 'options': {}
             })
 
@@ -94,20 +106,20 @@ class Representation:
             ret['representation:include'] = list(self.include)
         if self.exclude:
             ret['representation:exclude'] = list(self.exclude)
-        if self.selectors:
-            ret['representation:selectors'] = list(self.selectors)
+        if self.select:
+            ret['representation:select'] = list(self.select)
         if self.options:
             for k, v in self.options.items():
                 ret['representation:' + k] = str(v)
         return ret
 
-    def copy(self, representation=None, include=None, exclude=None, selectors=None, options=None):
+    def copy(self, representation=None, include=None, exclude=None, select=None, options=None):
         return Representation(representation or self.representation,
                               include or self.include, exclude or self.exclude,
-                              selectors or self.selectors,
+                              select or self.select,
                               options or self.options)
 
-    def extend(self, include=None, exclude=None, selectors=None, options=None):
+    def extend(self, include=None, exclude=None, select=None, options=None):
         if include:
             include = self.include | set(include)
         else:
@@ -116,15 +128,15 @@ class Representation:
             exclude = self.exclude | set(exclude)
         else:
             exclude = self.exclude
-        if selectors:
-            selectors = set(self.selectors or []) | set(selectors)
+        if select:
+            select = set(self.select or []) | set(select)
         else:
-            selectors = self.selectors
+            select = self.select
         if options:
             options = {**self.options, **options}
         else:
             options = {**self.options}
-        return Representation(self.representation, include, exclude, selectors, options)
+        return Representation(self.representation, include, exclude, select, options)
 
 
 DEFAULT_REPRESENTATION = Representation('representation')
@@ -144,6 +156,9 @@ class Taxonomy(Base):
     extra_data = Column(JSON().with_variant(
         sqlalchemy.dialects.postgresql.JSONB, 'postgresql'))
     terms = relationship("TaxonomyTerm", cascade="all, delete", lazy="dynamic")
+
+    select = Column(JSON().with_variant(
+        sqlalchemy.dialects.postgresql.JSONB, 'postgresql'), nullable=True)
 
     def __str__(self):
         return 'Taxonomy[{}]'.format(self.code)
@@ -169,6 +184,8 @@ class Taxonomy(Base):
         if INCLUDE_ID in representation:
             resp['id'] = self.id
         if INCLUDE_DATA in representation and self.extra_data:
+            if self.select is not None and not representation.has_select:
+                representation = representation.copy(select=self.select)
             resp.update(current_flask_taxonomies.extract_data(representation, self))
         return resp
 

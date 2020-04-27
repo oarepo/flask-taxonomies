@@ -209,7 +209,7 @@ class Api:
         session = session or self.session
         return session.query(Taxonomy).filter(Taxonomy.code == code).one()
 
-    def create_taxonomy(self, code, extra_data=None, url=None, session=None) -> Taxonomy:
+    def create_taxonomy(self, code, extra_data=None, url=None, select=None, session=None) -> Taxonomy:
         """Creates a new taxonomy.
         :param code: taxonomy code
         :param extra_data: taxonomy metadata
@@ -220,7 +220,7 @@ class Api:
         session = session or self.session
         with session.begin_nested():
             before_taxonomy_created.send(self, code=code, extra_data=extra_data)
-            created = Taxonomy(code=code, url=url, extra_data=extra_data)
+            created = Taxonomy(code=code, url=url, extra_data=extra_data, select=select)
             session.add(created)
             after_taxonomy_created.send(created)
         return created
@@ -469,19 +469,19 @@ class Api:
         data = obj.extra_data or {}
         if INCLUDE_DATA not in representation:
             return {}
-        if representation.selectors is None:
+        if representation.select is None:
             # include everything
             return data
 
         # include selected data
         ret = {}
-        for sel in representation.selectors:
-            if not representation.startswith('/'):
+        for sel in representation.select:
+            if not sel.startswith('/'):
                 sel = '/' + sel
             ptr = jsonpointer.JsonPointer(sel)
             selected_data = ptr.resolve(data)
             if selected_data:
-                ret[ptr.path[-1]] = selected_data
+                ret[ptr.parts[-1]] = selected_data
         return ret
 
     def _rename_or_move(self, elements, parent_query=None, slug=None,

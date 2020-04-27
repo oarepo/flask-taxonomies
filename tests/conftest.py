@@ -78,6 +78,25 @@ def sample_taxonomy(api):
 
 
 @pytest.fixture
+def excluded_title_sample_taxonomy(api):
+    tax = api.create_taxonomy(code='test', extra_data={
+        'title': 'Test taxonomy'
+    }, select=[
+    ])
+    api.create_term(TermIdentification(taxonomy=tax, slug='b'), extra_data={
+        'title': 'B'
+    })
+    api.create_term(TermIdentification(taxonomy=tax, slug='a'), extra_data={
+        'title': 'A'
+    })
+    api.create_term(TermIdentification(taxonomy=tax, slug='a/aa'), extra_data={
+        'title': 'AA'
+    })
+
+    return tax
+
+
+@pytest.fixture
 def many_taxonomies(api):
     for t in range(100):
         tax = api.create_taxonomy(code=f'test-{t + 1}', extra_data={

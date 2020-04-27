@@ -37,7 +37,7 @@ class PreferHeaderField(Field):
             representation,
             include=options.get('include', None),
             exclude=options.get('exclude', None),
-            selectors=options.get('selectors', None)
+            select=options.get('select', None)
         )
 
 
@@ -74,7 +74,7 @@ class HeaderSchema(Schema):
 class QuerySchema(Schema):
     include = PreferQueryField(missing=None, data_key='representation:include')
     exclude = PreferQueryField(missing=None, data_key='representation:exclude')
-    selectors = PreferQueryField(missing=None, data_key='representation:selectors')
+    select = PreferQueryField(missing=None, data_key='representation:select')
     levels = Integer(missing=None, data_key='representation:levels')
     size = Integer(missing=None)
     page = Integer(missing=1)

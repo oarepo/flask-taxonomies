@@ -20,7 +20,7 @@ FLASK_TAXONOMIES_URL_PREFIX = '/api/1.0/taxonomies/'
 # A function with signature (obj: [Taxonomy, TaxonomyTerm], representation: Representation)
 # that should return processed obj.extra_data as a dictionary.
 #
-# The default implementation looks at representation.selectors and if set, extracts only those
+# The default implementation looks at representation.select and if set, extracts only those
 # json pointers
 #
 # FLASK_TAXONOMIES_DATA_EXTRACTOR =
@@ -29,13 +29,13 @@ FLASK_TAXONOMIES_REPRESENTATION = {
     'minimal': {
         'include': [],
         'exclude': [],
-        'selectors': None,
+        'select': None,
         'options': {}
     },
     'representation': {
         'include': [INCLUDE_DATA, INCLUDE_ANCESTORS, INCLUDE_URL, INCLUDE_DESCENDANTS_URL],
         'exclude': [],
-        'selectors': None,
+        'select': None,
         'options': {}
     }
 }
