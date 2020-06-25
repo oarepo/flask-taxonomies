@@ -14,7 +14,7 @@ FLASK_TAXONOMIES_PROTOCOL = 'https'
 #
 # A prefix on which taxonomies are served
 #
-FLASK_TAXONOMIES_URL_PREFIX = '/api/1.0/taxonomies/'
+FLASK_TAXONOMIES_URL_PREFIX = '/api/2.0/taxonomies/'
 
 #
 # A function with signature (obj: [Taxonomy, TaxonomyTerm], representation: Representation)

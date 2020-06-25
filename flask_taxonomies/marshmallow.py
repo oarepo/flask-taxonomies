@@ -76,6 +76,12 @@ class QuerySchema(Schema):
     exclude = PreferQueryField(missing=None, data_key='representation:exclude')
     select = PreferQueryField(missing=None, data_key='representation:select')
     levels = Integer(missing=None, data_key='representation:levels')
+
+    class Meta:
+        unknown = EXCLUDE
+
+
+class PaginatedQuerySchema(QuerySchema):
     size = Integer(missing=None)
     page = Integer(missing=1)
 

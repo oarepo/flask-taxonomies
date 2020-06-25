@@ -1,26 +1,18 @@
 import functools
 import traceback
 
-from flask import Blueprint, jsonify, abort
+from flask import Blueprint, jsonify, abort, request, Response
 from sqlalchemy.orm.exc import NoResultFound
 from webargs.flaskparser import use_kwargs
 
 from flask_taxonomies.api import TermIdentification
 from flask_taxonomies.constants import INCLUDE_DESCENDANTS, INCLUDE_DELETED
-from flask_taxonomies.marshmallow import HeaderSchema, QuerySchema
+from flask_taxonomies.marshmallow import HeaderSchema, QuerySchema, PaginatedQuerySchema
 from flask_taxonomies.models import TaxonomyTerm, TermStatusEnum
 from flask_taxonomies.proxies import current_flask_taxonomies
 
-blueprint = Blueprint('flask_taxonomies', __name__, url_prefix='/api/1.0/taxonomies')
+blueprint = Blueprint('flask_taxonomies', __name__)
 
-
-# @parser.location_handler("extra_data")
-# def parse_extra_data(request, name, field):
-#     if name == 'extra_data':
-#         extra = {**request.json}
-#         extra.pop('code', None)
-#         extra.pop('slug', None)
-#         return extra
 
 def with_prefer(func):
     @functools.wraps(func)
@@ -74,7 +66,7 @@ class Paginator:
 
 @blueprint.route('/')
 @use_kwargs(HeaderSchema, location="headers")
-@use_kwargs(QuerySchema, location="query")
+@use_kwargs(PaginatedQuerySchema, location="query")
 @with_prefer
 def list_taxonomies(prefer=None, page=None, size=None):
     taxonomies = current_flask_taxonomies.list_taxonomies()
@@ -123,7 +115,7 @@ def build_descendants(descendants, representation, root_slug, stack=None, tops=N
 
 @blueprint.route('/<code>')
 @use_kwargs(HeaderSchema, location="headers")
-@use_kwargs(QuerySchema, location="query")
+@use_kwargs(PaginatedQuerySchema, location="query")
 @with_prefer
 def get_taxonomy(code=None, prefer=None, page=None, size=None):
     try:
@@ -150,6 +142,129 @@ def get_taxonomy(code=None, prefer=None, page=None, size=None):
                 data['data'] = taxonomy_repr
                 taxonomy_repr = data
         return jsonify(taxonomy_repr)
+
+    except NoResultFound:
+        abort(404)
+    except:
+        traceback.print_exc()
+        raise
+
+
+@blueprint.route('/<code>', methods=['PUT'])
+@use_kwargs(HeaderSchema, location="headers")
+@use_kwargs(PaginatedQuerySchema, location="query")
+@with_prefer
+def create_update_taxonomy(code=None, prefer=None, page=None, size=None):
+    tax = current_flask_taxonomies.get_taxonomy(code=code, fail=False)
+    if not tax:
+        current_flask_taxonomies.create_taxonomy(code=code, extra_data=request.json)
+    else:
+        current_flask_taxonomies.update_taxonomy(tax, extra_data=request.json)
+
+    return get_taxonomy(code, prefer=prefer, page=page, size=size)
+
+
+@blueprint.route('/', methods=['POST'])
+@use_kwargs(HeaderSchema, location="headers")
+@use_kwargs(QuerySchema, location="query")
+@with_prefer
+def create_update_taxonomy_post(prefer=None):
+    data = request.json
+    if 'code' not in data:
+        abort(Response('Code missing', status=400))
+    code = data.pop('code')
+    url = data.pop('url', None)
+    tax = current_flask_taxonomies.get_taxonomy(code=code, fail=False)
+    if not tax:
+        current_flask_taxonomies.create_taxonomy(code=code, extra_data=data, url=url)
+    else:
+        current_flask_taxonomies.update_taxonomy(tax, extra_data=data, url=url)
+
+    return get_taxonomy(code, prefer=prefer)
+
+
+@blueprint.route('/<code>/<path:slug>')
+@use_kwargs(HeaderSchema, location="headers")
+@use_kwargs(PaginatedQuerySchema, location="query")
+@with_prefer
+def get_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None):
+    try:
+        taxonomy = current_flask_taxonomies.get_taxonomy(code)
+        prefer = taxonomy.merge_select(prefer)
+
+        if INCLUDE_DELETED in prefer:
+            status_cond = None
+        else:
+            status_cond = TaxonomyTerm.status == TermStatusEnum.alive
+
+        paginator = Paginator(
+            current_flask_taxonomies.descendants_or_self(
+                TermIdentification(taxonomy=code, slug=slug),
+                levels=prefer.options.get('levels', None),
+                status_cond=status_cond
+            ), page, size,
+            lambda data: build_descendants(data, prefer, root_slug=None))
+
+        result = paginator.paginated_data
+        if not INCLUDE_DESCENDANTS in prefer:
+            if paginator.no_pagination:
+                result = result[0]
+            else:
+                result = result['data'][0]
+        return jsonify(result)
+
+    except NoResultFound:
+        abort(404)
+    except:
+        traceback.print_exc()
+        raise
+
+
+@blueprint.route('/<code>/<path:slug>', methods=['PUT'])
+@use_kwargs(HeaderSchema, location="headers")
+@use_kwargs(PaginatedQuerySchema, location="query")
+@with_prefer
+def create_update_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None):
+    try:
+        taxonomy = current_flask_taxonomies.get_taxonomy(code)
+        prefer = taxonomy.merge_select(prefer)
+
+        if INCLUDE_DELETED in prefer:
+            status_cond = None
+        else:
+            status_cond = TaxonomyTerm.status == TermStatusEnum.alive
+
+        ti = TermIdentification(taxonomy=code, slug=slug)
+        term = current_flask_taxonomies.filter_term(ti, status_cond=status_cond).one_or_none()
+
+        if term:
+            current_flask_taxonomies.update_term(
+                term,
+                status_cond=status_cond,
+                extra_data=request.json
+            )
+        else:
+            current_flask_taxonomies.create_term(
+                ti,
+                extra_data=request.json
+            )
+
+        paginator = Paginator(
+            current_flask_taxonomies.descendants_or_self(
+                TermIdentification(taxonomy=code, slug=slug),
+                levels=prefer.options.get('levels', None),
+                status_cond=status_cond
+            ), page, size,
+            lambda data: build_descendants(data, prefer, root_slug=None))
+
+        result = paginator.paginated_data
+        if not INCLUDE_DESCENDANTS in prefer:
+            if paginator.no_pagination:
+                result = result[0]
+            else:
+                result = result['data'][0]
+
+        return jsonify(result)
 
     except NoResultFound:
         abort(404)

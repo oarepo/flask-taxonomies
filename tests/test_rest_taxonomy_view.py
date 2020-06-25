@@ -2,12 +2,12 @@ from sqlalchemy_utils.types.json import json
 
 
 def taxonomy_list_empty_test(api, client):
-    taxonomies = client.get('/api/1.0/taxonomies/')
+    taxonomies = client.get('/api/2.0/taxonomies/')
     assert json.loads(taxonomies.data) == []
 
 
 def taxonomy_list_test(api, client, sample_taxonomy):
-    taxonomies = client.get('/api/1.0/taxonomies/')
+    taxonomies = client.get('/api/2.0/taxonomies/')
     if taxonomies.status_code != 200:
         print(taxonomies.data)
     assert taxonomies.status_code == 200
@@ -16,15 +16,15 @@ def taxonomy_list_test(api, client, sample_taxonomy):
             'code': 'test',
             'title': 'Test taxonomy',
             'links': {
-                'self': 'https://localhost/api/1.0/taxonomies/test/',
-                'tree': 'https://localhost/api/1.0/taxonomies/test/?representation:include=dsc'
+                'self': 'https://localhost/api/2.0/taxonomies/test/',
+                'tree': 'https://localhost/api/2.0/taxonomies/test/?representation:include=dsc'
             }
         }
     ]
 
 
 def taxonomy_list_no_urls_test(api, client, sample_taxonomy):
-    taxonomies = client.get('/api/1.0/taxonomies/',
+    taxonomies = client.get('/api/2.0/taxonomies/',
                             headers={
                                 'prefer': 'return=representation; exclude=url drl'
                             })
@@ -40,7 +40,7 @@ def taxonomy_list_no_urls_test(api, client, sample_taxonomy):
 
 
 def taxonomy_list_no_urls_but_id_test(api, client, sample_taxonomy):
-    taxonomies = client.get('/api/1.0/taxonomies/',
+    taxonomies = client.get('/api/2.0/taxonomies/',
                             headers={
                                 'prefer': 'return=representation; exclude=url drl; include=id'
                             })
@@ -57,7 +57,7 @@ def taxonomy_list_no_urls_but_id_test(api, client, sample_taxonomy):
 
 
 def taxonomy_list_no_urls_in_query_test(api, client, sample_taxonomy):
-    taxonomies = client.get('/api/1.0/taxonomies/?representation:exclude=url,drl&representation:include=id')
+    taxonomies = client.get('/api/2.0/taxonomies/?representation:exclude=url,drl&representation:include=id')
     if taxonomies.status_code != 200:
         print(taxonomies.data)
     assert taxonomies.status_code == 200
@@ -71,7 +71,7 @@ def taxonomy_list_no_urls_in_query_test(api, client, sample_taxonomy):
 
 
 def taxonomy_list_selector_test(api, client, sample_taxonomy):
-    taxonomies = client.get('/api/1.0/taxonomies/',
+    taxonomies = client.get('/api/2.0/taxonomies/',
                             headers={
                                 'prefer': 'return=representation; select=; exclude=url drl'
                             })
@@ -86,7 +86,7 @@ def taxonomy_list_selector_test(api, client, sample_taxonomy):
 
 
 def taxonomy_list_default_selector_test(api, client, excluded_title_sample_taxonomy):
-    taxonomies = client.get('/api/1.0/taxonomies/',
+    taxonomies = client.get('/api/2.0/taxonomies/',
                             headers={
                                 'prefer': 'return=representation; select=; exclude=url drl'
                             })
@@ -101,7 +101,7 @@ def taxonomy_list_default_selector_test(api, client, excluded_title_sample_taxon
 
 
 def taxonomy_list_overwrite_default_selector_test(api, client, excluded_title_sample_taxonomy):
-    taxonomies = client.get('/api/1.0/taxonomies/',
+    taxonomies = client.get('/api/2.0/taxonomies/',
                             headers={
                                 'prefer': 'return=representation; select=/title; exclude=url drl'
                             })
@@ -117,7 +117,7 @@ def taxonomy_list_overwrite_default_selector_test(api, client, excluded_title_sa
 
 
 def taxonomy_list_pagination_test(api, client, many_taxonomies):
-    taxonomies = client.get('/api/1.0/taxonomies/?page=2&size=10',
+    taxonomies = client.get('/api/2.0/taxonomies/?page=2&size=10',
                             headers={
                                 'prefer': 'return=representation; exclude=url drl'
                             })
@@ -143,7 +143,7 @@ def taxonomy_list_pagination_test(api, client, many_taxonomies):
     }
 
     # out of pages
-    taxonomies = client.get('/api/1.0/taxonomies/?page=11&size=10',
+    taxonomies = client.get('/api/2.0/taxonomies/?page=11&size=10',
                             headers={
                                 'prefer': 'return=representation; exclude=url drl'
                             })
@@ -159,7 +159,7 @@ def taxonomy_list_pagination_test(api, client, many_taxonomies):
 
 
 def get_taxonomy_test(api, client, sample_taxonomy):
-    taxonomy = client.get('/api/1.0/taxonomies/test')
+    taxonomy = client.get('/api/2.0/taxonomies/test')
     if taxonomy.status_code != 200:
         print(taxonomy.data)
     assert taxonomy.status_code == 200
@@ -167,42 +167,42 @@ def get_taxonomy_test(api, client, sample_taxonomy):
         'code': 'test',
         'title': 'Test taxonomy',
         'links': {
-            'self': 'https://localhost/api/1.0/taxonomies/test/',
-            'tree': 'https://localhost/api/1.0/taxonomies/test/?representation:include=dsc'
+            'self': 'https://localhost/api/2.0/taxonomies/test/',
+            'tree': 'https://localhost/api/2.0/taxonomies/test/?representation:include=dsc'
         }
     }
 
 
 def get_nonexisting_taxonomy_test(api, client, sample_taxonomy):
-    taxonomy = client.get('/api/1.0/taxonomies/unknown')
+    taxonomy = client.get('/api/2.0/taxonomies/unknown')
     assert taxonomy.status_code == 404
 
 
 def get_taxonomy_descendants_test(api, client, sample_taxonomy):
-    taxonomy = client.get('/api/1.0/taxonomies/test?representation:include=dsc')
+    taxonomy = client.get('/api/2.0/taxonomies/test?representation:include=dsc')
     if taxonomy.status_code != 200:
         print(taxonomy.data)
     assert taxonomy.status_code == 200
     assert json.loads(taxonomy.data) == {
         'code': 'test',
         'links': {
-            'self': 'https://localhost/api/1.0/taxonomies/test/',
-            'tree': 'https://localhost/api/1.0/taxonomies/test/?representation:include=dsc'
+            'self': 'https://localhost/api/2.0/taxonomies/test/',
+            'tree': 'https://localhost/api/2.0/taxonomies/test/?representation:include=dsc'
         },
         'title': 'Test taxonomy',
         'children': [
             {
                 'title': 'A',
                 'links': {
-                    'self': 'https://localhost/api/1.0/taxonomies/test/a',
-                    'tree': 'https://localhost/api/1.0/taxonomies/test/a?representation:include=dsc'
+                    'self': 'https://localhost/api/2.0/taxonomies/test/a',
+                    'tree': 'https://localhost/api/2.0/taxonomies/test/a?representation:include=dsc'
                 },
                 'children': [
                     {
                         'title': 'AA',
                         'links': {
-                            'self': 'https://localhost/api/1.0/taxonomies/test/a/aa',
-                            'tree': 'https://localhost/api/1.0/taxonomies/test/a/aa?representation:include=dsc'
+                            'self': 'https://localhost/api/2.0/taxonomies/test/a/aa',
+                            'tree': 'https://localhost/api/2.0/taxonomies/test/a/aa?representation:include=dsc'
                         }
                     }
                 ]
@@ -210,8 +210,8 @@ def get_taxonomy_descendants_test(api, client, sample_taxonomy):
             {
                 'title': 'B',
                 'links': {
-                    'self': 'https://localhost/api/1.0/taxonomies/test/b',
-                    'tree': 'https://localhost/api/1.0/taxonomies/test/b?representation:include=dsc'
+                    'self': 'https://localhost/api/2.0/taxonomies/test/b',
+                    'tree': 'https://localhost/api/2.0/taxonomies/test/b?representation:include=dsc'
                 }
             }
         ]
@@ -219,30 +219,30 @@ def get_taxonomy_descendants_test(api, client, sample_taxonomy):
 
 
 def get_taxonomy_descendants_level_test(api, client, sample_taxonomy):
-    taxonomy = client.get('/api/1.0/taxonomies/test?representation:include=dsc&representation:levels=1')
+    taxonomy = client.get('/api/2.0/taxonomies/test?representation:include=dsc&representation:levels=1')
     if taxonomy.status_code != 200:
         print(taxonomy.data)
     assert taxonomy.status_code == 200
     assert json.loads(taxonomy.data) == {
         'code': 'test',
         'links': {
-            'self': 'https://localhost/api/1.0/taxonomies/test/',
-            'tree': 'https://localhost/api/1.0/taxonomies/test/?representation:include=dsc'
+            'self': 'https://localhost/api/2.0/taxonomies/test/',
+            'tree': 'https://localhost/api/2.0/taxonomies/test/?representation:include=dsc'
         },
         'title': 'Test taxonomy',
         'children': [
             {
                 'title': 'A',
                 'links': {
-                    'self': 'https://localhost/api/1.0/taxonomies/test/a',
-                    'tree': 'https://localhost/api/1.0/taxonomies/test/a?representation:include=dsc'
+                    'self': 'https://localhost/api/2.0/taxonomies/test/a',
+                    'tree': 'https://localhost/api/2.0/taxonomies/test/a?representation:include=dsc'
                 }
             },
             {
                 'title': 'B',
                 'links': {
-                    'self': 'https://localhost/api/1.0/taxonomies/test/b',
-                    'tree': 'https://localhost/api/1.0/taxonomies/test/b?representation:include=dsc'
+                    'self': 'https://localhost/api/2.0/taxonomies/test/b',
+                    'tree': 'https://localhost/api/2.0/taxonomies/test/b?representation:include=dsc'
                 }
             }
         ]
@@ -250,15 +250,15 @@ def get_taxonomy_descendants_level_test(api, client, sample_taxonomy):
 
 
 def get_taxonomy_descendants_level_slug_test(api, client, sample_taxonomy):
-    taxonomy = client.get('/api/1.0/taxonomies/test?representation:include=dsc,slug,lvl&representation:levels=1')
+    taxonomy = client.get('/api/2.0/taxonomies/test?representation:include=dsc,slug,lvl&representation:levels=1')
     if taxonomy.status_code != 200:
         print(taxonomy.data)
     assert taxonomy.status_code == 200
     assert json.loads(taxonomy.data) == {
         'code': 'test',
         'links': {
-            'self': 'https://localhost/api/1.0/taxonomies/test/',
-            'tree': 'https://localhost/api/1.0/taxonomies/test/?representation:include=dsc'
+            'self': 'https://localhost/api/2.0/taxonomies/test/',
+            'tree': 'https://localhost/api/2.0/taxonomies/test/?representation:include=dsc'
         },
         'title': 'Test taxonomy',
         'children': [
@@ -267,8 +267,8 @@ def get_taxonomy_descendants_level_slug_test(api, client, sample_taxonomy):
                 'slug': 'test/a',
                 'level': 0,
                 'links': {
-                    'self': 'https://localhost/api/1.0/taxonomies/test/a',
-                    'tree': 'https://localhost/api/1.0/taxonomies/test/a?representation:include=dsc'
+                    'self': 'https://localhost/api/2.0/taxonomies/test/a',
+                    'tree': 'https://localhost/api/2.0/taxonomies/test/a?representation:include=dsc'
                 }
             },
             {
@@ -276,8 +276,8 @@ def get_taxonomy_descendants_level_slug_test(api, client, sample_taxonomy):
                 'slug': 'test/b',
                 'level': 0,
                 'links': {
-                    'self': 'https://localhost/api/1.0/taxonomies/test/b',
-                    'tree': 'https://localhost/api/1.0/taxonomies/test/b?representation:include=dsc'
+                    'self': 'https://localhost/api/2.0/taxonomies/test/b',
+                    'tree': 'https://localhost/api/2.0/taxonomies/test/b?representation:include=dsc'
                 }
             }
         ]
@@ -286,7 +286,7 @@ def get_taxonomy_descendants_level_slug_test(api, client, sample_taxonomy):
 
 def get_taxonomy_paginated_descendants_test(api, client, sample_taxonomy):
     taxonomy = client.get(
-        '/api/1.0/taxonomies/test?representation:include=dsc&representation:exclude=url,drl&page=1&size=1')
+        '/api/2.0/taxonomies/test?representation:include=dsc&representation:exclude=url,drl&page=1&size=1')
     if taxonomy.status_code != 200:
         print(taxonomy.data)
     assert taxonomy.status_code == 200
@@ -307,7 +307,7 @@ def get_taxonomy_paginated_descendants_test(api, client, sample_taxonomy):
 
     # second page - should keep 'A' to preserve the hierarchy
     taxonomy = client.get(
-        '/api/1.0/taxonomies/test?representation:include=dsc&representation:exclude=url,drl&page=2&size=1')
+        '/api/2.0/taxonomies/test?representation:include=dsc&representation:exclude=url,drl&page=2&size=1')
     if taxonomy.status_code != 200:
         print(taxonomy.data)
     assert taxonomy.status_code == 200
@@ -333,7 +333,7 @@ def get_taxonomy_paginated_descendants_test(api, client, sample_taxonomy):
 
     # third page - just B
     taxonomy = client.get(
-        '/api/1.0/taxonomies/test?representation:include=dsc&representation:exclude=url,drl&page=3&size=1')
+        '/api/2.0/taxonomies/test?representation:include=dsc&representation:exclude=url,drl&page=3&size=1')
     if taxonomy.status_code != 200:
         print(taxonomy.data)
     assert taxonomy.status_code == 200
@@ -354,36 +354,36 @@ def get_taxonomy_paginated_descendants_test(api, client, sample_taxonomy):
 
 
 def get_excluded_title_descendants(api, client, excluded_title_sample_taxonomy):
-    taxonomy = client.get('/api/1.0/taxonomies/test?representation:include=dsc')
+    taxonomy = client.get('/api/2.0/taxonomies/test?representation:include=dsc')
     if taxonomy.status_code != 200:
         print(taxonomy.data)
     assert taxonomy.status_code == 200
     assert json.loads(taxonomy.data) == {
         'code': 'test',
         'links': {
-            'self': 'https://localhost/api/1.0/taxonomies/test/',
-            'tree': 'https://localhost/api/1.0/taxonomies/test/?representation:include=dsc'
+            'self': 'https://localhost/api/2.0/taxonomies/test/',
+            'tree': 'https://localhost/api/2.0/taxonomies/test/?representation:include=dsc'
         },
         'title': 'Test taxonomy',
         'children': [
             {
                 'links': {
-                    'self': 'https://localhost/api/1.0/taxonomies/test/a',
-                    'tree': 'https://localhost/api/1.0/taxonomies/test/a?representation:include=dsc'
+                    'self': 'https://localhost/api/2.0/taxonomies/test/a',
+                    'tree': 'https://localhost/api/2.0/taxonomies/test/a?representation:include=dsc'
                 },
                 'children': [
                     {
                         'links': {
-                            'self': 'https://localhost/api/1.0/taxonomies/test/a/aa',
-                            'tree': 'https://localhost/api/1.0/taxonomies/test/a/aa?representation:include=dsc'
+                            'self': 'https://localhost/api/2.0/taxonomies/test/a/aa',
+                            'tree': 'https://localhost/api/2.0/taxonomies/test/a/aa?representation:include=dsc'
                         }
                     }
                 ]
             },
             {
                 'links': {
-                    'self': 'https://localhost/api/1.0/taxonomies/test/b',
-                    'tree': 'https://localhost/api/1.0/taxonomies/test/b?representation:include=dsc'
+                    'self': 'https://localhost/api/2.0/taxonomies/test/b',
+                    'tree': 'https://localhost/api/2.0/taxonomies/test/b?representation:include=dsc'
                 }
             }
         ]

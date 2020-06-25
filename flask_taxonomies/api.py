@@ -205,9 +205,13 @@ class Api:
     def taxonomy_list(self):
         return self.list_taxonomies()  # pragma: no cover
 
-    def get_taxonomy(self, code, session=None):
+    def get_taxonomy(self, code, fail=True, session=None):
         session = session or self.session
-        return session.query(Taxonomy).filter(Taxonomy.code == code).one()
+        ret = session.query(Taxonomy).filter(Taxonomy.code == code)
+        if fail:
+            return ret.one()
+        else:
+            return ret.one_or_none()
 
     def create_taxonomy(self, code, extra_data=None, url=None, select=None, session=None) -> Taxonomy:
         """Creates a new taxonomy.
@@ -332,7 +336,7 @@ class Api:
         session = session or self.session
         return ti.term_query(session).filter(status_cond)
 
-    def update_term(self, ti: TermIdentification,
+    def update_term(self, ti: [TaxonomyTerm, TermIdentification],
                     status_cond=TaxonomyTerm.status == TermStatusEnum.alive,
                     extra_data=None, patch=False, session=None):
         ti = _coerce_ti(ti)

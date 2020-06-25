@@ -21,8 +21,8 @@ setup(
     name='flask-taxonomies',
     version='7.0.0dev',
     packages=['flask_taxonomies', ],
-    requires=requires,
+    install_Srequires=requires,
     tests_require=tests_require,
     license='Creative Commons Attribution-Noncommercial-Share Alike license',
-    long_description=open('README.md').read(),
+    long_description=open('README.rst').read(),
 )

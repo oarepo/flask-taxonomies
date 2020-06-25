@@ -44,7 +44,7 @@ def db(app):
 @pytest.fixture
 def api(app, db):
     FlaskTaxonomies(app)
-    app.register_blueprint(blueprint)  # , prefix=app.config['FLASK_TAXONOMIES_URL_PREFIX'])
+    app.register_blueprint(blueprint, url_prefix=app.config['FLASK_TAXONOMIES_URL_PREFIX'])
     yield current_flask_taxonomies
 
 
