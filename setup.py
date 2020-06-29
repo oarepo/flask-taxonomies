@@ -9,7 +9,8 @@ requires = [
     'jsonpatch',
     'flask-migrate',
     'webargs',
-    'jsonpointer'
+    'jsonpointer',
+    'LinkHeader'
 ]
 
 tests_require = [

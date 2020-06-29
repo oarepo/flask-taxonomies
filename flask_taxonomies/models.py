@@ -1,5 +1,6 @@
 import enum
 import logging
+from collections import namedtuple
 
 import sqlalchemy.dialects
 from flask import current_app
@@ -37,7 +38,8 @@ class Representation:
         INCLUDE_URL,
         INCLUDE_DATA,
         INCLUDE_ID,
-        INCLUDE_DESCENDANTS
+        INCLUDE_DESCENDANTS,
+        INCLUDE_ENVELOPE,
     }
 
     def __init__(self, representation, include=None, exclude=None, select=None, options=None):
@@ -142,6 +144,7 @@ class Representation:
 DEFAULT_REPRESENTATION = Representation('representation')
 PRETTY_REPRESENTATION = Representation('representation', include=[PRETTY_PRINT])
 
+EnvelopeLinks = namedtuple('EnvelopeLinks', 'envelope headers')
 
 class Taxonomy(Base):
     __tablename__ = 'taxonomy_taxonomy'
@@ -166,26 +169,49 @@ class Taxonomy(Base):
     def __repr__(self):
         return str(self)
 
+    def links(self, representation=DEFAULT_REPRESENTATION) -> EnvelopeLinks:
+        links = {}
+        all_links = {}
+        self_link = current_flask_taxonomies.taxonomy_url(self)
+        all_links['self'] = self_link
+        if self.url:
+            all_links['custom'] = self.url
+        if INCLUDE_URL in representation:
+            links['self'] = self_link
+            if self.url:
+                links['custom'] = self.url
+
+        descendants_link = current_flask_taxonomies.taxonomy_url(self, descendants=True)
+        all_links['tree'] = descendants_link
+        if INCLUDE_DESCENDANTS_URL in representation:
+            links['tree'] = descendants_link
+
+        return EnvelopeLinks(headers=all_links, envelope=links)
+
     def json(self, representation=DEFAULT_REPRESENTATION):
+        """
+        Returns a tuple of (json, links)
+        :param representation:
+        :return:
+        """
         resp = {
             'code': self.code,
         }
-        links = {}
-        if INCLUDE_URL in representation:
-            links['self'] = current_flask_taxonomies.taxonomy_url(self)
-            if self.url:
-                links['custom'] = self.url
-        if INCLUDE_DESCENDANTS_URL in representation:
-            links['tree'] = current_flask_taxonomies.taxonomy_url(self, descendants=True)
-
-        if links:
-            resp['links'] = links
 
         if INCLUDE_ID in representation:
             resp['id'] = self.id
         if INCLUDE_DATA in representation and self.extra_data:
             representation = self.merge_select(representation)
             resp.update(current_flask_taxonomies.extract_data(representation, self))
+
+        if INCLUDE_ENVELOPE in representation:
+            resp = {
+                'data': resp
+            }
+
+        if INCLUDE_URL in representation or INCLUDE_DESCENDANTS_URL in representation:
+            resp['links'] = self.links(representation).envelope
+
         return resp
 
     def merge_select(self, representation: Representation):
@@ -260,24 +286,42 @@ class TaxonomyTerm(Base):
         return str(self)
 
     def json(self, representation=DEFAULT_REPRESENTATION):
+        """
+        Return a tuple of (json_response, links)
+
+        :param representation:
+        :return:
+        """
         resp = {}
         if INCLUDE_SLUG in representation:
-            resp['slug'] = self.taxonomy_code + '/' + self.slug
+            resp['slug'] = self.slug
         if INCLUDE_LEVEL in representation:
             resp['level'] = self.level
-
-        links = {}
-        if INCLUDE_URL in representation:
-            links['self'] = current_flask_taxonomies.taxonomy_term_url(self)
-
-        if INCLUDE_DESCENDANTS_URL in representation:
-            links['tree'] = current_flask_taxonomies.taxonomy_term_url(self, descendants=True)
-
-        if links:
-            resp['links'] = links
 
         if INCLUDE_ID in representation:
             resp['id'] = self.id
         if INCLUDE_DATA in representation and self.extra_data:
             resp.update(current_flask_taxonomies.extract_data(representation, self))
+        if INCLUDE_ENVELOPE in representation:
+            resp = {
+                'data': resp
+            }
+        if INCLUDE_URL in representation or INCLUDE_DESCENDANTS_URL in representation:
+            resp['links'] = self.links(representation).envelope
+
         return resp
+
+    def links(self, representation=DEFAULT_REPRESENTATION) -> EnvelopeLinks:
+        links = {}
+        all_links = {}
+        self_link = current_flask_taxonomies.taxonomy_term_url(self)
+        all_links['self'] = self_link
+        if INCLUDE_URL in representation:
+            links['self'] = self_link
+
+        descendants_link = current_flask_taxonomies.taxonomy_term_url(self, descendants=True)
+        all_links['tree'] = descendants_link
+        if INCLUDE_DESCENDANTS_URL in representation:
+            links['tree'] = descendants_link
+
+        return EnvelopeLinks(envelope=links, headers=all_links)

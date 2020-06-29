@@ -1,4 +1,5 @@
-from flask_taxonomies.constants import INCLUDE_DATA, INCLUDE_ANCESTORS, INCLUDE_URL, INCLUDE_DESCENDANTS_URL
+from flask_taxonomies.constants import INCLUDE_DATA, INCLUDE_ANCESTORS, INCLUDE_URL, INCLUDE_DESCENDANTS_URL, \
+    INCLUDE_SLUG
 
 #
 # Server name hosting the taxonomies. If not set,
@@ -27,12 +28,18 @@ FLASK_TAXONOMIES_URL_PREFIX = '/api/2.0/taxonomies/'
 
 FLASK_TAXONOMIES_REPRESENTATION = {
     'minimal': {
-        'include': [],
+        'include': [INCLUDE_SLUG],
         'exclude': [],
         'select': None,
         'options': {}
     },
     'representation': {
+        'include': [INCLUDE_DATA, INCLUDE_ANCESTORS],
+        'exclude': [],
+        'select': None,
+        'options': {}
+    },
+    'full': {
         'include': [INCLUDE_DATA, INCLUDE_ANCESTORS, INCLUDE_URL, INCLUDE_DESCENDANTS_URL],
         'exclude': [],
         'select': None,

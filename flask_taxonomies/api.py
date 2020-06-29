@@ -205,9 +205,12 @@ class Api:
     def taxonomy_list(self):
         return self.list_taxonomies()  # pragma: no cover
 
-    def get_taxonomy(self, code, fail=True, session=None):
+    def filter_taxonomy(self, code, session=None):
         session = session or self.session
-        ret = session.query(Taxonomy).filter(Taxonomy.code == code)
+        return session.query(Taxonomy).filter(Taxonomy.code == code)
+
+    def get_taxonomy(self, code, fail=True, session=None):
+        ret = self.filter_taxonomy(code, session)
         if fail:
             return ret.one()
         else:
