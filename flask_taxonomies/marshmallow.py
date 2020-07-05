@@ -1,7 +1,7 @@
 import re
 
 from marshmallow import utils, Schema, EXCLUDE
-from marshmallow.fields import Field, Integer
+from marshmallow.fields import Field, Integer, String
 from werkzeug.http import parse_options_header
 
 from flask_taxonomies.models import Representation, DEFAULT_REPRESENTATION
@@ -66,6 +66,14 @@ class PreferQueryField(Field):
 
 class HeaderSchema(Schema):
     prefer = PreferHeaderField(missing=DEFAULT_REPRESENTATION)
+
+    class Meta:
+        unknown = EXCLUDE
+
+
+class MoveHeaderSchema(HeaderSchema):
+    destination = String()
+    rename = String()
 
     class Meta:
         unknown = EXCLUDE

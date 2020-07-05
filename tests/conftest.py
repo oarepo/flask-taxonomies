@@ -7,7 +7,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_taxonomies.api import TermIdentification
 from flask_taxonomies.ext import FlaskTaxonomies
 from flask_taxonomies.proxies import current_flask_taxonomies
-from flask_taxonomies.views import blueprint
+from flask_taxonomies.views.common import blueprint
 
 
 @pytest.fixture

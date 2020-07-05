@@ -11,7 +11,6 @@ def taxonomy_create_test(api, client):
         'code': 'test',
         'links': {
             'self': 'https://localhost/api/2.0/taxonomies/test/',
-            'tree': 'https://localhost/api/2.0/taxonomies/test/?representation:include=dsc'
         },
         'title': 'test title'
     }
@@ -31,7 +30,6 @@ def taxonomy_post_create_test(api, client):
         'code': 'test',
         'links': {
             'self': 'https://localhost/api/2.0/taxonomies/test/',
-            'tree': 'https://localhost/api/2.0/taxonomies/test/?representation:include=dsc'
         },
         'title': 'test title'
     }

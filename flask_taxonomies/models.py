@@ -34,12 +34,13 @@ def _cast_set(x, return_none=False):
 class Representation:
     KNOWN_FEATURES = {
         PRETTY_PRINT,
-        INCLUDE_ANCESTORS,
+        INCLUDE_ANCESTORS_HIERARCHY,
         INCLUDE_URL,
         INCLUDE_DATA,
         INCLUDE_ID,
         INCLUDE_DESCENDANTS,
         INCLUDE_ENVELOPE,
+        INCLUDE_LEVEL
     }
 
     def __init__(self, representation, include=None, exclude=None, select=None, options=None):
@@ -146,6 +147,7 @@ PRETTY_REPRESENTATION = Representation('representation', include=[PRETTY_PRINT])
 
 EnvelopeLinks = namedtuple('EnvelopeLinks', 'envelope headers')
 
+
 class Taxonomy(Base):
     __tablename__ = 'taxonomy_taxonomy'
 
@@ -200,6 +202,8 @@ class Taxonomy(Base):
 
         if INCLUDE_ID in representation:
             resp['id'] = self.id
+        if INCLUDE_LEVEL in representation:
+            resp['level'] = 0
         if INCLUDE_DATA in representation and self.extra_data:
             representation = self.merge_select(representation)
             resp.update(current_flask_taxonomies.extract_data(representation, self))
@@ -300,6 +304,10 @@ class TaxonomyTerm(Base):
 
         if INCLUDE_ID in representation:
             resp['id'] = self.id
+        if INCLUDE_LEVEL in representation:
+            resp['level'] = self.level + 1
+        if INCLUDE_STATUS in representation:
+            resp['status'] = self.status.name if self.status else None
         if INCLUDE_DATA in representation and self.extra_data:
             resp.update(current_flask_taxonomies.extract_data(representation, self))
         if INCLUDE_ENVELOPE in representation:

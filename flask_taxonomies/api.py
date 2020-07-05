@@ -1,3 +1,8 @@
+from dataclasses import MISSING
+
+from sqlalchemy.orm.exc import NoResultFound
+from xml.dom.pulldom import DOMEventStream
+
 import jsonpatch
 import jsonpointer
 import sqlalchemy
@@ -168,6 +173,13 @@ class TermIdentification:
             return True
         return other.whole_slug.startswith(self.whole_slug + '/')
 
+    def __str__(self):
+        if self.term:
+            return str(self.term)
+        if self.slug:
+            return '%s/%s' % (self.taxonomy, self.slug)
+        return self.taxonomy
+
 
 def _coerce_tax(tax, target):
     if isinstance(target, Taxonomy):
@@ -232,7 +244,8 @@ class Api:
             after_taxonomy_created.send(created)
         return created
 
-    def update_taxonomy(self, taxonomy: [Taxonomy, str], extra_data, session=None) -> Taxonomy:
+    def update_taxonomy(self, taxonomy: [Taxonomy, str], extra_data, url=MISSING, select=MISSING,
+                        session=None) -> Taxonomy:
         """Updates a taxonomy.
         :param taxonomy: taxonomy instance to be updated
         :param extra_data: new taxonomy metadata
@@ -246,6 +259,12 @@ class Api:
             before_taxonomy_updated.send(taxonomy, taxonomy=taxonomy, extra_data=extra_data)
             taxonomy.extra_data = extra_data
             flag_modified(taxonomy, "extra_data")
+            if url is not MISSING:
+                taxonomy.url = url
+                flag_modified(taxonomy, "url")
+            if select is not MISSING:
+                taxonomy.select = select
+                flag_modified(taxonomy, "select")
             session.add(taxonomy)
             after_taxonomy_updated.send(taxonomy, taxonomy=taxonomy)
         return taxonomy
@@ -341,7 +360,7 @@ class Api:
 
     def update_term(self, ti: [TaxonomyTerm, TermIdentification],
                     status_cond=TaxonomyTerm.status == TermStatusEnum.alive,
-                    extra_data=None, patch=False, session=None):
+                    extra_data=None, patch=False, status=MISSING, session=None):
         ti = _coerce_ti(ti)
         session = session or self.session
         with session.begin_nested():
@@ -356,6 +375,9 @@ class Api:
             else:
                 term.extra_data = extra_data
             flag_modified(term, "extra_data")
+            if status is not MISSING and status != term.status:
+                term.status = status
+                flag_modified(term, "status")
             session.add(term)
             after_taxonomy_term_updated.send(term, term=term, taxonomy=term.taxonomy)
             return term
@@ -414,21 +436,28 @@ class Api:
         with session.begin_nested():
             terms = self.descendants_or_self(ti,
                                              order=False, status_cond=sqlalchemy.sql.true())
-            locked_terms = terms.with_for_update().values('id')  # get ids to actually lock the terms
+            locked_terms = [r[0] for r in
+                            terms.with_for_update().values(TaxonomyTerm.id)]  # get ids to actually lock the terms
             if terms.filter(TaxonomyTerm.busy_count > 0).count():
                 raise TaxonomyError('Can not delete busy terms')
 
             term = terms.first()
-            self.mark_busy(terms, TermStatusEnum.delete_pending if remove_after_delete else TermStatusEnum.deleted)
+            if not term:
+                raise NoResultFound('TaxonomyTerm %s not found' % ti)
+            self.mark_busy(locked_terms,
+                           TermStatusEnum.delete_pending if remove_after_delete else TermStatusEnum.deleted,
+                           session=session)
             # can call mark_busy if the deletion should be postponed
             taxonomy = term.taxonomy
             before_taxonomy_term_deleted.send(term, taxonomy=taxonomy, term=term, terms=terms)
-            self.unmark_busy(terms)
+            self.unmark_busy(locked_terms, session=session)
             after_taxonomy_term_deleted.send(term, taxonomy=taxonomy, term=term)
+            return term
 
-    def mark_busy(self, terms, status=None, session=None):
+    def mark_busy(self, term_ids, status=None, session=None):
         session = session or self.session
         with session.begin_nested():
+            terms = session.query(TaxonomyTerm).filter(TaxonomyTerm.id.in_(term_ids))
             if status:
                 terms.update({
                     TaxonomyTerm.busy_count: TaxonomyTerm.busy_count + 1,
@@ -439,9 +468,10 @@ class Api:
                              synchronize_session=False)
         session.expire_all()
 
-    def unmark_busy(self, terms, session=None):
+    def unmark_busy(self, term_ids, session=None):
         session = session or self.session
         with session.begin_nested():
+            terms = session.query(TaxonomyTerm).filter(TaxonomyTerm.id.in_(term_ids))
             terms.update({TaxonomyTerm.busy_count: TaxonomyTerm.busy_count - 1},
                          synchronize_session=False)
             # delete those that are marked as 'delete_pending'
@@ -517,14 +547,17 @@ class Api:
             else:
                 target_path = self._last_slug_element(root.slug)
 
-            self.mark_busy(elements.with_for_update(),
+            locked_terms = [r[0] for r in
+                            elements.with_for_update().values(TaxonomyTerm.id)]  # get ids to actually lock the terms
+
+            self.mark_busy(locked_terms,
                            status=(
                                TermStatusEnum.delete_pending
                                if remove_after_delete else TermStatusEnum.deleted
                            ))
             before_taxonomy_term_moved.send(root, target_path=target_path, terms=elements)
             target_root = self._copy(root, parent, target_path, session)
-            self.unmark_busy(elements)
+            self.unmark_busy(locked_terms)
             after_taxonomy_term_moved.send(root, term=root, new_term=target_root)
             return root, target_root
 

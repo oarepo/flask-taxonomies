@@ -129,10 +129,13 @@ def simple_op_test(api, test_taxonomy):
     ]
 
     # try to delete busy terms
-    api.mark_busy(api.descendants_or_self(term11, order=False))
+    locked_terms = [r[0] for r in
+                api.descendants_or_self(term11, order=False).with_for_update().values(TaxonomyTerm.id)]  # get ids to actually lock the terms
+
+    api.mark_busy(locked_terms)
     with pytest.raises(TaxonomyError):
         api.delete_term(term11, remove_after_delete=False)
-    api.unmark_busy(api.descendants_or_self(term11, order=False))
+    api.unmark_busy(locked_terms)
 
     # delete ordinary term but keep in database
     api.delete_term(term11, remove_after_delete=False)

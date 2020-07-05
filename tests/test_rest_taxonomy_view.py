@@ -118,30 +118,65 @@ def taxonomy_list_overwrite_default_selector_test(api, client, excluded_title_sa
 def taxonomy_list_pagination_test(api, client, many_taxonomies):
     taxonomies = client.get('/api/2.0/taxonomies/?page=2&size=10',
                             headers={
-                                'prefer': 'return=representation; exclude=url drl'
+                                'prefer': 'return=representation; exclude=url drl; include=env'
                             })
     if taxonomies.status_code != 200:
         print(taxonomies.data)
     assert taxonomies.status_code == 200
     assert json.loads(taxonomies.data) == {
+        'data': [
+            {'data': {'code': 'test-11', 'title': 'Test taxonomy #11'}},
+            {'data': {'code': 'test-12', 'title': 'Test taxonomy #12'}},
+            {'data': {'code': 'test-13', 'title': 'Test taxonomy #13'}},
+            {'data': {'code': 'test-14', 'title': 'Test taxonomy #14'}},
+            {'data': {'code': 'test-15', 'title': 'Test taxonomy #15'}},
+            {'data': {'code': 'test-16', 'title': 'Test taxonomy #16'}},
+            {'data': {'code': 'test-17', 'title': 'Test taxonomy #17'}},
+            {'data': {'code': 'test-18', 'title': 'Test taxonomy #18'}},
+            {'data': {'code': 'test-19', 'title': 'Test taxonomy #19'}},
+            {'data': {'code': 'test-20', 'title': 'Test taxonomy #20'}}],
+        'links': {'self': 'http://localhost/api/2.0/taxonomies/?page=2&size=10'},
         'page': 2,
         'size': 10,
-        'total': 100,
-        'data': [
-            {'code': 'test-11', 'title': 'Test taxonomy #11'},
-            {'code': 'test-12', 'title': 'Test taxonomy #12'},
-            {'code': 'test-13', 'title': 'Test taxonomy #13'},
-            {'code': 'test-14', 'title': 'Test taxonomy #14'},
-            {'code': 'test-15', 'title': 'Test taxonomy #15'},
-            {'code': 'test-16', 'title': 'Test taxonomy #16'},
-            {'code': 'test-17', 'title': 'Test taxonomy #17'},
-            {'code': 'test-18', 'title': 'Test taxonomy #18'},
-            {'code': 'test-19', 'title': 'Test taxonomy #19'},
-            {'code': 'test-20', 'title': 'Test taxonomy #20'}
-        ]
+        'total': 100
     }
 
+    taxonomies = client.get('/api/2.0/taxonomies/?page=2&size=10',
+                            headers={
+                                'prefer': 'return=representation; exclude=url drl'
+                            })
+    if taxonomies.status_code != 200:
+        print(taxonomies.data)
+    assert taxonomies.status_code == 200
+    assert json.loads(taxonomies.data) == [
+        {'code': 'test-11', 'title': 'Test taxonomy #11'},
+        {'code': 'test-12', 'title': 'Test taxonomy #12'},
+        {'code': 'test-13', 'title': 'Test taxonomy #13'},
+        {'code': 'test-14', 'title': 'Test taxonomy #14'},
+        {'code': 'test-15', 'title': 'Test taxonomy #15'},
+        {'code': 'test-16', 'title': 'Test taxonomy #16'},
+        {'code': 'test-17', 'title': 'Test taxonomy #17'},
+        {'code': 'test-18', 'title': 'Test taxonomy #18'},
+        {'code': 'test-19', 'title': 'Test taxonomy #19'},
+        {'code': 'test-20', 'title': 'Test taxonomy #20'}
+    ]
+
     # out of pages
+    taxonomies = client.get('/api/2.0/taxonomies/?page=11&size=10',
+                            headers={
+                                'prefer': 'return=representation; exclude=url drl; include=env'
+                            })
+    if taxonomies.status_code != 200:
+        print(taxonomies.data)
+    assert taxonomies.status_code == 200
+    assert json.loads(taxonomies.data) == {
+        'data': [],
+        'links': {'self': 'http://localhost/api/2.0/taxonomies/?page=11&size=10'},
+        'page': 11,
+        'size': 10,
+        'total': 100
+    }
+
     taxonomies = client.get('/api/2.0/taxonomies/?page=11&size=10',
                             headers={
                                 'prefer': 'return=representation; exclude=url drl'
@@ -149,12 +184,7 @@ def taxonomy_list_pagination_test(api, client, many_taxonomies):
     if taxonomies.status_code != 200:
         print(taxonomies.data)
     assert taxonomies.status_code == 200
-    assert json.loads(taxonomies.data) == {
-        'page': 11,
-        'size': 10,
-        'total': 100,
-        'data': []
-    }
+    assert json.loads(taxonomies.data) == []
 
 
 def get_taxonomy_test(api, client, sample_taxonomy):
@@ -247,6 +277,7 @@ def get_taxonomy_descendants_level_slug_test(api, client, sample_taxonomy):
     assert taxonomy.status_code == 200
     assert json.loads(taxonomy.data) == {
         'code': 'test',
+        'level': 0,
         'links': {
             'self': 'https://localhost/api/2.0/taxonomies/test/',
         },
@@ -254,16 +285,16 @@ def get_taxonomy_descendants_level_slug_test(api, client, sample_taxonomy):
         'children': [
             {
                 'title': 'A',
-                'slug': 'test/a',
-                'level': 0,
+                'slug': 'a',
+                'level': 1,
                 'links': {
                     'self': 'https://localhost/api/2.0/taxonomies/test/a',
                 }
             },
             {
                 'title': 'B',
-                'slug': 'test/b',
-                'level': 0,
+                'slug': 'b',
+                'level': 1,
                 'links': {
                     'self': 'https://localhost/api/2.0/taxonomies/test/b',
                 }
@@ -274,70 +305,56 @@ def get_taxonomy_descendants_level_slug_test(api, client, sample_taxonomy):
 
 def get_taxonomy_paginated_descendants_test(api, client, sample_taxonomy):
     taxonomy = client.get(
-        '/api/2.0/taxonomies/test?representation:include=dsc&representation:exclude=url,drl&page=1&size=1')
+        '/api/2.0/taxonomies/test?representation:include=dsc,env&representation:exclude=url,drl&page=1&size=1')
     if taxonomy.status_code != 200:
         print(taxonomy.data)
     assert taxonomy.status_code == 200
     assert json.loads(taxonomy.data) == {
+        'children': [
+            {'data': {'title': 'A'}}
+        ],
+        'data': {'code': 'test', 'title': 'Test taxonomy'},
         'page': 1,
         'size': 1,
-        'total': 3,
-        'data': {
-            'code': 'test',
-            'title': 'Test taxonomy',
-            'children': [
-                {
-                    'title': 'A'
-                }
-            ]
-        }
+        'total': 3
     }
 
     # second page - should keep 'A' to preserve the hierarchy
     taxonomy = client.get(
-        '/api/2.0/taxonomies/test?representation:include=dsc&representation:exclude=url,drl&page=2&size=1')
+        '/api/2.0/taxonomies/test?representation:include=dsc,anh,env&representation:exclude=url,drl&page=2&size=1')
     if taxonomy.status_code != 200:
         print(taxonomy.data)
     assert taxonomy.status_code == 200
     assert json.loads(taxonomy.data) == {
+        'children': [
+            {
+                'ancestor': True,
+                'children': [
+                    {'data': {'title': 'AA'}}
+                ],
+                'data': {'title': 'A'}
+            }
+        ],
+        'data': {'code': 'test', 'title': 'Test taxonomy'},
         'page': 2,
         'size': 1,
-        'total': 3,
-        'data': {
-            'code': 'test',
-            'title': 'Test taxonomy',
-            'children': [
-                {
-                    'title': 'A',
-                    'children': [
-                        {
-                            'title': 'AA',
-                        }
-                    ]
-                }
-            ]
-        }
+        'total': 3
     }
 
     # third page - just B
     taxonomy = client.get(
-        '/api/2.0/taxonomies/test?representation:include=dsc&representation:exclude=url,drl&page=3&size=1')
+        '/api/2.0/taxonomies/test?representation:include=dsc,anh,env&representation:exclude=url,drl&page=3&size=1')
     if taxonomy.status_code != 200:
         print(taxonomy.data)
     assert taxonomy.status_code == 200
     assert json.loads(taxonomy.data) == {
+        'children': [
+            {'data': {'title': 'B'}}
+        ],
+        'data': {'code': 'test', 'title': 'Test taxonomy'},
         'page': 3,
         'size': 1,
-        'total': 3,
-        'data': {
-            'code': 'test',
-            'title': 'Test taxonomy',
-            'children': [
-                {
-                    'title': 'B'
-                }
-            ]
-        }
+        'total': 3
     }
 
 
