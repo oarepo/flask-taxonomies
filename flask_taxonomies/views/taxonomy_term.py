@@ -1,3 +1,4 @@
+import json
 import traceback
 from urllib.parse import urljoin, urlparse
 
@@ -56,10 +57,29 @@ def get_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None, s
         return paginator.jsonify(status_code=status_code)
 
     except NoResultFound:
-        json_abort(404, {
-            "message": "%s was not found on the server" % request.url,
-            "reason": "deleted"
-        })
+        term = current_flask_taxonomies.filter_term(
+            TermIdentification(taxonomy=code, slug=slug),
+            status_cond=sqlalchemy.sql.true()
+        ).one_or_none()
+        if not term:
+            json_abort(404, {
+                "message": "%s was not found on the server" % request.url,
+                "reason": "does-not-exist"
+            })
+        elif term.obsoleted_by_id:
+            obsoleted_by = term.obsoleted_by
+            obsoleted_by_links = obsoleted_by.links()
+            return Response(json.dumps({
+                'links': obsoleted_by_links.envelope,
+                'status': term.status.name
+            }), status=301, headers={
+                'Location': obsoleted_by_links.headers['self']
+            }, content_type='application/json')
+        else:
+            json_abort(410, {
+                "message": "%s was not found on the server" % request.url,
+                "reason": "deleted"
+            })
     except:
         traceback.print_exc()
         raise
@@ -204,8 +224,8 @@ def taxonomy_move_term(code=None, slug=None, prefer=None, page=None, size=None, 
         else:
             destination_taxonomy = code
             destination_slug = destination
-            if destination_slug == '/':
-                destination_slug = None
+            if destination_slug.startswith('/'):
+                destination_slug = destination_slug[1:]
         if not current_flask_taxonomies.filter_term(TermIdentification(taxonomy=code, slug=slug)).count():
             abort(404, 'Term %s/%s does not exist' % (code, slug))
 
@@ -213,7 +233,7 @@ def taxonomy_move_term(code=None, slug=None, prefer=None, page=None, size=None, 
             TermIdentification(taxonomy=code, slug=slug),
             new_parent=TermIdentification(taxonomy=destination_taxonomy,
                                           slug=destination_slug) if destination_slug else '',
-            remove_after_delete=True)
+            remove_after_delete=False)  # do not remove the original node from the database, just mark it as deleted
     elif rename:
         new_slug = slug
         if new_slug.endswith('/'):
@@ -233,4 +253,4 @@ def taxonomy_move_term(code=None, slug=None, prefer=None, page=None, size=None, 
         return  # just to make pycharm happy
 
     return get_taxonomy_term(code=destination_taxonomy, slug=new_term.slug,
-                             prefer=prefer, page=page, size=size, status_code=201)
+                             prefer=prefer, page=page, size=size)

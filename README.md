@@ -445,7 +445,7 @@ United Kingdom has indeed been removed from Europe:
 
 ```console
 $ curl -i http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/gb
-HTTP/1.0 404 NOT FOUND
+HTTP/1.0 410 GONE
 
 {
   "message": "http://localhost/api/2.0/taxonomies/country/europe/gb was not found on the server",
@@ -961,12 +961,12 @@ Content-Type: application/json
 }
 ```
 
-Subsequent GET returns 404:
+Subsequent GET returns 410:
 
 ```console
 $ curl -i 'http://127.0.0.1:5000/api/2.0/taxonomies/test/term1'
 
-HTTP/1.0 404 NOT FOUND
+HTTP/1.0 410 GONE
 
 {
   "message": "http://localhost/api/2.0/taxonomies/test/term1 was not found on the server",

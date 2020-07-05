@@ -558,12 +558,17 @@ class Api:
             before_taxonomy_term_moved.send(root, target_path=target_path, terms=elements)
             target_root = self._copy(root, parent, target_path, session)
             self.unmark_busy(locked_terms)
+            if not remove_after_delete:
+                session.refresh(root)
+                root.obsoleted_by_id = target_root.id
+                session.add(root)
             after_taxonomy_term_moved.send(root, term=root, new_term=target_root)
             return root, target_root
 
     def _copy(self, term: TaxonomyTerm, parent, target_path, session):
         new_term = TaxonomyTerm(
             taxonomy_id=term.taxonomy_id,
+            taxonomy_code=term.taxonomy_code,
             parent_id=parent.id if parent else None,
             slug=target_path,
             level=parent.level + 1 if parent else 0,
