@@ -16,7 +16,7 @@ def taxonomy_list_test(api, client, sample_taxonomy):
             'code': 'test',
             'title': 'Test taxonomy',
             'links': {
-                'self': 'https://localhost/api/2.0/taxonomies/test/'
+                'self': 'http://localhost/api/2.0/taxonomies/test/'
             }
         }
     ]
@@ -196,7 +196,7 @@ def get_taxonomy_test(api, client, sample_taxonomy):
         'code': 'test',
         'title': 'Test taxonomy',
         'links': {
-            'self': 'https://localhost/api/2.0/taxonomies/test/',
+            'self': 'http://localhost/api/2.0/taxonomies/test/',
         }
     }
 
@@ -214,20 +214,20 @@ def get_taxonomy_descendants_test(api, client, sample_taxonomy):
     assert json.loads(taxonomy.data) == {
         'code': 'test',
         'links': {
-            'self': 'https://localhost/api/2.0/taxonomies/test/',
+            'self': 'http://localhost/api/2.0/taxonomies/test/',
         },
         'title': 'Test taxonomy',
         'children': [
             {
                 'title': 'A',
                 'links': {
-                    'self': 'https://localhost/api/2.0/taxonomies/test/a',
+                    'self': 'http://localhost/api/2.0/taxonomies/test/a',
                 },
                 'children': [
                     {
                         'title': 'AA',
                         'links': {
-                            'self': 'https://localhost/api/2.0/taxonomies/test/a/aa',
+                            'self': 'http://localhost/api/2.0/taxonomies/test/a/aa',
                         }
                     }
                 ]
@@ -235,7 +235,7 @@ def get_taxonomy_descendants_test(api, client, sample_taxonomy):
             {
                 'title': 'B',
                 'links': {
-                    'self': 'https://localhost/api/2.0/taxonomies/test/b',
+                    'self': 'http://localhost/api/2.0/taxonomies/test/b',
                 }
             }
         ]
@@ -250,20 +250,20 @@ def get_taxonomy_descendants_level_test(api, client, sample_taxonomy):
     assert json.loads(taxonomy.data) == {
         'code': 'test',
         'links': {
-            'self': 'https://localhost/api/2.0/taxonomies/test/',
+            'self': 'http://localhost/api/2.0/taxonomies/test/',
         },
         'title': 'Test taxonomy',
         'children': [
             {
                 'title': 'A',
                 'links': {
-                    'self': 'https://localhost/api/2.0/taxonomies/test/a',
+                    'self': 'http://localhost/api/2.0/taxonomies/test/a',
                 }
             },
             {
                 'title': 'B',
                 'links': {
-                    'self': 'https://localhost/api/2.0/taxonomies/test/b',
+                    'self': 'http://localhost/api/2.0/taxonomies/test/b',
                 }
             }
         ]
@@ -279,7 +279,7 @@ def get_taxonomy_descendants_level_slug_test(api, client, sample_taxonomy):
         'code': 'test',
         'level': 0,
         'links': {
-            'self': 'https://localhost/api/2.0/taxonomies/test/',
+            'self': 'http://localhost/api/2.0/taxonomies/test/',
         },
         'title': 'Test taxonomy',
         'children': [
@@ -288,7 +288,7 @@ def get_taxonomy_descendants_level_slug_test(api, client, sample_taxonomy):
                 'slug': 'a',
                 'level': 1,
                 'links': {
-                    'self': 'https://localhost/api/2.0/taxonomies/test/a',
+                    'self': 'http://localhost/api/2.0/taxonomies/test/a',
                 }
             },
             {
@@ -296,7 +296,7 @@ def get_taxonomy_descendants_level_slug_test(api, client, sample_taxonomy):
                 'slug': 'b',
                 'level': 1,
                 'links': {
-                    'self': 'https://localhost/api/2.0/taxonomies/test/b',
+                    'self': 'http://localhost/api/2.0/taxonomies/test/b',
                 }
             }
         ]
@@ -366,25 +366,25 @@ def get_excluded_title_descendants(api, client, excluded_title_sample_taxonomy):
     assert json.loads(taxonomy.data) == {
         'code': 'test',
         'links': {
-            'self': 'https://localhost/api/2.0/taxonomies/test/',
+            'self': 'http://localhost/api/2.0/taxonomies/test/',
         },
         'title': 'Test taxonomy',
         'children': [
             {
                 'links': {
-                    'self': 'https://localhost/api/2.0/taxonomies/test/a',
+                    'self': 'http://localhost/api/2.0/taxonomies/test/a',
                 },
                 'children': [
                     {
                         'links': {
-                            'self': 'https://localhost/api/2.0/taxonomies/test/a/aa',
+                            'self': 'http://localhost/api/2.0/taxonomies/test/a/aa',
                         }
                     }
                 ]
             },
             {
                 'links': {
-                    'self': 'https://localhost/api/2.0/taxonomies/test/b',
+                    'self': 'http://localhost/api/2.0/taxonomies/test/b',
                 }
             }
         ]

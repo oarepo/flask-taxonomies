@@ -10,7 +10,7 @@ def taxonomy_create_test(api, client):
     exp = {
         'code': 'test',
         'links': {
-            'self': 'https://localhost/api/2.0/taxonomies/test/',
+            'self': 'http://localhost/api/2.0/taxonomies/test/',
         },
         'title': 'test title'
     }
@@ -29,7 +29,7 @@ def taxonomy_post_create_test(api, client):
     exp = {
         'code': 'test',
         'links': {
-            'self': 'https://localhost/api/2.0/taxonomies/test/',
+            'self': 'http://localhost/api/2.0/taxonomies/test/',
         },
         'title': 'test title'
     }

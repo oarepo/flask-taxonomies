@@ -12,7 +12,7 @@ from flask_taxonomies.marshmallow import HeaderSchema, PaginatedQuerySchema, Mov
 from flask_taxonomies.models import TaxonomyTerm, TermStatusEnum
 from flask_taxonomies.proxies import current_flask_taxonomies
 from flask_taxonomies.routing import accept_fallback
-from .common import blueprint, with_prefer, build_descendants
+from .common import blueprint, with_prefer, build_descendants, json_abort
 from .paginator import Paginator
 
 
@@ -56,7 +56,10 @@ def get_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None, s
         return paginator.jsonify(status_code=status_code)
 
     except NoResultFound:
-        abort(404)
+        json_abort(404, {
+            "message": "%s was not found on the server" % request.url,
+            "reason": "deleted"
+        })
     except:
         traceback.print_exc()
         raise

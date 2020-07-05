@@ -17,7 +17,8 @@ requires = [
 tests_require = [
     'pytest',
     'pytest-flask-sqlalchemy',
-    'md-toc'
+    'md-toc',
+    'shlex'
 ]
 
 setup(

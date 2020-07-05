@@ -12,3 +12,4 @@ from .taxonomy_term import (
     delete_taxonomy_term,
     taxonomy_move_term
 )
+from .common import blueprint

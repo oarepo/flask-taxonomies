@@ -35,9 +35,9 @@ class Paginator:
 
             if self.page > 1 and INCLUDE_ANCESTORS_HIERARCHY in self.representation:
                 # second page should have one element less
-                size_1 = self.size - self_offset
-                data = list(data[self_offset + self.size + (self.page - 2) * size_1: self_offset + self.size + (
-                        self.page - 1) * size_1])
+                size_offset = 1 if self.size > 1 else 0
+                data = list(data[self_offset + (self.page - 1) * self.size:
+                                 self_offset + self.page * self.size - size_offset])  # -1 is to remove the parent that will get added automatically
             else:
                 data = list(data[self_offset + (self.page - 1) * self.size: self_offset + self.page * self.size])
         else:
@@ -81,7 +81,7 @@ class Paginator:
                             'total': self.count,
                         })
                 return data
-                
+
         if INCLUDE_ENVELOPE in self.representation:
             links = self.envelope_links(self.representation, data, original).envelope
             data = {
@@ -121,6 +121,7 @@ class Paginator:
         ret.status_code = status_code
         if ret.status_code == 201 and 'self' in links:
             ret.headers['Location'] = links['self']
+        ret.content_type = 'application/json'  # seems to be lost when status code is set
         return ret
 
     def envelope_links(self, representation, data, links) -> EnvelopeLinks:

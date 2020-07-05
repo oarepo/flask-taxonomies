@@ -1,7 +1,8 @@
 import functools
+import json
 
 import sqlalchemy
-from flask import Blueprint
+from flask import Blueprint, Response, abort
 
 from build.lib.flask_taxonomies.constants import INCLUDE_ANCESTORS
 from flask_taxonomies.api import TermIdentification
@@ -96,3 +97,10 @@ def build_descendants(descendants, representation, root_slug, stack=None, tops=N
         stack.append([desc.slug + '/', desc_repr])
 
     return tops
+
+
+def json_abort(status_code, detail):
+    resp = Response(json.dumps(detail, indent=4, ensure_ascii=False),
+                    status=status_code,
+                    mimetype='application/json; charset=utf-8')
+    abort(status_code, response=resp)

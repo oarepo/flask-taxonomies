@@ -102,14 +102,9 @@ just the code/slug.
 *Listing:*
 ```console
 $ curl -i -H "Prefer: return=minimal" http://127.0.0.1:5000/api/2.0/taxonomies/
+
 HTTP/1.0 200 OK
-X-Page: 1
-X-PageSize: None
-X-Total: None
 Link: <http://127.0.0.1:5000/api/2.0/taxonomies/>; rel=self
-Content-Length: 34
-Server: Werkzeug/1.0.1 Python/3.8.2
-Date: Sun, 28 Jun 2020 17:30:45 GMT
 
 [
   {
@@ -121,11 +116,9 @@ Date: Sun, 28 Jun 2020 17:30:45 GMT
 *Get taxonomy:*
 ```console
 $ curl -i -H "Prefer: return=minimal" http://127.0.0.1:5000/api/2.0/taxonomies/country
+
 HTTP/1.0 200 OK
 Content-Type: application/json
-Content-Length: 24
-Server: Werkzeug/1.0.1 Python/3.8.2
-Date: Sun, 28 Jun 2020 17:40:43 GMT
 
 {
   "code": "country"
@@ -135,12 +128,10 @@ Date: Sun, 28 Jun 2020 17:40:43 GMT
 *Get term:*
 ```console
 $ curl -i -H "Prefer: return=minimal" http://127.0.0.1:5000/api/2.0/taxonomies/country/europe
+
 HTTP/1.0 200 OK
-Link: <https://localhost/api/2.0/taxonomies/country/europe>; rel=self
-Link: <https://localhost/api/2.0/taxonomies/country/europe?representation:include=dsc>; rel=tree
-Content-Length: 23
-Server: Werkzeug/1.0.1 Python/3.8.2
-Date: Sun, 28 Jun 2020 20:01:37 GMT
+Link: <http://localhost/api/2.0/taxonomies/country/europe>; rel=self
+Link: <http://localhost/api/2.0/taxonomies/country/europe?representation:include=dsc>; rel=tree
 
 {
   "slug": "europe"
@@ -157,16 +148,13 @@ ancestor and urls. For example:
 $ curl -i http://127.0.0.1:5000/api/2.0/taxonomies/
 HTTP/1.0 200 OK
 Link: <http://127.0.0.1:5000/api/2.0/taxonomies/>; rel=self
-Content-Length: 69
-Server: Werkzeug/1.0.1 Python/3.8.2
-Date: Sun, 28 Jun 2020 20:05:01 GMT
 
 [
   {
     "code": "country", 
     "links": {
       "custom": "https://www.kaggle.com/nikitagrec/world-capitals-gps/data", 
-      "self": "https://localhost/api/2.0/taxonomies/country/"
+      "self": "http://localhost/api/2.0/taxonomies/country/"
     }, 
     "title": "List of countries"
   }
@@ -177,11 +165,8 @@ Date: Sun, 28 Jun 2020 20:05:01 GMT
 ```console
 $ curl -i http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/cz
 HTTP/1.0 200 OK
-Link: <https://localhost/api/2.0/taxonomies/country/europe/cz>; rel=self
-Link: <https://localhost/api/2.0/taxonomies/country/europe/cz?representation:include=dsc>; rel=tree
-Content-Length: 200
-Server: Werkzeug/1.0.1 Python/3.8.2
-Date: Sun, 28 Jun 2020 20:19:57 GMT
+Link: <http://localhost/api/2.0/taxonomies/country/europe/cz>; rel=self
+Link: <http://localhost/api/2.0/taxonomies/country/europe/cz?representation:include=dsc>; rel=tree
 
 {
   "CapitalLatitude": "50.083333333333336", 
@@ -193,12 +178,12 @@ Date: Sun, 28 Jun 2020 20:19:57 GMT
   "ancestors": [
     {
       "links": {
-        "self": "https://localhost/api/2.0/taxonomies/country/europe"
+        "self": "http://localhost/api/2.0/taxonomies/country/europe"
       }
     }
   ], 
   "links": {
-    "self": "https://localhost/api/2.0/taxonomies/country/europe/cz"
+    "self": "http://localhost/api/2.0/taxonomies/country/europe/cz"
   }
 }
 ```
@@ -236,19 +221,15 @@ $ curl -i -H "Prefer: return=minimal; include=url" \
   http://127.0.0.1:5000/api/2.0/taxonomies/country/europe
 
 HTTP/1.0 200 OK
-Link: <https://localhost/api/2.0/taxonomies/country/europe>; rel=self
-Link: <https://localhost/api/2.0/taxonomies/country/europe?representation:include=dsc>; rel=tree
-Content-Length: 108
-Server: Werkzeug/1.0.1 Python/3.8.2
-Date: Thu, 02 Jul 2020 12:59:26 GMT
+Link: <http://localhost/api/2.0/taxonomies/country/europe>; rel=self
+Link: <http://localhost/api/2.0/taxonomies/country/europe?representation:include=dsc>; rel=tree
 
 {
   "links": {
-    "self": "https://localhost/api/2.0/taxonomies/country/europe"
+    "self": "http://localhost/api/2.0/taxonomies/country/europe"
   }, 
   "slug": "europe"
 }
-
 ```
 
 Adds a ``links`` section to payload with record url (``"self":``)
@@ -260,16 +241,13 @@ $ curl -i -H "Prefer: return=minimal; include=url drl" \
   http://127.0.0.1:5000/api/2.0/taxonomies/country/europe
 
 HTTP/1.0 200 OK
-Link: <https://localhost/api/2.0/taxonomies/country/europe>; rel=self
-Link: <https://localhost/api/2.0/taxonomies/country/europe?representation:include=dsc>; rel=tree
-Content-Length: 203
-Server: Werkzeug/1.0.1 Python/3.8.2
-Date: Thu, 02 Jul 2020 13:02:48 GMT
+Link: <http://localhost/api/2.0/taxonomies/country/europe>; rel=self
+Link: <http://localhost/api/2.0/taxonomies/country/europe?representation:include=dsc>; rel=tree
 
 {
   "links": {
-    "self": "https://localhost/api/2.0/taxonomies/country/europe", 
-    "tree": "https://localhost/api/2.0/taxonomies/country/europe?representation:include=dsc"
+    "self": "http://localhost/api/2.0/taxonomies/country/europe", 
+    "tree": "http://localhost/api/2.0/taxonomies/country/europe?representation:include=dsc"
   }, 
   "slug": "europe"
 }
@@ -287,13 +265,13 @@ $ curl -i -H "Prefer: return=minimal; include=anh url" \
   "children": [
     {
       "links": {
-        "self": "https://localhost/api/2.0/taxonomies/country/europe/cz"
+        "self": "http://localhost/api/2.0/taxonomies/country/europe/cz"
       }, 
       "slug": "europe/cz"
     }
   ], 
   "links": {
-    "self": "https://localhost/api/2.0/taxonomies/country/europe"
+    "self": "http://localhost/api/2.0/taxonomies/country/europe"
   }, 
   "slug": "europe",
   "ancestor": true
@@ -314,23 +292,20 @@ $ curl -i -H "Prefer: return=minimal; include=anc url" \
   http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/cz
 
 HTTP/1.0 200 OK
-Link: <https://localhost/api/2.0/taxonomies/country/europe/cz>; rel=self
-Link: <https://localhost/api/2.0/taxonomies/country/europe/cz?representation:include=dsc>; rel=tree
-Content-Length: 269
-Server: Werkzeug/1.0.1 Python/3.8.2
-Date: Fri, 03 Jul 2020 08:37:22 GMT
+Link: <http://localhost/api/2.0/taxonomies/country/europe/cz>; rel=self
+Link: <http://localhost/api/2.0/taxonomies/country/europe/cz?representation:include=dsc>; rel=tree
 
 {
   "ancestors": [
     {
       "links": {
-        "self": "https://localhost/api/2.0/taxonomies/country/europe"
+        "self": "http://localhost/api/2.0/taxonomies/country/europe"
       }, 
       "slug": "europe"
     }
   ], 
   "links": {
-    "self": "https://localhost/api/2.0/taxonomies/country/europe/cz"
+    "self": "http://localhost/api/2.0/taxonomies/country/europe/cz"
   }, 
   "slug": "europe/cz"
 }
@@ -348,11 +323,8 @@ $ curl -i -H "Prefer: return=minimal; include=data" \
   http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/cz
 
 HTTP/1.0 200 OK
-Link: <https://localhost/api/2.0/taxonomies/country/europe/cz>; rel=self
-Link: <https://localhost/api/2.0/taxonomies/country/europe/cz?representation:include=dsc>; rel=tree
-Content-Length: 224
-Server: Werkzeug/1.0.1 Python/3.8.2
-Date: Fri, 03 Jul 2020 08:39:38 GMT
+Link: <http://localhost/api/2.0/taxonomies/country/europe/cz>; rel=self
+Link: <http://localhost/api/2.0/taxonomies/country/europe/cz?representation:include=dsc>; rel=tree
 
 {
   "CapitalLatitude": "50.083333333333336", 
@@ -379,14 +351,10 @@ $ curl -i -H "Prefer: return=minimal; include=dsc" \
   http://127.0.0.1:5000/api/2.0/taxonomies/country/europe
 
 HTTP/1.0 200 OK
-Link: <https://localhost/api/2.0/taxonomies/country/europe>; rel=self
-Link: <https://localhost/api/2.0/taxonomies/country/europe?representation:include=dsc>; rel=tree
-Content-Length: 2727
-Server: Werkzeug/1.0.1 Python/3.8.2
-Date: Fri, 03 Jul 2020 08:42:23 GMT
+Link: <http://localhost/api/2.0/taxonomies/country/europe>; rel=self
+Link: <http://localhost/api/2.0/taxonomies/country/europe?representation:include=dsc>; rel=tree
 
 {
-  "slug": "europe",
   "children": [
     {
       "slug": "europe/ad"
@@ -398,7 +366,8 @@ Date: Fri, 03 Jul 2020 08:42:23 GMT
     {
       "slug": "europe/va"
     }
-  ]
+  ],
+  "slug": "europe"
 }
 ```
 
@@ -412,11 +381,8 @@ $ curl -i -H "Prefer: return=representation; include=slug" \
   http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/cz
 
 HTTP/1.0 200 OK
-Link: <https://localhost/api/2.0/taxonomies/country/europe/cz>; rel=self
-Link: <https://localhost/api/2.0/taxonomies/country/europe/cz?representation:include=dsc>; rel=tree
-Content-Length: 282
-Server: Werkzeug/1.0.1 Python/3.8.2
-Date: Fri, 03 Jul 2020 09:13:01 GMT
+Link: <http://localhost/api/2.0/taxonomies/country/europe/cz>; rel=self
+Link: <http://localhost/api/2.0/taxonomies/country/europe/cz?representation:include=dsc>; rel=tree
 
 {
   "CapitalLatitude": "50.083333333333336", 
@@ -427,9 +393,11 @@ Date: Fri, 03 Jul 2020 09:13:01 GMT
   "CountryName": "Czech Republic", 
   "ancestors": [
     {
+      "links":{"self":"http://localhost/api/2.0/taxonomies/country/europe"},
       "slug": "europe"
     }
   ], 
+  "links":{"self":"http://localhost/api/2.0/taxonomies/country/europe/cz"},
   "slug": "europe/cz"
 }
 ```
@@ -443,11 +411,8 @@ $ curl -i -H "Prefer: return=minimal; include=lvl" \
   http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/cz
 
 HTTP/1.0 200 OK
-Link: <https://localhost/api/2.0/taxonomies/country/europe/cz>; rel=self
-Link: <https://localhost/api/2.0/taxonomies/country/europe/cz?representation:include=dsc>; rel=tree
-Content-Length: 41
-Server: Werkzeug/1.0.1 Python/3.8.2
-Date: Fri, 03 Jul 2020 09:36:10 GMT
+Link: <http://localhost/api/2.0/taxonomies/country/europe/cz>; rel=self
+Link: <http://localhost/api/2.0/taxonomies/country/europe/cz?representation:include=dsc>; rel=tree
 
 {
   "level": 2, 
@@ -464,9 +429,6 @@ $ curl -X DELETE -i http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/gb
 
 HTTP/1.0 200 OK
 Content-Type: application/json
-Content-Length: 186
-Server: Werkzeug/1.0.1 Python/3.8.2
-Date: Fri, 03 Jul 2020 10:35:53 GMT
 
 {
   "CapitalLatitude": "51.5", 
@@ -474,7 +436,8 @@ Date: Fri, 03 Jul 2020 10:35:53 GMT
   "CapitalName": "London", 
   "ContinentName": "Europe", 
   "CountryCode": "GB", 
-  "CountryName": "United Kingdom"
+  "CountryName": "United Kingdom",
+  "links":{"self":"http://localhost/api/2.0/taxonomies/country/europe/gb"}
 }
 ```
 
@@ -483,6 +446,11 @@ United Kingdom has indeed been removed from Europe:
 ```console
 $ curl -i http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/gb
 HTTP/1.0 404 NOT FOUND
+
+{
+  "message": "http://localhost/api/2.0/taxonomies/country/europe/gb was not found on the server",
+  "reason": "deleted"
+}
 ```
 
 Now run the GET again with removed terms included:
@@ -492,11 +460,8 @@ $ curl -i -H "Prefer: return=minimal; include=del sta" \
   http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/gb
 
 HTTP/1.0 200 OK
-Link: <https://localhost/api/2.0/taxonomies/country/europe/gb>; rel=self
-Link: <https://localhost/api/2.0/taxonomies/country/europe/gb?representation:include=dsc>; rel=tree
-Content-Length: 50
-Server: Werkzeug/1.0.1 Python/3.8.2
-Date: Fri, 03 Jul 2020 10:53:47 GMT
+Link: <http://localhost/api/2.0/taxonomies/country/europe/gb>; rel=self
+Link: <http://localhost/api/2.0/taxonomies/country/europe/gb?representation:include=dsc>; rel=tree
 
 {
   "slug": "europe/gb", 
@@ -513,11 +478,8 @@ $ curl -i -H "Prefer: return=minimal; include=del sta dsc" \
   http://127.0.0.1:5000/api/2.0/taxonomies/country/europe
 
 HTTP/1.0 200 OK
-Link: <https://localhost/api/2.0/taxonomies/country/europe>; rel=self
-Link: <https://localhost/api/2.0/taxonomies/country/europe?representation:include=dsc>; rel=tree
-Content-Length: 3897
-Server: Werkzeug/1.0.1 Python/3.8.2
-Date: Fri, 03 Jul 2020 11:29:07 GMT
+Link: <http://localhost/api/2.0/taxonomies/country/europe>; rel=self
+Link: <http://localhost/api/2.0/taxonomies/country/europe?representation:include=dsc>; rel=tree
 
 {
   "children": [
@@ -555,15 +517,12 @@ curl -i -H "Prefer: return=minimal;" \
      representation:include=sta,url&representation:exclude=slug"
 
 HTTP/1.0 200 OK
-Link: <https://localhost/api/2.0/taxonomies/country/europe>; rel=self
-Link: <https://localhost/api/2.0/taxonomies/country/europe?representation:include=dsc>; rel=tree
-Content-Length: 109
-Server: Werkzeug/1.0.1 Python/3.8.2
-Date: Fri, 03 Jul 2020 15:38:37 GMT
+Link: <http://localhost/api/2.0/taxonomies/country/europe>; rel=self
+Link: <http://localhost/api/2.0/taxonomies/country/europe?representation:include=dsc>; rel=tree
 
 {
   "links": {
-    "self": "https://localhost/api/2.0/taxonomies/country/europe"
+    "self": "http://localhost/api/2.0/taxonomies/country/europe"
   }, 
   "status": "alive"
 }
@@ -579,11 +538,8 @@ $ curl -i -H "Prefer: return=representation;select=/CapitalName /CountryCode" \
     "http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/cz"
 
 HTTP/1.0 200 OK
-Link: <https://localhost/api/2.0/taxonomies/country/europe/cz>; rel=self
-Link: <https://localhost/api/2.0/taxonomies/country/europe/cz?representation:include=dsc>; rel=tree
-Content-Length: 272
-Server: Werkzeug/1.0.1 Python/3.8.2
-Date: Fri, 03 Jul 2020 19:01:57 GMT
+Link: <http://localhost/api/2.0/taxonomies/country/europe/cz>; rel=self
+Link: <http://localhost/api/2.0/taxonomies/country/europe/cz?representation:include=dsc>; rel=tree
 
 {
   "CapitalName": "Prague", 
@@ -591,12 +547,12 @@ Date: Fri, 03 Jul 2020 19:01:57 GMT
   "ancestors": [
     {
       "links": {
-        "self": "https://localhost/api/2.0/taxonomies/country/europe"
+        "self": "http://localhost/api/2.0/taxonomies/country/europe"
       }
     }
   ], 
   "links": {
-    "self": "https://localhost/api/2.0/taxonomies/country/europe/cz"
+    "self": "http://localhost/api/2.0/taxonomies/country/europe/cz"
   }
 }
 ```
@@ -615,14 +571,11 @@ $ curl -i -H "Prefer: return=minimal;" \
   "http://127.0.0.1:5000/api/2.0/taxonomies/country/europe?representation:include=dsc&size=5"
 
 HTTP/1.0 200 OK
-Link: <https://localhost/api/2.0/taxonomies/country/europe>; rel=self
-Link: <https://localhost/api/2.0/taxonomies/country/europe?representation:include=dsc>; rel=tree
+Link: <http://localhost/api/2.0/taxonomies/country/europe>; rel=self
+Link: <http://localhost/api/2.0/taxonomies/country/europe?representation:include=dsc>; rel=tree
 X-Page: 1
 X-PageSize: 5
 X-Total: 58
-Content-Length: 203
-Server: Werkzeug/1.0.1 Python/3.8.2
-Date: Fri, 03 Jul 2020 19:23:58 GMT
 
 {
   "children": [
@@ -650,14 +603,11 @@ $ curl -i -H "Prefer: return=minimal;" \
   "http://127.0.0.1:5000/api/2.0/taxonomies/country/europe?representation:include=dsc&size=5&page=4"
 
 HTTP/1.0 200 OK
-Link: <https://localhost/api/2.0/taxonomies/country/europe/dk>; rel=self
-Link: <https://localhost/api/2.0/taxonomies/country/europe/dk?representation:include=dsc>; rel=tree
+Link: <http://localhost/api/2.0/taxonomies/country/europe/dk>; rel=self
+Link: <http://localhost/api/2.0/taxonomies/country/europe/dk?representation:include=dsc>; rel=tree
 X-Page: 4
 X-PageSize: 5
 X-Total: 58
-Content-Length: 172
-Server: Werkzeug/1.0.1 Python/3.8.2
-Date: Fri, 03 Jul 2020 19:47:00 GMT
 
 [
   {
@@ -686,14 +636,11 @@ $ curl -i -H "Prefer: return=minimal;" \
   "http://127.0.0.1:5000/api/2.0/taxonomies/country/europe?representation:include=dsc,anh&size=5&page=2"
 
 HTTP/1.0 200 OK
-Link: <https://localhost/api/2.0/taxonomies/country/europe/ax>; rel=self
-Link: <https://localhost/api/2.0/taxonomies/country/europe/ax?representation:include=dsc>; rel=tree
+Link: <http://localhost/api/2.0/taxonomies/country/europe/ax>; rel=self
+Link: <http://localhost/api/2.0/taxonomies/country/europe/ax?representation:include=dsc>; rel=tree
 X-Page: 2
 X-PageSize: 5
 X-Total: 58
-Content-Length: 224
-Server: Werkzeug/1.0.1 Python/3.8.2
-Date: Fri, 03 Jul 2020 19:52:50 GMT
 
 {
   "ancestor": true, 
@@ -723,14 +670,11 @@ $ curl -i -H "Prefer: return=minimal;" \
      representation:include=dsc&representation:exclude=self&size=5&page=1"
 
 HTTP/1.0 200 OK
-Link: <https://localhost/api/2.0/taxonomies/country/europe/ad>; rel=self
-Link: <https://localhost/api/2.0/taxonomies/country/europe/ad?representation:include=dsc>; rel=tree
+Link: <http://localhost/api/2.0/taxonomies/country/europe/ad>; rel=self
+Link: <http://localhost/api/2.0/taxonomies/country/europe/ad?representation:include=dsc>; rel=tree
 X-Page: 1
 X-PageSize: 5
 X-Total: 58
-Content-Length: 172
-Server: Werkzeug/1.0.1 Python/3.8.2
-Date: Fri, 03 Jul 2020 20:04:22 GMT
 
 [
   {
@@ -758,23 +702,20 @@ To create a taxonomy, either use HTTP PUT:
 
 ```console
 $ curl -i -X PUT 'http://127.0.0.1:5000/api/2.0/taxonomies/test' \
---header 'Content-Type: application/json' \
+-H 'Content-Type: application/json' \
 --data-raw '{
     "title": "Test taxonomy"
 }'
 
 HTTP/1.0 201 CREATED
-Link: <https://localhost/api/2.0/taxonomies/test/>; rel=self
-Link: <https://localhost/api/2.0/taxonomies/test/?representation:include=dsc>; rel=tree
-Location: https://localhost/api/2.0/taxonomies/test/
-Content-Length: 126
-Server: Werkzeug/1.0.1 Python/3.8.2
-Date: Sat, 04 Jul 2020 09:53:30 GMT
+Link: <http://localhost/api/2.0/taxonomies/test/>; rel=self
+Link: <http://localhost/api/2.0/taxonomies/test/?representation:include=dsc>; rel=tree
+Location: http://localhost/api/2.0/taxonomies/test/
 
 {
   "code": "test", 
   "links": {
-    "self": "https://localhost/api/2.0/taxonomies/test/"
+    "self": "http://localhost/api/2.0/taxonomies/test/"
   }, 
   "title": "Test taxonomy"
 }
@@ -784,24 +725,21 @@ Or HTTP POST with ``code`` in the payload
 
 ```console
 $ curl -i -X POST 'http://127.0.0.1:5000/api/2.0/taxonomies/' \
-    --header 'Content-Type: application/json' --data-raw '{
-    "title": "Test taxonomy", "code": "test"
+    -H 'Content-Type: application/json' --data-raw '{
+    "title": "Test taxonomy 1", "code": "test1"
 }'
 
 HTTP/1.0 201 CREATED
-Link: <https://localhost/api/2.0/taxonomies/test/>; rel=self
-Link: <https://localhost/api/2.0/taxonomies/test/?representation:include=dsc>; rel=tree
-Location: https://localhost/api/2.0/taxonomies/test/
-Content-Length: 126
-Server: Werkzeug/1.0.1 Python/3.8.2
-Date: Sat, 04 Jul 2020 09:59:09 GMT
+Link: <http://localhost/api/2.0/taxonomies/test1/>; rel=self
+Link: <http://localhost/api/2.0/taxonomies/test1/?representation:include=dsc>; rel=tree
+Location: http://localhost/api/2.0/taxonomies/test1/
 
 {
-  "code": "test", 
+  "code": "test1", 
   "links": {
-    "self": "https://localhost/api/2.0/taxonomies/test/"
+    "self": "http://localhost/api/2.0/taxonomies/test1/"
   }, 
-  "title": "Test taxonomy"
+  "title": "Test taxonomy 1"
 }
 ```
 
@@ -816,16 +754,13 @@ $ curl -i -X PUT 'http://127.0.0.1:5000/api/2.0/taxonomies/test' \
 }'
 
 HTTP/1.0 200 OK
-Link: <https://localhost/api/2.0/taxonomies/test/>; rel=self
-Link: <https://localhost/api/2.0/taxonomies/test/?representation:include=dsc>; rel=tree
-Content-Length: 134
-Server: Werkzeug/1.0.1 Python/3.8.2
-Date: Sat, 04 Jul 2020 10:26:47 GMT
+Link: <http://localhost/api/2.0/taxonomies/test/>; rel=self
+Link: <http://localhost/api/2.0/taxonomies/test/?representation:include=dsc>; rel=tree
 
 {
   "code": "test", 
   "links": {
-    "self": "https://localhost/api/2.0/taxonomies/test/"
+    "self": "http://localhost/api/2.0/taxonomies/test/"
   }, 
   "title": "Test taxonomy updated"
 }
@@ -842,16 +777,13 @@ $ curl -i -X PATCH 'http://127.0.0.1:5000/api/2.0/taxonomies/test' \
 }]'
 
 HTTP/1.0 200 OK
-Link: <https://localhost/api/2.0/taxonomies/test/>; rel=self
-Link: <https://localhost/api/2.0/taxonomies/test/?representation:include=dsc>; rel=tree
-Content-Length: 144
-Server: Werkzeug/1.0.1 Python/3.8.2
-Date: Sat, 04 Jul 2020 10:49:20 GMT
+Link: <http://localhost/api/2.0/taxonomies/test/>; rel=self
+Link: <http://localhost/api/2.0/taxonomies/test/?representation:include=dsc>; rel=tree
 
 {
   "code": "test", 
   "links": {
-    "self": "https://localhost/api/2.0/taxonomies/test/"
+    "self": "http://localhost/api/2.0/taxonomies/test/"
   }, 
   "title": "Test taxonomy updated via patch"
 }
@@ -860,12 +792,10 @@ Date: Sat, 04 Jul 2020 10:49:20 GMT
 #### Deleting
 
 ```console
-$ curl -i -X DELETE 'http://127.0.0.1:5000/api/2.0/taxonomies/test'
+$ curl -i -X DELETE 'http://127.0.0.1:5000/api/2.0/taxonomies/test1'
 
 HTTP/1.0 204 NO CONTENT
 Content-Type: text/html; charset=utf-8
-Server: Werkzeug/1.0.1 Python/3.8.2
-Date: Sat, 04 Jul 2020 10:55:03 GMT
 ```
 
 ### Taxonomy Term
@@ -880,16 +810,13 @@ $ curl -i -X PUT 'http://127.0.0.1:5000/api/2.0/taxonomies/test/term' \
 }'
 
 HTTP/1.0 201 CREATED
-Link: <https://localhost/api/2.0/taxonomies/test/term>; rel=self
-Link: <https://localhost/api/2.0/taxonomies/test/term?representation:include=dsc>; rel=tree
-Location: https://localhost/api/2.0/taxonomies/test/term
-Content-Length: 107
-Server: Werkzeug/1.0.1 Python/3.8.2
-Date: Sat, 04 Jul 2020 11:07:15 GMT
+Link: <http://localhost/api/2.0/taxonomies/test/term>; rel=self
+Link: <http://localhost/api/2.0/taxonomies/test/term?representation:include=dsc>; rel=tree
+Location: http://localhost/api/2.0/taxonomies/test/term
 
 {
   "links": {
-    "self": "https://localhost/api/2.0/taxonomies/test/term"
+    "self": "http://localhost/api/2.0/taxonomies/test/term"
   }, 
   "title": "Test Term"
 }
@@ -898,27 +825,81 @@ Date: Sat, 04 Jul 2020 11:07:15 GMT
 or POST:
 
 ```console
-$ curl -i -X POST 'http://127.0.0.1:5000/api/2.0/taxonomies/test/term' \
+$ curl -i -X POST 'http://127.0.0.1:5000/api/2.0/taxonomies/test' \
   --header 'Content-Type: application/json' --data-raw '{
-    "title": "Test nested term", "slug": "nested"
+    "title": "Test term 1", "slug": "term1"
 }'
 
 HTTP/1.0 201 CREATED
-Link: <https://localhost/api/2.0/taxonomies/test/nested>; rel=self
-Link: <https://localhost/api/2.0/taxonomies/test/nested?representation:include=dsc>; rel=tree
-Location: https://localhost/api/2.0/taxonomies/test/nested
-Content-Length: 116
-Server: Werkzeug/1.0.1 Python/3.8.2
-Date: Sat, 04 Jul 2020 11:24:29 GMT
+Link: <http://localhost/api/2.0/taxonomies/test/term1>; rel=self
+Link: <http://localhost/api/2.0/taxonomies/test/term1?representation:include=dsc>; rel=tree
+Location: http://localhost/api/2.0/taxonomies/test/term1
 
 {
   "links": {
-    "self": "https://localhost/api/2.0/taxonomies/test/nested"
+    "self": "http://localhost/api/2.0/taxonomies/test/term1"
   }, 
-  "title": "Test nested term"
+  "title": "Test term 1"
 }
 ``` 
  
+Terms can be created within terms via HTTP PUT:
+
+```console
+$ curl -i -X PUT 'http://127.0.0.1:5000/api/2.0/taxonomies/test/term/nested' \
+  --header 'Content-Type: application/json' --data-raw '{
+    "title": "Nested Term"
+}'
+
+HTTP/1.0 201 CREATED
+Link: <http://localhost/api/2.0/taxonomies/test/term/nested>; rel=self
+Link: <http://localhost/api/2.0/taxonomies/test/term/nested?representation:include=dsc>; rel=tree
+Location: http://localhost/api/2.0/taxonomies/test/term/nested
+
+{
+  "ancestors":[
+     {
+       "links":{
+         "self":"http://localhost/api/2.0/taxonomies/test/term"
+       },
+       "title":"Test Term"
+     }
+  ],
+  "links": {
+    "self": "http://localhost/api/2.0/taxonomies/test/term/nested"
+  }, 
+  "title": "Nested Term"
+}
+```
+
+or POST:
+
+```console
+$ curl -i -X POST 'http://127.0.0.1:5000/api/2.0/taxonomies/test/term1' \
+  --header 'Content-Type: application/json' --data-raw '{
+    "title": "Test nested term 1", "slug": "nested1"
+}'
+
+HTTP/1.0 201 CREATED
+Link: <http://localhost/api/2.0/taxonomies/test/term1/nested1>; rel=self
+Link: <http://localhost/api/2.0/taxonomies/test/term1/nested1?representation:include=dsc>; rel=tree
+Location: http://localhost/api/2.0/taxonomies/test/term1/nested1
+
+{
+  "ancestors":[
+     {
+       "links":{
+         "self":"http://localhost/api/2.0/taxonomies/test/term1"
+       },
+       "title":"Test term 1"
+     }
+  ],
+  "links": {
+    "self": "http://localhost/api/2.0/taxonomies/test/term1/nested1"
+  }, 
+  "title": "Test nested term 1"
+}
+``` 
 
 #### Updating
 
@@ -931,15 +912,12 @@ $ curl -i -X PUT 'http://127.0.0.1:5000/api/2.0/taxonomies/test/term' \
 }'
 
 HTTP/1.0 200 OK
-Link: <https://localhost/api/2.0/taxonomies/test/term>; rel=self
-Link: <https://localhost/api/2.0/taxonomies/test/term?representation:include=dsc>; rel=tree
-Content-Length: 115
-Server: Werkzeug/1.0.1 Python/3.8.2
-Date: Sat, 04 Jul 2020 11:26:24 GMT
+Link: <http://localhost/api/2.0/taxonomies/test/term>; rel=self
+Link: <http://localhost/api/2.0/taxonomies/test/term?representation:include=dsc>; rel=tree
 
 {
   "links": {
-    "self": "https://localhost/api/2.0/taxonomies/test/term"
+    "self": "http://localhost/api/2.0/taxonomies/test/term"
   }, 
   "title": "Test Term updated"
 }
@@ -954,15 +932,12 @@ $ curl -i -X PATCH 'http://127.0.0.1:5000/api/2.0/taxonomies/test/term' \
 }]'
 
 HTTP/1.0 200 OK
-Link: <https://localhost/api/2.0/taxonomies/test/term>; rel=self
-Link: <https://localhost/api/2.0/taxonomies/test/term?representation:include=dsc>; rel=tree
-Content-Length: 134
-Server: Werkzeug/1.0.1 Python/3.8.2
-Date: Sat, 04 Jul 2020 11:57:33 GMT
+Link: <http://localhost/api/2.0/taxonomies/test/term>; rel=self
+Link: <http://localhost/api/2.0/taxonomies/test/term?representation:include=dsc>; rel=tree
 
 {
   "links": {
-    "self": "https://localhost/api/2.0/taxonomies/test/term"
+    "self": "http://localhost/api/2.0/taxonomies/test/term"
   }, 
   "title": "Test taxonomy term updated via patch"
 }
@@ -973,28 +948,30 @@ Date: Sat, 04 Jul 2020 11:57:33 GMT
 Use HTTP delete to remove a term. The removed term will be returned in the response:
 
 ```console
-$ curl -i -X DELETE 'http://127.0.0.1:5000/api/2.0/taxonomies/test/term'
+$ curl -i -X DELETE 'http://127.0.0.1:5000/api/2.0/taxonomies/test/term1'
 
 HTTP/1.0 200 OK
 Content-Type: application/json
-Content-Length: 134
-Server: Werkzeug/1.0.1 Python/3.8.2
-Date: Sat, 04 Jul 2020 12:51:22 GMT
 
 {
   "links": {
-    "self": "https://localhost/api/2.0/taxonomies/test/term"
+    "self": "http://localhost/api/2.0/taxonomies/test/term1"
   }, 
-  "title": "Test taxonomy term updated via patch"
+  "title": "Test term 1"
 }
 ```
 
 Subsequent GET returns 404:
 
 ```console
-$ curl -i 'http://127.0.0.1:5000/api/2.0/taxonomies/test/term'
+$ curl -i 'http://127.0.0.1:5000/api/2.0/taxonomies/test/term1'
 
 HTTP/1.0 404 NOT FOUND
+
+{
+  "message": "http://localhost/api/2.0/taxonomies/test/term1 was not found on the server",
+  "reason": "deleted"
+}
 ```
 
 But the term stays on the server:
@@ -1002,15 +979,12 @@ But the term stays on the server:
 ```console
 $ curl -i 'http://127.0.0.1:5000/api/2.0/taxonomies/test/term?representation:include=del'
 HTTP/1.0 200 OK
-Link: <https://localhost/api/2.0/taxonomies/test/term>; rel=self
-Link: <https://localhost/api/2.0/taxonomies/test/term?representation:include=dsc>; rel=tree
-Content-Length: 134
-Server: Werkzeug/1.0.1 Python/3.8.2
-Date: Sat, 04 Jul 2020 12:53:01 GMT
+Link: <http://localhost/api/2.0/taxonomies/test/term>; rel=self
+Link: <http://localhost/api/2.0/taxonomies/test/term?representation:include=dsc>; rel=tree
 
 {
   "links": {
-    "self": "https://localhost/api/2.0/taxonomies/test/term"
+    "self": "http://localhost/api/2.0/taxonomies/test/term"
   }, 
   "title": "Test taxonomy term updated via patch"
 }
@@ -1026,11 +1000,8 @@ $ curl -i -X PATCH -H "Prefer: return=minimal; include=del" \
     --header 'Content-Type: application/json' --data-raw '[]'
 
 HTTP/1.0 200 OK
-Link: <https://localhost/api/2.0/taxonomies/test/term>; rel=self
-Link: <https://localhost/api/2.0/taxonomies/test/term?representation:include=dsc>; rel=tree
-Content-Length: 21
-Server: Werkzeug/1.0.1 Python/3.8.2
-Date: Sat, 04 Jul 2020 18:14:44 GMT
+Link: <http://localhost/api/2.0/taxonomies/test/term>; rel=self
+Link: <http://localhost/api/2.0/taxonomies/test/term?representation:include=dsc>; rel=tree
 
 {
   "slug": "term"

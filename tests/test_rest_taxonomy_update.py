@@ -10,7 +10,7 @@ def taxonomy_update_test(api, client, test_taxonomy):
     exp = {
         'code': 'test',
         'links': {
-            'self': 'https://localhost/api/2.0/taxonomies/test/'
+            'self': 'http://localhost/api/2.0/taxonomies/test/'
         },
         'title': 'test title updated'
     }

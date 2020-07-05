@@ -9,7 +9,7 @@ def term_create_test(api, client, sample_taxonomy):
                       content_type='application/json')
     exp = {
         'links': {
-            'self': 'https://localhost/api/2.0/taxonomies/test/aaa',
+            'self': 'http://localhost/api/2.0/taxonomies/test/aaa',
         },
         'title': 'test aaa title'
     }
@@ -26,13 +26,13 @@ def term_create_test(api, client, sample_taxonomy):
         'ancestors': [
             {
                 'links': {
-                    'self': 'https://localhost/api/2.0/taxonomies/test/aaa'
+                    'self': 'http://localhost/api/2.0/taxonomies/test/aaa'
                 },
                 'title': 'test aaa title'
             }
         ],
         'links': {
-            'self': 'https://localhost/api/2.0/taxonomies/test/aaa/bbb'
+            'self': 'http://localhost/api/2.0/taxonomies/test/aaa/bbb'
         },
         'title': 'test bbb title'
     }
@@ -51,7 +51,7 @@ def term_create_post_test(api, client, sample_taxonomy):
                        content_type='application/json')
     exp = {
         'links': {
-            'self': 'https://localhost/api/2.0/taxonomies/test/aaa',
+            'self': 'http://localhost/api/2.0/taxonomies/test/aaa',
         },
         'title': 'test aaa title'
     }
@@ -68,11 +68,11 @@ def term_create_post_test(api, client, sample_taxonomy):
     exp = {
         'ancestors': [
             {
-                'links': {'self': 'https://localhost/api/2.0/taxonomies/test/aaa'},
+                'links': {'self': 'http://localhost/api/2.0/taxonomies/test/aaa'},
                 'title': 'test aaa title'
             }
         ],
-        'links': {'self': 'https://localhost/api/2.0/taxonomies/test/aaa/bbb'},
+        'links': {'self': 'http://localhost/api/2.0/taxonomies/test/aaa/bbb'},
         'title': 'test bbb title'
     }
     assert json.loads(term.data) == exp

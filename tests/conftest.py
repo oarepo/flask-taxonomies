@@ -4,6 +4,7 @@ import pytest
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 
+from example.import_countries import import_countries
 from flask_taxonomies.api import TermIdentification
 from flask_taxonomies.ext import FlaskTaxonomies
 from flask_taxonomies.proxies import current_flask_taxonomies
@@ -13,6 +14,11 @@ from flask_taxonomies.views.common import blueprint
 @pytest.fixture
 def app():
     app = Flask('__test__')
+    app.config.update({
+        'PREFERRED_URL_SCHEME': 'http',
+        'SERVER_NAME': 'localhost',
+        'FLASK_TAXONOMIES_PROTOCOL': 'http'
+    })
     return app
 
 
@@ -102,3 +108,9 @@ def many_taxonomies(api):
         tax = api.create_taxonomy(code=f'test-{t + 1}', extra_data={
             'title': f'Test taxonomy #{t + 1}'
         })
+
+
+@pytest.fixture
+def country_taxonomy(api, app, db):
+    with app.app_context():
+        import_countries(db)
