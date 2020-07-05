@@ -246,7 +246,7 @@ def taxonomy_move_term(code=None, slug=None, prefer=None, page=None, size=None, 
         old_term, new_term = current_flask_taxonomies.rename_term(
             TermIdentification(taxonomy=code, slug=slug),
             new_slug=new_slug,
-            remove_after_delete=True)
+            remove_after_delete=False)  # do not remove the original node from the database, just mark it as deleted
         destination_taxonomy = code
     else:
         abort(400, 'Pass either `destination` or `rename` parameters ')

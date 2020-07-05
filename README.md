@@ -1010,6 +1010,78 @@ Link: <http://localhost/api/2.0/taxonomies/test/term?representation:include=dsc>
 
 #### Moving
 
+Use HTTP post with content type ``application/vnd.move`` and ``Destination`` header:
+
+```console
+$ curl -i -X POST \
+   -H 'Content-Type: application/vnd.move' \
+   -H "Destination: /" \
+  'http://127.0.0.1:5000/api/2.0/taxonomies/test/term/nested'
+
+HTTP/1.0 200 OK
+
+{
+    "links":{
+        "self":"http://localhost/api/2.0/taxonomies/test/nested"
+    },
+    "title":"Nested Term"
+}
+```
+
+The original url returns 301:
+
+```console
+$ curl -i 'http://127.0.0.1:5000/api/2.0/taxonomies/test/term/nested'
+
+HTTP/1.0 301 MOVED PERMANENTLY
+Location: http://localhost/api/2.0/taxonomies/test/nested
+
+{
+    "links": {
+        "self": "http://localhost/api/2.0/taxonomies/test/nested"
+    }, 
+    "status": "deleted"
+}
+```
+
+#### Renaming
+
+Use HTTP post with content type ``application/vnd.move`` and ``Rename`` header:
+
+```console
+$ curl -i -X POST \
+   -H 'Content-Type: application/vnd.move' \
+   -H "Rename: renamed-nested" \
+  'http://127.0.0.1:5000/api/2.0/taxonomies/test/nested'
+
+HTTP/1.0 200 OK
+
+{
+    "links":{
+        "self":"http://localhost/api/2.0/taxonomies/test/renamed-nested"
+    },
+    "title":"Nested Term"
+}
+```
+
+
+The original url returns 301:
+
+```console
+$ curl -i 'http://127.0.0.1:5000/api/2.0/taxonomies/test/nested'
+
+HTTP/1.0 301 MOVED PERMANENTLY
+Location: http://localhost/api/2.0/taxonomies/test/renamed-nested
+
+{
+    "links": {
+        "self": "http://localhost/api/2.0/taxonomies/test/renamed-nested"
+    }, 
+    "status": "deleted"
+}
+```
+
+
 ## Configuration
 
 ### Security
