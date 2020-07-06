@@ -61,7 +61,8 @@ def simple_op_test(api, test_taxonomy):
     assert list(api.descendants(TermIdentification(taxonomy=test_taxonomy, slug='a'))) == [term11]
     assert list(api.descendants(TermIdentification(taxonomy=test_taxonomy, slug='a'))) == [term11]
 
-    assert list(api.descendants_or_self(TermIdentification(taxonomy=test_taxonomy, slug='a'), levels=1)) == [term1, term11]
+    assert list(api.descendants_or_self(
+        TermIdentification(taxonomy=test_taxonomy, slug='a'), levels=1)) == [term1, term11]
     assert list(api.descendants_or_self(TermIdentification(taxonomy=test_taxonomy, slug='a'), levels=0)) == [term1]
 
     assert list(api.descendants(test_taxonomy.code + '/a')) == [term11]
@@ -129,8 +130,10 @@ def simple_op_test(api, test_taxonomy):
     ]
 
     # try to delete busy terms
-    locked_terms = [r[0] for r in
-                api.descendants_or_self(term11, order=False).with_for_update().values(TaxonomyTerm.id)]  # get ids to actually lock the terms
+    locked_terms = [
+        r[0] for r in
+        api.descendants_or_self(term11, order=False).with_for_update().values(TaxonomyTerm.id)
+    ]  # get ids to actually lock the terms
 
     api.mark_busy(locked_terms)
     with pytest.raises(TaxonomyError):

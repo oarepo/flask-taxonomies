@@ -39,8 +39,9 @@ class Paginator:
             if self.page > 1 and INCLUDE_ANCESTORS_HIERARCHY in self.representation:
                 # second page should have one element less
                 size_offset = 1 if self.size > 1 else 0
+                # -size_offset is to remove the parent that will get added automatically
                 data = list(data[self_offset + (self.page - 1) * self.size:
-                                 self_offset + self.page * self.size - size_offset])  # -1 is to remove the parent that will get added automatically
+                                 self_offset + self.page * self.size - size_offset])
             else:
                 data = list(data[self_offset + (self.page - 1) * self.size: self_offset + self.page * self.size])
         else:

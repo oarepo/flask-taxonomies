@@ -35,9 +35,6 @@ from .views.perms import PermsEnforcer
 log = logging.getLogger(__name__)
 
 
-
-
-
 class Api:
     def __init__(self, app=None):
         self.app = app

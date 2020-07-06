@@ -56,7 +56,7 @@ def get_taxonomy(code=None, prefer=None, page=None, size=None, status_code=200):
                 prefer) if original_data else EnvelopeLinks({}, {}),
             single_result=True, allow_empty=False)
 
-        if not INCLUDE_DESCENDANTS in prefer:
+        if INCLUDE_DESCENDANTS not in prefer:
             return paginator.jsonify(status_code=status_code)
 
         if INCLUDE_DESCENDANTS in prefer:

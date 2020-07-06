@@ -164,7 +164,7 @@ class Taxonomy(Base):
     code = Column(String(256), unique=True, index=True)
     url = Column(String(1024), unique=True, index=True)
     """
-    Custom url of the taxonomy. If not set, the url is supposed to be 
+    Custom url of the taxonomy. If not set, the url is supposed to be
     <FLASK_TAXONOMIES_SERVER_NAME or SERVER_NAME>/api/2.0/taxonomies/<name>
     """
     extra_data = Column(JSON().with_variant(
