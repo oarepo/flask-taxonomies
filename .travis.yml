@@ -39,7 +39,8 @@ install:
   - "travis_retry pip install -e .[$EXTRAS]"
 
 before_script:
-  - psql -U postgres -c "create extension ltree"
+  - psql -U postgres -c "create database flask-taxonomies-test"
+  - psql -U postgres -c "create extension ltree" -d flask-taxonomies-test
 
 script:
   - "./run-tests.sh"
