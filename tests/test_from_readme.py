@@ -149,7 +149,7 @@ def read_console_content(first_lineno, lines):
             ret.pop(0)
         parts.append([])
         while ret and ret[0] != '':
-            parts[-1].append(ret.pop(0))
+            parts[-1].append(ret.pop(0).replace('127.0.0.1:5000', 'localhost'))
 
     if not parts:
         raise ValueError('No reply at line %s' % (first_lineno + 1))

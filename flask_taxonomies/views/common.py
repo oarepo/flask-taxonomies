@@ -5,6 +5,7 @@ import sqlalchemy
 from flask import Blueprint, Response, abort
 
 from flask_taxonomies.constants import (
+    INCLUDE_ANCESTOR_LIST,
     INCLUDE_ANCESTORS,
     INCLUDE_ANCESTORS_HIERARCHY,
     INCLUDE_DELETED,
@@ -79,10 +80,13 @@ def build_descendants(descendants, representation, root_slug, stack=None, tops=N
         while stack and not desc.slug.startswith(stack[-1][0]):
             stack.pop()
         ancestors = None
+        ancestor_list = None
         if not stack and desc.parent_slug != root_slug:
             # ancestors are missing, serialize them before this element
             if INCLUDE_ANCESTORS_HIERARCHY in representation:
                 build_ancestors(desc, tops, stack, representation, root_slug, transformers)
+            elif INCLUDE_ANCESTOR_LIST in representation:
+                ancestor_list = build_ancestors(desc, tops, stack, representation, root_slug, transformers)
             elif INCLUDE_ANCESTORS in representation:
                 ancestors = build_ancestors(desc, tops, stack, representation, root_slug, transformers)
 
@@ -94,8 +98,13 @@ def build_descendants(descendants, representation, root_slug, stack=None, tops=N
             for transformer in transformers:
                 desc_repr = transformer(json=desc_repr, term=desc, representation=representation)
         if stack:
-            stack[-1][1].setdefault('children', []).append(desc_repr)
+            children = stack[-1][1].setdefault('children', [])
+            if ancestor_list:
+                children.extend(ancestor_list)
+            children.append(desc_repr)
         else:
+            if ancestor_list:
+                tops.extend(ancestor_list)
             tops.append(desc_repr)
         stack.append([desc.slug + '/', desc_repr])
 

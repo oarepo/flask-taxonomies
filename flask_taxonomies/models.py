@@ -44,6 +44,8 @@ class Representation:
     KNOWN_FEATURES = {
         PRETTY_PRINT,
         INCLUDE_ANCESTORS_HIERARCHY,
+        INCLUDE_ANCESTORS,
+        INCLUDE_ANCESTOR_LIST,
         INCLUDE_URL,
         INCLUDE_DATA,
         INCLUDE_ID,

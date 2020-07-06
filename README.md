@@ -135,8 +135,8 @@ Content-Type: application/json
 $ curl -i -H "Prefer: return=minimal" http://127.0.0.1:5000/api/2.0/taxonomies/country/europe
 
 HTTP/1.0 200 OK
-Link: <http://localhost/api/2.0/taxonomies/country/europe>; rel=self
-Link: <http://localhost/api/2.0/taxonomies/country/europe?representation:include=dsc>; rel=tree
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe>; rel=self
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe?representation:include=dsc>; rel=tree
 
 {
   "slug": "europe"
@@ -159,7 +159,7 @@ Link: <http://127.0.0.1:5000/api/2.0/taxonomies/>; rel=self
     "code": "country", 
     "links": {
       "custom": "https://www.kaggle.com/nikitagrec/world-capitals-gps/data", 
-      "self": "http://localhost/api/2.0/taxonomies/country/"
+      "self": "http://127.0.0.1:5000/api/2.0/taxonomies/country/"
     }, 
     "title": "List of countries"
   }
@@ -170,8 +170,8 @@ Link: <http://127.0.0.1:5000/api/2.0/taxonomies/>; rel=self
 ```console
 $ curl -i http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/cz
 HTTP/1.0 200 OK
-Link: <http://localhost/api/2.0/taxonomies/country/europe/cz>; rel=self
-Link: <http://localhost/api/2.0/taxonomies/country/europe/cz?representation:include=dsc>; rel=tree
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/cz>; rel=self
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/cz?representation:include=dsc>; rel=tree
 
 {
   "CapitalLatitude": "50.083333333333336", 
@@ -183,12 +183,12 @@ Link: <http://localhost/api/2.0/taxonomies/country/europe/cz?representation:incl
   "ancestors": [
     {
       "links": {
-        "self": "http://localhost/api/2.0/taxonomies/country/europe"
+        "self": "http://127.0.0.1:5000/api/2.0/taxonomies/country/europe"
       }
     }
   ], 
   "links": {
-    "self": "http://localhost/api/2.0/taxonomies/country/europe/cz"
+    "self": "http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/cz"
   }
 }
 ```
@@ -205,6 +205,7 @@ INCLUDE_URL = 'url'
 INCLUDE_DESCENDANTS_URL = 'drl'
 INCLUDE_ANCESTORS_HIERARCHY = 'anh'
 INCLUDE_ANCESTORS = 'anc'
+INCLUDE_ANCESTOR_LIST = 'anl'
 INCLUDE_DATA = 'data'
 INCLUDE_ID = 'id'
 INCLUDE_DESCENDANTS = 'dsc'
@@ -226,12 +227,12 @@ $ curl -i -H "Prefer: return=minimal; include=url" \
   http://127.0.0.1:5000/api/2.0/taxonomies/country/europe
 
 HTTP/1.0 200 OK
-Link: <http://localhost/api/2.0/taxonomies/country/europe>; rel=self
-Link: <http://localhost/api/2.0/taxonomies/country/europe?representation:include=dsc>; rel=tree
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe>; rel=self
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe?representation:include=dsc>; rel=tree
 
 {
   "links": {
-    "self": "http://localhost/api/2.0/taxonomies/country/europe"
+    "self": "http://127.0.0.1:5000/api/2.0/taxonomies/country/europe"
   }, 
   "slug": "europe"
 }
@@ -246,13 +247,13 @@ $ curl -i -H "Prefer: return=minimal; include=url drl" \
   http://127.0.0.1:5000/api/2.0/taxonomies/country/europe
 
 HTTP/1.0 200 OK
-Link: <http://localhost/api/2.0/taxonomies/country/europe>; rel=self
-Link: <http://localhost/api/2.0/taxonomies/country/europe?representation:include=dsc>; rel=tree
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe>; rel=self
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe?representation:include=dsc>; rel=tree
 
 {
   "links": {
-    "self": "http://localhost/api/2.0/taxonomies/country/europe", 
-    "tree": "http://localhost/api/2.0/taxonomies/country/europe?representation:include=dsc"
+    "self": "http://127.0.0.1:5000/api/2.0/taxonomies/country/europe", 
+    "tree": "http://127.0.0.1:5000/api/2.0/taxonomies/country/europe?representation:include=dsc"
   }, 
   "slug": "europe"
 }
@@ -270,13 +271,13 @@ $ curl -i -H "Prefer: return=minimal; include=anh url" \
   "children": [
     {
       "links": {
-        "self": "http://localhost/api/2.0/taxonomies/country/europe/cz"
+        "self": "http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/cz"
       }, 
       "slug": "europe/cz"
     }
   ], 
   "links": {
-    "self": "http://localhost/api/2.0/taxonomies/country/europe"
+    "self": "http://127.0.0.1:5000/api/2.0/taxonomies/country/europe"
   }, 
   "slug": "europe",
   "ancestor": true
@@ -297,26 +298,59 @@ $ curl -i -H "Prefer: return=minimal; include=anc url" \
   http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/cz
 
 HTTP/1.0 200 OK
-Link: <http://localhost/api/2.0/taxonomies/country/europe/cz>; rel=self
-Link: <http://localhost/api/2.0/taxonomies/country/europe/cz?representation:include=dsc>; rel=tree
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/cz>; rel=self
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/cz?representation:include=dsc>; rel=tree
 
 {
   "ancestors": [
     {
       "links": {
-        "self": "http://localhost/api/2.0/taxonomies/country/europe"
+        "self": "http://127.0.0.1:5000/api/2.0/taxonomies/country/europe"
       }, 
       "slug": "europe"
     }
   ], 
   "links": {
-    "self": "http://localhost/api/2.0/taxonomies/country/europe/cz"
+    "self": "http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/cz"
   }, 
   "slug": "europe/cz"
 }
 ```
 The ancestors are rendered inside the ``ancestors`` element. Adding url as well 
 is recommended to get urls of ancestors.
+
+**Include ancestor list in response**
+
+```console
+$ curl -i -H "Prefer: return=representation; include=anl" \
+  http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/cz
+
+HTTP/1.0 200 OK
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/cz>; rel=self
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/cz?representation:include=dsc>; rel=tree
+
+[
+  {
+    "links": {
+      "self": "http://127.0.0.1:5000/api/2.0/taxonomies/country/europe"
+    }
+  }, 
+  {
+    "CapitalLatitude": "50.083333333333336", 
+    "CapitalLongitude": "14.466667", 
+    "CapitalName": "Prague", 
+    "ContinentName": "Europe", 
+    "CountryCode": "CZ", 
+    "CountryName": "Czech Republic", 
+    "links": {
+      "self": "http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/cz"
+    }
+  }
+]
+```
+The ancestors are rendered on the same level as the term. This rendering might be used
+for example when serializing the taxonomy term to elasticsearch - this way all the 
+ancestors are ser
 
 **Include data in response**
 
@@ -328,8 +362,8 @@ $ curl -i -H "Prefer: return=minimal; include=data" \
   http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/cz
 
 HTTP/1.0 200 OK
-Link: <http://localhost/api/2.0/taxonomies/country/europe/cz>; rel=self
-Link: <http://localhost/api/2.0/taxonomies/country/europe/cz?representation:include=dsc>; rel=tree
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/cz>; rel=self
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/cz?representation:include=dsc>; rel=tree
 
 {
   "CapitalLatitude": "50.083333333333336", 
@@ -356,8 +390,8 @@ $ curl -i -H "Prefer: return=minimal; include=dsc" \
   http://127.0.0.1:5000/api/2.0/taxonomies/country/europe
 
 HTTP/1.0 200 OK
-Link: <http://localhost/api/2.0/taxonomies/country/europe>; rel=self
-Link: <http://localhost/api/2.0/taxonomies/country/europe?representation:include=dsc>; rel=tree
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe>; rel=self
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe?representation:include=dsc>; rel=tree
 
 {
   "children": [
@@ -386,8 +420,8 @@ $ curl -i -H "Prefer: return=representation; include=slug" \
   http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/cz
 
 HTTP/1.0 200 OK
-Link: <http://localhost/api/2.0/taxonomies/country/europe/cz>; rel=self
-Link: <http://localhost/api/2.0/taxonomies/country/europe/cz?representation:include=dsc>; rel=tree
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/cz>; rel=self
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/cz?representation:include=dsc>; rel=tree
 
 {
   "CapitalLatitude": "50.083333333333336", 
@@ -398,11 +432,11 @@ Link: <http://localhost/api/2.0/taxonomies/country/europe/cz?representation:incl
   "CountryName": "Czech Republic", 
   "ancestors": [
     {
-      "links":{"self":"http://localhost/api/2.0/taxonomies/country/europe"},
+      "links":{"self":"http://127.0.0.1:5000/api/2.0/taxonomies/country/europe"},
       "slug": "europe"
     }
   ], 
-  "links":{"self":"http://localhost/api/2.0/taxonomies/country/europe/cz"},
+  "links":{"self":"http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/cz"},
   "slug": "europe/cz"
 }
 ```
@@ -416,8 +450,8 @@ $ curl -i -H "Prefer: return=minimal; include=lvl" \
   http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/cz
 
 HTTP/1.0 200 OK
-Link: <http://localhost/api/2.0/taxonomies/country/europe/cz>; rel=self
-Link: <http://localhost/api/2.0/taxonomies/country/europe/cz?representation:include=dsc>; rel=tree
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/cz>; rel=self
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/cz?representation:include=dsc>; rel=tree
 
 {
   "level": 2, 
@@ -442,7 +476,7 @@ Content-Type: application/json
   "ContinentName": "Europe", 
   "CountryCode": "GB", 
   "CountryName": "United Kingdom",
-  "links":{"self":"http://localhost/api/2.0/taxonomies/country/europe/gb"}
+  "links":{"self":"http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/gb"}
 }
 ```
 
@@ -453,7 +487,7 @@ $ curl -i http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/gb
 HTTP/1.0 410 GONE
 
 {
-  "message": "http://localhost/api/2.0/taxonomies/country/europe/gb was not found on the server",
+  "message": "http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/gb was not found on the server",
   "reason": "deleted"
 }
 ```
@@ -465,8 +499,8 @@ $ curl -i -H "Prefer: return=minimal; include=del sta" \
   http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/gb
 
 HTTP/1.0 200 OK
-Link: <http://localhost/api/2.0/taxonomies/country/europe/gb>; rel=self
-Link: <http://localhost/api/2.0/taxonomies/country/europe/gb?representation:include=dsc>; rel=tree
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/gb>; rel=self
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/gb?representation:include=dsc>; rel=tree
 
 {
   "slug": "europe/gb", 
@@ -483,8 +517,8 @@ $ curl -i -H "Prefer: return=minimal; include=del sta dsc" \
   http://127.0.0.1:5000/api/2.0/taxonomies/country/europe
 
 HTTP/1.0 200 OK
-Link: <http://localhost/api/2.0/taxonomies/country/europe>; rel=self
-Link: <http://localhost/api/2.0/taxonomies/country/europe?representation:include=dsc>; rel=tree
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe>; rel=self
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe?representation:include=dsc>; rel=tree
 
 {
   "children": [
@@ -522,12 +556,12 @@ curl -i -H "Prefer: return=minimal;" \
      representation:include=sta,url&representation:exclude=slug"
 
 HTTP/1.0 200 OK
-Link: <http://localhost/api/2.0/taxonomies/country/europe>; rel=self
-Link: <http://localhost/api/2.0/taxonomies/country/europe?representation:include=dsc>; rel=tree
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe>; rel=self
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe?representation:include=dsc>; rel=tree
 
 {
   "links": {
-    "self": "http://localhost/api/2.0/taxonomies/country/europe"
+    "self": "http://127.0.0.1:5000/api/2.0/taxonomies/country/europe"
   }, 
   "status": "alive"
 }
@@ -543,8 +577,8 @@ $ curl -i -H "Prefer: return=representation;select=/CapitalName /CountryCode" \
     "http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/cz"
 
 HTTP/1.0 200 OK
-Link: <http://localhost/api/2.0/taxonomies/country/europe/cz>; rel=self
-Link: <http://localhost/api/2.0/taxonomies/country/europe/cz?representation:include=dsc>; rel=tree
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/cz>; rel=self
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/cz?representation:include=dsc>; rel=tree
 
 {
   "CapitalName": "Prague", 
@@ -552,12 +586,12 @@ Link: <http://localhost/api/2.0/taxonomies/country/europe/cz?representation:incl
   "ancestors": [
     {
       "links": {
-        "self": "http://localhost/api/2.0/taxonomies/country/europe"
+        "self": "http://127.0.0.1:5000/api/2.0/taxonomies/country/europe"
       }
     }
   ], 
   "links": {
-    "self": "http://localhost/api/2.0/taxonomies/country/europe/cz"
+    "self": "http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/cz"
   }
 }
 ```
@@ -576,8 +610,8 @@ $ curl -i -H "Prefer: return=minimal;" \
   "http://127.0.0.1:5000/api/2.0/taxonomies/country/europe?representation:include=dsc&size=5"
 
 HTTP/1.0 200 OK
-Link: <http://localhost/api/2.0/taxonomies/country/europe>; rel=self
-Link: <http://localhost/api/2.0/taxonomies/country/europe?representation:include=dsc>; rel=tree
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe>; rel=self
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe?representation:include=dsc>; rel=tree
 X-Page: 1
 X-PageSize: 5
 X-Total: 58
@@ -608,8 +642,8 @@ $ curl -i -H "Prefer: return=minimal;" \
   "http://127.0.0.1:5000/api/2.0/taxonomies/country/europe?representation:include=dsc&size=5&page=4"
 
 HTTP/1.0 200 OK
-Link: <http://localhost/api/2.0/taxonomies/country/europe/dk>; rel=self
-Link: <http://localhost/api/2.0/taxonomies/country/europe/dk?representation:include=dsc>; rel=tree
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/dk>; rel=self
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/dk?representation:include=dsc>; rel=tree
 X-Page: 4
 X-PageSize: 5
 X-Total: 58
@@ -641,8 +675,8 @@ $ curl -i -H "Prefer: return=minimal;" \
   "http://127.0.0.1:5000/api/2.0/taxonomies/country/europe?representation:include=dsc,anh&size=5&page=2"
 
 HTTP/1.0 200 OK
-Link: <http://localhost/api/2.0/taxonomies/country/europe/ax>; rel=self
-Link: <http://localhost/api/2.0/taxonomies/country/europe/ax?representation:include=dsc>; rel=tree
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/ax>; rel=self
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/ax?representation:include=dsc>; rel=tree
 X-Page: 2
 X-PageSize: 5
 X-Total: 58
@@ -675,8 +709,8 @@ $ curl -i -H "Prefer: return=minimal;" \
      representation:include=dsc&representation:exclude=self&size=5&page=1"
 
 HTTP/1.0 200 OK
-Link: <http://localhost/api/2.0/taxonomies/country/europe/ad>; rel=self
-Link: <http://localhost/api/2.0/taxonomies/country/europe/ad?representation:include=dsc>; rel=tree
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/ad>; rel=self
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/ad?representation:include=dsc>; rel=tree
 X-Page: 1
 X-PageSize: 5
 X-Total: 58
@@ -713,14 +747,14 @@ $ curl -i -X PUT 'http://127.0.0.1:5000/api/2.0/taxonomies/test' \
 }'
 
 HTTP/1.0 201 CREATED
-Link: <http://localhost/api/2.0/taxonomies/test/>; rel=self
-Link: <http://localhost/api/2.0/taxonomies/test/?representation:include=dsc>; rel=tree
-Location: http://localhost/api/2.0/taxonomies/test/
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/test/>; rel=self
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/test/?representation:include=dsc>; rel=tree
+Location: http://127.0.0.1:5000/api/2.0/taxonomies/test/
 
 {
   "code": "test", 
   "links": {
-    "self": "http://localhost/api/2.0/taxonomies/test/"
+    "self": "http://127.0.0.1:5000/api/2.0/taxonomies/test/"
   }, 
   "title": "Test taxonomy"
 }
@@ -735,14 +769,14 @@ $ curl -i -X POST 'http://127.0.0.1:5000/api/2.0/taxonomies/' \
 }'
 
 HTTP/1.0 201 CREATED
-Link: <http://localhost/api/2.0/taxonomies/test1/>; rel=self
-Link: <http://localhost/api/2.0/taxonomies/test1/?representation:include=dsc>; rel=tree
-Location: http://localhost/api/2.0/taxonomies/test1/
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/test1/>; rel=self
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/test1/?representation:include=dsc>; rel=tree
+Location: http://127.0.0.1:5000/api/2.0/taxonomies/test1/
 
 {
   "code": "test1", 
   "links": {
-    "self": "http://localhost/api/2.0/taxonomies/test1/"
+    "self": "http://127.0.0.1:5000/api/2.0/taxonomies/test1/"
   }, 
   "title": "Test taxonomy 1"
 }
@@ -759,13 +793,13 @@ $ curl -i -X PUT 'http://127.0.0.1:5000/api/2.0/taxonomies/test' \
 }'
 
 HTTP/1.0 200 OK
-Link: <http://localhost/api/2.0/taxonomies/test/>; rel=self
-Link: <http://localhost/api/2.0/taxonomies/test/?representation:include=dsc>; rel=tree
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/test/>; rel=self
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/test/?representation:include=dsc>; rel=tree
 
 {
   "code": "test", 
   "links": {
-    "self": "http://localhost/api/2.0/taxonomies/test/"
+    "self": "http://127.0.0.1:5000/api/2.0/taxonomies/test/"
   }, 
   "title": "Test taxonomy updated"
 }
@@ -782,13 +816,13 @@ $ curl -i -X PATCH 'http://127.0.0.1:5000/api/2.0/taxonomies/test' \
 }]'
 
 HTTP/1.0 200 OK
-Link: <http://localhost/api/2.0/taxonomies/test/>; rel=self
-Link: <http://localhost/api/2.0/taxonomies/test/?representation:include=dsc>; rel=tree
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/test/>; rel=self
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/test/?representation:include=dsc>; rel=tree
 
 {
   "code": "test", 
   "links": {
-    "self": "http://localhost/api/2.0/taxonomies/test/"
+    "self": "http://127.0.0.1:5000/api/2.0/taxonomies/test/"
   }, 
   "title": "Test taxonomy updated via patch"
 }
@@ -815,13 +849,13 @@ $ curl -i -X PUT 'http://127.0.0.1:5000/api/2.0/taxonomies/test/term' \
 }'
 
 HTTP/1.0 201 CREATED
-Link: <http://localhost/api/2.0/taxonomies/test/term>; rel=self
-Link: <http://localhost/api/2.0/taxonomies/test/term?representation:include=dsc>; rel=tree
-Location: http://localhost/api/2.0/taxonomies/test/term
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/test/term>; rel=self
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/test/term?representation:include=dsc>; rel=tree
+Location: http://127.0.0.1:5000/api/2.0/taxonomies/test/term
 
 {
   "links": {
-    "self": "http://localhost/api/2.0/taxonomies/test/term"
+    "self": "http://127.0.0.1:5000/api/2.0/taxonomies/test/term"
   }, 
   "title": "Test Term"
 }
@@ -836,13 +870,13 @@ $ curl -i -X POST 'http://127.0.0.1:5000/api/2.0/taxonomies/test' \
 }'
 
 HTTP/1.0 201 CREATED
-Link: <http://localhost/api/2.0/taxonomies/test/term1>; rel=self
-Link: <http://localhost/api/2.0/taxonomies/test/term1?representation:include=dsc>; rel=tree
-Location: http://localhost/api/2.0/taxonomies/test/term1
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/test/term1>; rel=self
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/test/term1?representation:include=dsc>; rel=tree
+Location: http://127.0.0.1:5000/api/2.0/taxonomies/test/term1
 
 {
   "links": {
-    "self": "http://localhost/api/2.0/taxonomies/test/term1"
+    "self": "http://127.0.0.1:5000/api/2.0/taxonomies/test/term1"
   }, 
   "title": "Test term 1"
 }
@@ -857,21 +891,21 @@ $ curl -i -X PUT 'http://127.0.0.1:5000/api/2.0/taxonomies/test/term/nested' \
 }'
 
 HTTP/1.0 201 CREATED
-Link: <http://localhost/api/2.0/taxonomies/test/term/nested>; rel=self
-Link: <http://localhost/api/2.0/taxonomies/test/term/nested?representation:include=dsc>; rel=tree
-Location: http://localhost/api/2.0/taxonomies/test/term/nested
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/test/term/nested>; rel=self
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/test/term/nested?representation:include=dsc>; rel=tree
+Location: http://127.0.0.1:5000/api/2.0/taxonomies/test/term/nested
 
 {
   "ancestors":[
      {
        "links":{
-         "self":"http://localhost/api/2.0/taxonomies/test/term"
+         "self":"http://127.0.0.1:5000/api/2.0/taxonomies/test/term"
        },
        "title":"Test Term"
      }
   ],
   "links": {
-    "self": "http://localhost/api/2.0/taxonomies/test/term/nested"
+    "self": "http://127.0.0.1:5000/api/2.0/taxonomies/test/term/nested"
   }, 
   "title": "Nested Term"
 }
@@ -886,21 +920,21 @@ $ curl -i -X POST 'http://127.0.0.1:5000/api/2.0/taxonomies/test/term1' \
 }'
 
 HTTP/1.0 201 CREATED
-Link: <http://localhost/api/2.0/taxonomies/test/term1/nested1>; rel=self
-Link: <http://localhost/api/2.0/taxonomies/test/term1/nested1?representation:include=dsc>; rel=tree
-Location: http://localhost/api/2.0/taxonomies/test/term1/nested1
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/test/term1/nested1>; rel=self
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/test/term1/nested1?representation:include=dsc>; rel=tree
+Location: http://127.0.0.1:5000/api/2.0/taxonomies/test/term1/nested1
 
 {
   "ancestors":[
      {
        "links":{
-         "self":"http://localhost/api/2.0/taxonomies/test/term1"
+         "self":"http://127.0.0.1:5000/api/2.0/taxonomies/test/term1"
        },
        "title":"Test term 1"
      }
   ],
   "links": {
-    "self": "http://localhost/api/2.0/taxonomies/test/term1/nested1"
+    "self": "http://127.0.0.1:5000/api/2.0/taxonomies/test/term1/nested1"
   }, 
   "title": "Test nested term 1"
 }
@@ -917,12 +951,12 @@ $ curl -i -X PUT 'http://127.0.0.1:5000/api/2.0/taxonomies/test/term' \
 }'
 
 HTTP/1.0 200 OK
-Link: <http://localhost/api/2.0/taxonomies/test/term>; rel=self
-Link: <http://localhost/api/2.0/taxonomies/test/term?representation:include=dsc>; rel=tree
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/test/term>; rel=self
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/test/term?representation:include=dsc>; rel=tree
 
 {
   "links": {
-    "self": "http://localhost/api/2.0/taxonomies/test/term"
+    "self": "http://127.0.0.1:5000/api/2.0/taxonomies/test/term"
   }, 
   "title": "Test Term updated"
 }
@@ -937,12 +971,12 @@ $ curl -i -X PATCH 'http://127.0.0.1:5000/api/2.0/taxonomies/test/term' \
 }]'
 
 HTTP/1.0 200 OK
-Link: <http://localhost/api/2.0/taxonomies/test/term>; rel=self
-Link: <http://localhost/api/2.0/taxonomies/test/term?representation:include=dsc>; rel=tree
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/test/term>; rel=self
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/test/term?representation:include=dsc>; rel=tree
 
 {
   "links": {
-    "self": "http://localhost/api/2.0/taxonomies/test/term"
+    "self": "http://127.0.0.1:5000/api/2.0/taxonomies/test/term"
   }, 
   "title": "Test taxonomy term updated via patch"
 }
@@ -960,7 +994,7 @@ Content-Type: application/json
 
 {
   "links": {
-    "self": "http://localhost/api/2.0/taxonomies/test/term1"
+    "self": "http://127.0.0.1:5000/api/2.0/taxonomies/test/term1"
   }, 
   "title": "Test term 1"
 }
@@ -974,7 +1008,7 @@ $ curl -i 'http://127.0.0.1:5000/api/2.0/taxonomies/test/term1'
 HTTP/1.0 410 GONE
 
 {
-  "message": "http://localhost/api/2.0/taxonomies/test/term1 was not found on the server",
+  "message": "http://127.0.0.1:5000/api/2.0/taxonomies/test/term1 was not found on the server",
   "reason": "deleted"
 }
 ```
@@ -984,12 +1018,12 @@ But the term stays on the server:
 ```console
 $ curl -i 'http://127.0.0.1:5000/api/2.0/taxonomies/test/term?representation:include=del'
 HTTP/1.0 200 OK
-Link: <http://localhost/api/2.0/taxonomies/test/term>; rel=self
-Link: <http://localhost/api/2.0/taxonomies/test/term?representation:include=dsc>; rel=tree
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/test/term>; rel=self
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/test/term?representation:include=dsc>; rel=tree
 
 {
   "links": {
-    "self": "http://localhost/api/2.0/taxonomies/test/term"
+    "self": "http://127.0.0.1:5000/api/2.0/taxonomies/test/term"
   }, 
   "title": "Test taxonomy term updated via patch"
 }
@@ -1005,8 +1039,8 @@ $ curl -i -X PATCH -H "Prefer: return=minimal; include=del" \
     --header 'Content-Type: application/json' --data-raw '[]'
 
 HTTP/1.0 200 OK
-Link: <http://localhost/api/2.0/taxonomies/test/term>; rel=self
-Link: <http://localhost/api/2.0/taxonomies/test/term?representation:include=dsc>; rel=tree
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/test/term>; rel=self
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/test/term?representation:include=dsc>; rel=tree
 
 {
   "slug": "term"
@@ -1027,7 +1061,7 @@ HTTP/1.0 200 OK
 
 {
     "links":{
-        "self":"http://localhost/api/2.0/taxonomies/test/nested"
+        "self":"http://127.0.0.1:5000/api/2.0/taxonomies/test/nested"
     },
     "title":"Nested Term"
 }
@@ -1039,11 +1073,11 @@ The original url returns 301:
 $ curl -i 'http://127.0.0.1:5000/api/2.0/taxonomies/test/term/nested'
 
 HTTP/1.0 301 MOVED PERMANENTLY
-Location: http://localhost/api/2.0/taxonomies/test/nested
+Location: http://127.0.0.1:5000/api/2.0/taxonomies/test/nested
 
 {
     "links": {
-        "self": "http://localhost/api/2.0/taxonomies/test/nested"
+        "self": "http://127.0.0.1:5000/api/2.0/taxonomies/test/nested"
     }, 
     "status": "deleted"
 }
@@ -1063,7 +1097,7 @@ HTTP/1.0 200 OK
 
 {
     "links":{
-        "self":"http://localhost/api/2.0/taxonomies/test/renamed-nested"
+        "self":"http://127.0.0.1:5000/api/2.0/taxonomies/test/renamed-nested"
     },
     "title":"Nested Term"
 }
@@ -1076,11 +1110,11 @@ The original url returns 301:
 $ curl -i 'http://127.0.0.1:5000/api/2.0/taxonomies/test/nested'
 
 HTTP/1.0 301 MOVED PERMANENTLY
-Location: http://localhost/api/2.0/taxonomies/test/renamed-nested
+Location: http://127.0.0.1:5000/api/2.0/taxonomies/test/renamed-nested
 
 {
     "links": {
-        "self": "http://localhost/api/2.0/taxonomies/test/renamed-nested"
+        "self": "http://127.0.0.1:5000/api/2.0/taxonomies/test/renamed-nested"
     }, 
     "status": "deleted"
 }
