@@ -38,6 +38,9 @@ before_install:
 install:
   - "travis_retry pip install -e .[$EXTRAS]"
 
+before_script:
+  - psql -U postgres -c "create extension ltree"
+
 script:
   - "./run-tests.sh"
 

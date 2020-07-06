@@ -64,6 +64,8 @@ def db(app):
         app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
         app.config["SQLALCHEMY_ECHO"] = True
         db = SQLAlchemy(app)
+        db.drop_all()
+        db.create_all()
         Base.metadata.create_all(db.engine)
         try:
             yield db
