@@ -255,7 +255,7 @@ class TaxonomyTerm(Base):
     __tablename__ = 'taxonomy_term'
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    slug = Column(PostgresSlugType().with_variant(SlugType(1024), 'sqlite'),
+    slug = Column(SlugType(1024).with_variant(PostgresSlugType(), 'postgresql'),
                   unique=False, index=True)
     extra_data = Column(JSON().with_variant(
         sqlalchemy.dialects.postgresql.JSONB, 'postgresql'))
