@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 
 include LICENSE
-recursive-include flask_taxonomies *.py
-recursive-include flask_taxonomies *.json
+recursive-include flask_taxonomies *.py *.json *.ini *.mako
 
 recursive-exclude tests *.py
+recursive-exclude example *py *csv
+
+include *.md
+include flask_taxonomies/alembic/README
 
 exclude .coveragerc
 exclude .pydocstyle
@@ -15,3 +18,6 @@ exclude *.yml
 exclude run-tests.sh
 exclude tests
 include *.rst
+
+exclude *.in
+exclude *.sh
