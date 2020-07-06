@@ -24,7 +24,7 @@ def representation_model_test(api):
     assert INCLUDE_ID in repr1
     assert INCLUDE_ID not in repr
 
-    repr1 = repr.extend(exclude = default_includes, select=['/a', '/b'])
+    repr1 = repr.extend(exclude=default_includes, select=['/a', '/b'])
     for i in default_includes:
         assert i in repr1.include
         assert i not in repr1
@@ -48,4 +48,3 @@ def prefer_header_test(api):
     assert rep.include == default_includes | {'a', 'b', 'c'}
     assert rep.exclude == {'d', 'e', 'f'}
     assert rep.select == {'/a', '/b'}
-

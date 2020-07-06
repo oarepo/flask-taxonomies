@@ -20,7 +20,9 @@ tests_require = [
     'pytest-flask-sqlalchemy',
     'md-toc',
     'isort',
-    'check-manifest'
+    'check-manifest',
+    'pytest-coverage',
+    'pytest-pep8'
 ]
 
 setup(
