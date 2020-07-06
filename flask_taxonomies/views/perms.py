@@ -1,8 +1,13 @@
+import traceback
 from functools import lru_cache
 
 from werkzeug.utils import import_string
 
 from flask_taxonomies.views.common import json_abort
+
+import logging
+
+log = logging.getLogger(__name__)
 
 
 class OperationPermsEnforcer:
@@ -10,14 +15,19 @@ class OperationPermsEnforcer:
         self.factory = factory
 
     def enforce(self, status_code=403, **kwargs):
-        if not self.factory:
-            return True
-        permissions = self.factory(**kwargs)
-        if not permissions:
-            return True
-        for perm in permissions:
-            if perm.can():
+        try:
+            if not self.factory:
                 return True
+            permissions = self.factory(**kwargs)
+            if not permissions:
+                return True
+            for perm in permissions:
+                if perm.can():
+                    return True
+        except:
+            log.exception('Exception occurred in permission testing')
+            traceback.print_exc()
+
         json_abort(status_code, {})
 
 
