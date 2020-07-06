@@ -1,11 +1,10 @@
+import logging
 import traceback
 from functools import lru_cache
 
 from werkzeug.utils import import_string
 
 from flask_taxonomies.views.common import json_abort
-
-import logging
 
 log = logging.getLogger(__name__)
 

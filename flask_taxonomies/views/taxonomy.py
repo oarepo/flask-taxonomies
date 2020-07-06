@@ -2,15 +2,16 @@ import traceback
 
 import jsonpatch
 import sqlalchemy
-from flask import abort, request, Response
+from flask import Response, abort, request
 from sqlalchemy.orm.exc import NoResultFound
 from webargs.flaskparser import use_kwargs
 
-from flask_taxonomies.constants import INCLUDE_DESCENDANTS, INCLUDE_DELETED
-from flask_taxonomies.marshmallow import HeaderSchema, QuerySchema, PaginatedQuerySchema
-from flask_taxonomies.models import TaxonomyTerm, TermStatusEnum, EnvelopeLinks
+from flask_taxonomies.constants import INCLUDE_DELETED, INCLUDE_DESCENDANTS
+from flask_taxonomies.marshmallow import HeaderSchema, PaginatedQuerySchema, QuerySchema
+from flask_taxonomies.models import EnvelopeLinks, TaxonomyTerm, TermStatusEnum
 from flask_taxonomies.proxies import current_flask_taxonomies
-from .common import blueprint, with_prefer, build_descendants, json_abort
+
+from .common import blueprint, build_descendants, json_abort, with_prefer
 from .paginator import Paginator
 
 

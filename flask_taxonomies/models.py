@@ -4,13 +4,22 @@ from collections import namedtuple
 
 import sqlalchemy.dialects
 from flask import current_app
-from sqlalchemy import Column, Integer, String, JSON, ForeignKey, Index, Enum, UniqueConstraint
+from sqlalchemy import (
+    JSON,
+    Column,
+    Enum,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    UniqueConstraint,
+)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from werkzeug.utils import cached_property
 
 from flask_taxonomies.constants import *
-from flask_taxonomies.fields import SlugType, PostgresSlugType
+from flask_taxonomies.fields import PostgresSlugType, SlugType
 from flask_taxonomies.proxies import current_flask_taxonomies
 
 logger = logging.getLogger('taxonomies')

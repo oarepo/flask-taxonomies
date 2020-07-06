@@ -1,8 +1,15 @@
 import os
 
 import pytest
-from flask import Flask, g, request as flask_request, current_app
-from flask_principal import Principal, identity_changed, Identity, identity_loaded, UserNeed
+from flask import Flask, current_app, g
+from flask import request as flask_request
+from flask_principal import (
+    Identity,
+    Principal,
+    UserNeed,
+    identity_changed,
+    identity_loaded,
+)
 from flask_sqlalchemy import SQLAlchemy
 
 from example.import_countries import import_countries

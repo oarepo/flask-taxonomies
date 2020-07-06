@@ -1,8 +1,8 @@
 from flask import current_app
 
 from flask_taxonomies.constants import INCLUDE_ID
-from flask_taxonomies.models import Representation
 from flask_taxonomies.marshmallow import PreferHeaderField
+from flask_taxonomies.models import Representation
 
 
 def representation_model_test(api):

@@ -1,10 +1,13 @@
-from flask import jsonify, current_app
-from link_header import LinkHeader, Link
+from flask import current_app, jsonify
+from link_header import Link, LinkHeader
 from sqlalchemy.orm.exc import NoResultFound
 from werkzeug.utils import cached_property
 
-from flask_taxonomies.constants import INCLUDE_ENVELOPE, \
-    INCLUDE_ANCESTORS_HIERARCHY, INCLUDE_SELF
+from flask_taxonomies.constants import (
+    INCLUDE_ANCESTORS_HIERARCHY,
+    INCLUDE_ENVELOPE,
+    INCLUDE_SELF,
+)
 from flask_taxonomies.models import EnvelopeLinks
 
 

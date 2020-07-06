@@ -1,7 +1,7 @@
 import sqlalchemy
 
-from flask_taxonomies.term_identification import TermIdentification
 from flask_taxonomies.models import Taxonomy, TaxonomyTerm
+from flask_taxonomies.term_identification import TermIdentification
 
 
 def to_json(api, taxonomy_or_term):

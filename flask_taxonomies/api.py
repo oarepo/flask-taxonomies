@@ -12,11 +12,23 @@ from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.util import deprecated
 
 from .constants import INCLUDE_DATA, INCLUDE_DESCENDANTS
-from .models import Taxonomy, TaxonomyTerm, TermStatusEnum, TaxonomyError
-from .signals import before_taxonomy_created, after_taxonomy_created, before_taxonomy_updated, \
-    after_taxonomy_updated, before_taxonomy_deleted, after_taxonomy_deleted, before_taxonomy_term_created, \
-    after_taxonomy_term_created, before_taxonomy_term_deleted, after_taxonomy_term_deleted, \
-    before_taxonomy_term_updated, after_taxonomy_term_updated, before_taxonomy_term_moved, after_taxonomy_term_moved
+from .models import Taxonomy, TaxonomyError, TaxonomyTerm, TermStatusEnum
+from .signals import (
+    after_taxonomy_created,
+    after_taxonomy_deleted,
+    after_taxonomy_term_created,
+    after_taxonomy_term_deleted,
+    after_taxonomy_term_moved,
+    after_taxonomy_term_updated,
+    after_taxonomy_updated,
+    before_taxonomy_created,
+    before_taxonomy_deleted,
+    before_taxonomy_term_created,
+    before_taxonomy_term_deleted,
+    before_taxonomy_term_moved,
+    before_taxonomy_term_updated,
+    before_taxonomy_updated,
+)
 from .term_identification import TermIdentification, _coerce_ti
 from .views.perms import PermsEnforcer
 

@@ -5,11 +5,12 @@ Revises:
 Create Date: 2020-04-27 09:43:25.766541
 
 """
-from alembic import op
 import sqlalchemy as sa
-import flask_taxonomies.fields
+from alembic import op
 from sqlalchemy import Text
 from sqlalchemy.dialects import postgresql
+
+import flask_taxonomies.fields
 
 # revision identifiers, used by Alembic.
 revision = 'e9f9ed09a386'

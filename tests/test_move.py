@@ -1,6 +1,6 @@
 import pytest
 
-from flask_taxonomies.models import TermStatusEnum, TaxonomyError
+from flask_taxonomies.models import TaxonomyError, TermStatusEnum
 from flask_taxonomies.utils import to_json
 
 

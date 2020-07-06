@@ -1,7 +1,7 @@
 import sqlalchemy as sa
 from sqlalchemy import types
 from sqlalchemy.sql.operators import custom_op
-from sqlalchemy_utils import LtreeType, Ltree
+from sqlalchemy_utils import Ltree, LtreeType
 
 
 class PostgresSlugType(LtreeType):

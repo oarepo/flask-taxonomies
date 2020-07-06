@@ -3,17 +3,26 @@ import traceback
 from urllib.parse import urljoin, urlparse
 
 import sqlalchemy
-from flask import jsonify, abort, request, Response, current_app
+from flask import Response, abort, current_app, jsonify, request
 from sqlalchemy.orm.exc import NoResultFound
 from webargs.flaskparser import use_kwargs
 
-from flask_taxonomies.term_identification import TermIdentification
-from flask_taxonomies.constants import INCLUDE_DESCENDANTS, INCLUDE_DELETED, INCLUDE_SELF
-from flask_taxonomies.marshmallow import HeaderSchema, PaginatedQuerySchema, MoveHeaderSchema
+from flask_taxonomies.constants import (
+    INCLUDE_DELETED,
+    INCLUDE_DESCENDANTS,
+    INCLUDE_SELF,
+)
+from flask_taxonomies.marshmallow import (
+    HeaderSchema,
+    MoveHeaderSchema,
+    PaginatedQuerySchema,
+)
 from flask_taxonomies.models import TaxonomyTerm, TermStatusEnum
 from flask_taxonomies.proxies import current_flask_taxonomies
 from flask_taxonomies.routing import accept_fallback
-from .common import blueprint, with_prefer, build_descendants, json_abort
+from flask_taxonomies.term_identification import TermIdentification
+
+from .common import blueprint, build_descendants, json_abort, with_prefer
 from .paginator import Paginator
 
 

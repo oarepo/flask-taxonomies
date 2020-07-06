@@ -1,5 +1,6 @@
 from flask import current_app
 from werkzeug.local import LocalProxy
+
 if False:
     import flask_taxonomies.api
 

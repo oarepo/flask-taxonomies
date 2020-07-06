@@ -1,4 +1,4 @@
-from flask_taxonomies.models import TaxonomyTerm, Taxonomy, TaxonomyError
+from flask_taxonomies.models import Taxonomy, TaxonomyError, TaxonomyTerm
 
 
 class TermIdentification:

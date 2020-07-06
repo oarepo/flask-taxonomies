@@ -1,10 +1,10 @@
 import re
 
-from marshmallow import utils, Schema, EXCLUDE
+from marshmallow import EXCLUDE, Schema, utils
 from marshmallow.fields import Field, Integer, String
 from werkzeug.http import parse_options_header
 
-from flask_taxonomies.models import Representation, DEFAULT_REPRESENTATION
+from flask_taxonomies.models import DEFAULT_REPRESENTATION, Representation
 
 RETURN_PREFIX = 'return='
 

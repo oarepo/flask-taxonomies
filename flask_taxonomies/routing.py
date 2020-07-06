@@ -4,7 +4,6 @@ from functools import partial
 from flask import request
 from werkzeug.exceptions import NotAcceptable
 
-
 # extended from https://github.com/di/flask-accept
 #
 # The MIT License (MIT)

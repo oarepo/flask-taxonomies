@@ -1,6 +1,12 @@
 from build.lib.flask_taxonomies.constants import INCLUDE_ANCESTORS
-from flask_taxonomies.constants import INCLUDE_DATA, INCLUDE_ANCESTORS_HIERARCHY, INCLUDE_URL, INCLUDE_DESCENDANTS_URL, \
-    INCLUDE_SLUG, INCLUDE_SELF
+from flask_taxonomies.constants import (
+    INCLUDE_ANCESTORS_HIERARCHY,
+    INCLUDE_DATA,
+    INCLUDE_DESCENDANTS_URL,
+    INCLUDE_SELF,
+    INCLUDE_SLUG,
+    INCLUDE_URL,
+)
 
 #
 # Server name hosting the taxonomies. If not set,
