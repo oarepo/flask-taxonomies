@@ -16,7 +16,7 @@ requires = [
 ]
 
 tests_require = [
-    'pytest',
+    'pytest>=5.4',
     'pytest-flask-sqlalchemy',
     'md-toc',
     'isort',
