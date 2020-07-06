@@ -22,7 +22,7 @@ cache:
 
 env:
   global:
-    - POSTGRESQL_SQLALCHEMY_DATABASE_URI="postgresql+psycopg2://postgres@localhost:5432/invenio"
+    - POSTGRESQL_SQLALCHEMY_DATABASE_URI="postgresql+psycopg2://postgres@localhost:5432/flask-taxonomies-test"
   matrix:
     - REQUIREMENTS=release EXTRAS=postgresql,tests SQLALCHEMY_DATABASE_URI=$POSTGRESQL_SQLALCHEMY_DATABASE_URI
     - REQUIREMENTS=release EXTRAS=sqlite,tests

@@ -60,7 +60,7 @@ def client(app):
 def db(app):
     from flask_taxonomies.models import Base
     with app.app_context():
-        app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('TEST_DATABASE_URI', 'sqlite:///test.sqlite3')
+        app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('SQLALCHEMY_DATABASE_URI', 'sqlite:///test.sqlite3')
         app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
         app.config["SQLALCHEMY_ECHO"] = True
         db = SQLAlchemy(app)
