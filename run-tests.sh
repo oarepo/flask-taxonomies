@@ -25,4 +25,4 @@
 
 isort -rc -c -df . && \
 check-manifest --ignore ".travis-*" && \
-python setup.py test
+pytest

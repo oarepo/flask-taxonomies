@@ -1,5 +1,5 @@
-from build.lib.flask_taxonomies.constants import INCLUDE_ANCESTORS
 from flask_taxonomies.constants import (
+    INCLUDE_ANCESTORS,
     INCLUDE_ANCESTORS_HIERARCHY,
     INCLUDE_DATA,
     INCLUDE_DESCENDANTS_URL,

@@ -4,8 +4,11 @@ import json
 import sqlalchemy
 from flask import Blueprint, Response, abort
 
-from build.lib.flask_taxonomies.constants import INCLUDE_ANCESTORS
-from flask_taxonomies.constants import INCLUDE_ANCESTORS_HIERARCHY, INCLUDE_DELETED
+from flask_taxonomies.constants import (
+    INCLUDE_ANCESTORS,
+    INCLUDE_ANCESTORS_HIERARCHY,
+    INCLUDE_DELETED,
+)
 from flask_taxonomies.models import TaxonomyTerm, TermStatusEnum
 from flask_taxonomies.proxies import current_flask_taxonomies
 from flask_taxonomies.term_identification import TermIdentification
