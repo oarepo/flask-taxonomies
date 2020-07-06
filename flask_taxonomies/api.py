@@ -135,7 +135,11 @@ class Api:
         return query
 
     def taxonomy_url(self, taxonomy: [Taxonomy, str], descendants=False):
-        proto = current_app.config.get('FLASK_TAXONOMIES_SERVER_SCHEME')
+        proto = (
+                current_app.config.get('FLASK_TAXONOMIES_SERVER_SCHEME') or
+                current_app.config.get('PREFERRED_URL_SCHEME') or
+                'https'
+        )
         prefix = current_app.config.get('FLASK_TAXONOMIES_URL_PREFIX')
         base = current_app.config.get('FLASK_TAXONOMIES_SERVER_NAME')
         if not base:

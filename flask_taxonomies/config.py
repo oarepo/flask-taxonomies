@@ -15,9 +15,9 @@ from flask_taxonomies.constants import (
 # FLASK_TAXONOMIES_SERVER_NAME =
 
 #
-# Protocol to use in generated urls
+# Protocol to use in generated urls. If not set, defaults to PREFERRED_URL_SCHEME
 #
-FLASK_TAXONOMIES_SERVER_SCHEME = 'https'
+FLASK_TAXONOMIES_SERVER_SCHEME = None
 
 #
 # A prefix on which taxonomies are served
