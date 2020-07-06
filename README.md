@@ -52,10 +52,12 @@ pip install flask-taxonomies
 from flask_taxonomies.ext import FlaskTaxonomies
 from flask_taxonomies.views import blueprint
 from flask import Flask
+from flask_principal import Principal
 
 app = Flask('__test__')
 
 FlaskTaxonomies(app)
+Principal(app)
 app.register_blueprint(blueprint, url_prefix=app.config['FLASK_TAXONOMIES_URL_PREFIX'])
 
 db = ...
