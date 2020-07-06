@@ -10,7 +10,7 @@ from flask_taxonomies.constants import INCLUDE_DESCENDANTS, INCLUDE_DELETED
 from flask_taxonomies.marshmallow import HeaderSchema, QuerySchema, PaginatedQuerySchema
 from flask_taxonomies.models import TaxonomyTerm, TermStatusEnum, EnvelopeLinks
 from flask_taxonomies.proxies import current_flask_taxonomies
-from .common import blueprint, with_prefer, build_descendants
+from .common import blueprint, with_prefer, build_descendants, json_abort
 from .paginator import Paginator
 
 
@@ -19,6 +19,7 @@ from .paginator import Paginator
 @use_kwargs(PaginatedQuerySchema, location="query")
 @with_prefer
 def list_taxonomies(prefer=None, page=None, size=None):
+    current_flask_taxonomies.permissions.taxonomy_list.enforce(request=request)
     taxonomies = current_flask_taxonomies.list_taxonomies()
     paginator = Paginator(
         prefer, taxonomies, page, size,
@@ -31,8 +32,6 @@ def list_taxonomies(prefer=None, page=None, size=None):
     return paginator.jsonify()
 
 
-
-
 @blueprint.route('/<code>', strict_slashes=False)
 @use_kwargs(HeaderSchema, location="headers")
 @use_kwargs(PaginatedQuerySchema, location="query")
@@ -41,8 +40,10 @@ def get_taxonomy(code=None, prefer=None, page=None, size=None, status_code=200):
     try:
         taxonomy = current_flask_taxonomies.get_taxonomy(code)
     except NoResultFound:
-        abort(404, 'Taxonomy with code %s not found' % code)
-        return      # make pycharm happy
+        json_abort(404, {})
+        return  # make pycharm happy
+
+    current_flask_taxonomies.permissions.taxonomy_read.enforce(request=request, status_code=404)
 
     prefer = taxonomy.merge_select(prefer)
 
@@ -82,7 +83,7 @@ def get_taxonomy(code=None, prefer=None, page=None, size=None, status_code=200):
         return paginator.jsonify(status_code=status_code)
 
     except NoResultFound:
-        abort(404)
+        json_abort(404, {})
     except:
         traceback.print_exc()
         raise
@@ -94,6 +95,12 @@ def get_taxonomy(code=None, prefer=None, page=None, size=None, status_code=200):
 @with_prefer
 def create_update_taxonomy(code=None, prefer=None, page=None, size=None):
     tax = current_flask_taxonomies.get_taxonomy(code=code, fail=False)
+
+    if tax:
+        current_flask_taxonomies.permissions.taxonomy_update.enforce(request=request, taxonomy=tax)
+    else:
+        current_flask_taxonomies.permissions.taxonomy_create.enforce(request=request, code=code)
+
     data = request.json
     url = data.pop('url', None)
     select = data.pop('select', None)
@@ -114,7 +121,9 @@ def create_update_taxonomy(code=None, prefer=None, page=None, size=None):
 def patch_taxonomy(code=None, prefer=None, page=None, size=None):
     tax = current_flask_taxonomies.get_taxonomy(code=code, fail=False)
     if not tax:
-        abort(404)
+        json_abort(404, {})
+
+    current_flask_taxonomies.permissions.taxonomy_update.enforce(request=request, taxonomy=tax)
 
     data = {
         **(tax.extra_data or {}),
@@ -143,9 +152,11 @@ def create_update_taxonomy_post(prefer=None):
     select = data.pop('select', None)
     tax = current_flask_taxonomies.get_taxonomy(code=code, fail=False)
     if not tax:
+        current_flask_taxonomies.permissions.taxonomy_create.enforce(request=request, code=code)
         current_flask_taxonomies.create_taxonomy(code=code, extra_data=data, url=url, select=select)
         status_code = 201
     else:
+        current_flask_taxonomies.permissions.taxonomy_update.enforce(request=request, taxonomy=tax)
         current_flask_taxonomies.update_taxonomy(tax, extra_data=data, url=url, select=select)
         status_code = 200
 
@@ -160,6 +171,12 @@ def delete_taxonomy(code=None):
     Note: this call is destructive in a sense that all its terms, regardless if used or not,
     are deleted as well. A tight user permissions should be employed.
     """
-    tax = current_flask_taxonomies.get_taxonomy(code=code, fail=False)
+    try:
+        tax = current_flask_taxonomies.get_taxonomy(code=code)
+    except NoResultFound:
+        json_abort(404, {})
+        return  # make pycharm happy
+
+    current_flask_taxonomies.permissions.taxonomy_delete.enforce(request=request, code=code)
     current_flask_taxonomies.delete_taxonomy(tax)
     return Response(status=204)

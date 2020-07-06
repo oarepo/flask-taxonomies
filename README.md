@@ -1138,6 +1138,37 @@ Specifies max results returned when pagination is not used. Defaults to ``10000`
 
 ### Security
 
+Flask taxonomies uses ``flask-principal`` to handle security. The default permissions are
+that everyone is allowed to read/create/update/delete/move all taxonomies and terms.
+
+To restrict the access, specify permission factories (a function that returns a list of permission)
+for each operation.
+
+``FLASK_TAXONOMIES_PERMISSION_FACTORIES``
+
+A dictionary of operation to a list of permissions.
+
+```
+FLASK_TAXONOMIES_PERMISSION_FACTORIES = {
+    'taxonomy_list':   request -> List[Permission]
+    'taxonomy_read':   request, taxonomy -> List[Permission]
+    'taxonomy_create': request, code -> List[Permission]
+    'taxonomy_update': request, taxonomy -> List[Permission]
+    'taxonomy_delete': request, taxonomy -> List[Permission],
+
+    'taxonomy_term_read':   request, taxonomy, slug -> List[Permission]
+    'taxonomy_term_create': request, taxonomy, slug -> List[Permission]
+    'taxonomy_term_update': request, taxonomy, term -> List[Permission]
+    'taxonomy_term_delete': request, taxonomy, term -> List[Permission],
+    'taxonomy_term_move': request, taxonomy, term, destination, rename -> List[Permission],
+}
+```
+The right-hand side can be either a list/tuple of permissions, function with the above-mentioned
+signatures or a string pointing to the implementation. The string form is resolved on 
+the first request. 
+
+If ``.can`` on any of the permissions returns True or the list is empty, access is granted.
+
 ## Python API
 
 ### Signals

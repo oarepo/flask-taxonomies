@@ -1,6 +1,6 @@
 import sqlalchemy
 
-from flask_taxonomies.api import TermIdentification
+from flask_taxonomies.term_identification import TermIdentification
 from flask_taxonomies.models import Taxonomy, TaxonomyTerm
 
 

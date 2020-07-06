@@ -11,7 +11,8 @@ requires = [
     'webargs',
     'jsonpointer',
     'LinkHeader',
-    'jsonpatch'
+    'jsonpatch',
+    'flask-principal'
 ]
 
 tests_require = [
@@ -28,5 +29,5 @@ setup(
     install_requires=requires,
     tests_require=tests_require,
     license='Creative Commons Attribution-Noncommercial-Share Alike license',
-    long_description=open('README.rst').read(),
+    long_description=open('README.md').read(),
 )

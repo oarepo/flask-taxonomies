@@ -7,7 +7,7 @@ from flask import jsonify, abort, request, Response, current_app
 from sqlalchemy.orm.exc import NoResultFound
 from webargs.flaskparser import use_kwargs
 
-from flask_taxonomies.api import TermIdentification
+from flask_taxonomies.term_identification import TermIdentification
 from flask_taxonomies.constants import INCLUDE_DESCENDANTS, INCLUDE_DELETED, INCLUDE_SELF
 from flask_taxonomies.marshmallow import HeaderSchema, PaginatedQuerySchema, MoveHeaderSchema
 from flask_taxonomies.models import TaxonomyTerm, TermStatusEnum
@@ -25,6 +25,8 @@ def get_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None, s
     try:
         taxonomy = current_flask_taxonomies.get_taxonomy(code)
         prefer = taxonomy.merge_select(prefer)
+
+        current_flask_taxonomies.permissions.taxonomy_term_read.enforce(request=request, taxonomy=taxonomy, slug=slug)
 
         if INCLUDE_DELETED in prefer:
             status_cond = sqlalchemy.sql.true()
@@ -107,6 +109,8 @@ def _create_update_taxonomy_term_internal(code, slug, prefer, page, size, extra_
         term = current_flask_taxonomies.filter_term(ti, status_cond=status_cond).one_or_none()
 
         if term:
+            current_flask_taxonomies.permissions.taxonomy_term_update.enforce(request=request, taxonomy=taxonomy,
+                                                                              term=term)
             current_flask_taxonomies.update_term(
                 term,
                 status_cond=status_cond,
@@ -114,6 +118,8 @@ def _create_update_taxonomy_term_internal(code, slug, prefer, page, size, extra_
             )
             status_code = 200
         else:
+            current_flask_taxonomies.permissions.taxonomy_term_create.enforce(request=request, taxonomy=taxonomy,
+                                                                              slug=slug)
             current_flask_taxonomies.create_term(
                 ti,
                 extra_data=extra_data
@@ -123,7 +129,7 @@ def _create_update_taxonomy_term_internal(code, slug, prefer, page, size, extra_
         return get_taxonomy_term(code=code, slug=slug, prefer=prefer, page=page, size=size, status_code=status_code)
 
     except NoResultFound:
-        abort(404)
+        json_abort(404, {})
     except:
         traceback.print_exc()
         raise
@@ -159,9 +165,9 @@ def create_taxonomy_term_post_on_root(code=None, slug=None, prefer=None, page=No
 @use_kwargs(PaginatedQuerySchema, location="query")
 @with_prefer
 def patch_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None):
-    taxonomy = current_flask_taxonomies.get_taxonomy(code)
+    taxonomy = current_flask_taxonomies.get_taxonomy(code, fail=False)
     if not taxonomy:
-        abort(404)
+        json_abort(404, {})
     prefer = taxonomy.merge_select(prefer)
 
     if INCLUDE_DELETED in prefer:
@@ -174,6 +180,8 @@ def patch_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None)
 
     if not term:
         abort(404)
+
+    current_flask_taxonomies.permissions.taxonomy_term_update.enforce(request=request, taxonomy=taxonomy, term=term)
 
     current_flask_taxonomies.update_term(
         term,
@@ -192,10 +200,15 @@ def patch_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None)
 @with_prefer
 def delete_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None):
     try:
+        taxonomy = current_flask_taxonomies.get_taxonomy(code)
+        ti = TermIdentification(taxonomy=code, slug=slug)
+        term = current_flask_taxonomies.filter_term(ti).one()
+
+        current_flask_taxonomies.permissions.taxonomy_term_delete.enforce(request=request, taxonomy=taxonomy, term=term)
         term = current_flask_taxonomies.delete_term(TermIdentification(taxonomy=code, slug=slug),
                                                     remove_after_delete=False)
     except NoResultFound as e:
-        return Response(str(e), status=404)
+        return json_abort(404, {})
     return jsonify(term.json(representation=prefer))
 
 
@@ -205,6 +218,18 @@ def delete_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None
 @with_prefer
 def taxonomy_move_term(code=None, slug=None, prefer=None, page=None, size=None, destination='', rename=''):
     """Move term into a new parent or rename it."""
+
+    try:
+        taxonomy = current_flask_taxonomies.get_taxonomy(code)
+        ti = TermIdentification(taxonomy=taxonomy, slug=slug)
+        term = current_flask_taxonomies.filter_term(ti).one()
+
+        current_flask_taxonomies.permissions.taxonomy_term_move.enforce(
+            request=request, taxonomy=taxonomy, term=term,
+            destination=destination, rename=rename)
+
+    except NoResultFound as e:
+        return json_abort(404, {})
 
     if destination:
         if destination.startswith('http'):
