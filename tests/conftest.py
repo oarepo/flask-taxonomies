@@ -1,7 +1,8 @@
 import os
 
 import pytest
-from flask import Flask
+from flask import Flask, g, request as flask_request, current_app
+from flask_principal import Principal, identity_changed, Identity, identity_loaded, UserNeed
 from flask_sqlalchemy import SQLAlchemy
 
 from example.import_countries import import_countries
@@ -11,14 +12,35 @@ from flask_taxonomies.proxies import current_flask_taxonomies
 from flask_taxonomies.views.common import blueprint
 
 
-@pytest.fixture
-def app():
+class User:
+    def __init__(self, username):
+        self.username = username
+
+
+@identity_loaded.connect
+def on_identity_loaded(sender, identity):
+    g.identity.provides.add(UserNeed(identity.id))
+
+
+@pytest.fixture(params=[{}])
+def app(request):
     app = Flask('__test__')
     app.config.update({
         'PREFERRED_URL_SCHEME': 'http',
         'SERVER_NAME': 'localhost',
-        'FLASK_TAXONOMIES_SERVER_SCHEME': 'http'
+        'FLASK_TAXONOMIES_SERVER_SCHEME': 'http',
+        'SECRET_KEY': 'test',
+        **request.param
     })
+    Principal(app)
+
+    # login
+    @app.route('/login', methods=['POST'])
+    def login():
+        username = flask_request.json['username']
+        identity_changed.send(app, identity=Identity(username))
+        return ''
+
     return app
 
 
