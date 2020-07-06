@@ -17,7 +17,7 @@ def app():
     app.config.update({
         'PREFERRED_URL_SCHEME': 'http',
         'SERVER_NAME': 'localhost',
-        'FLASK_TAXONOMIES_PROTOCOL': 'http'
+        'FLASK_TAXONOMIES_SERVER_SCHEME': 'http'
     })
     return app
 

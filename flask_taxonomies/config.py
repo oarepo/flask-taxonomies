@@ -11,7 +11,7 @@ from flask_taxonomies.constants import INCLUDE_DATA, INCLUDE_ANCESTORS_HIERARCHY
 #
 # Protocol to use in generated urls
 #
-FLASK_TAXONOMIES_PROTOCOL = 'https'
+FLASK_TAXONOMIES_SERVER_SCHEME = 'https'
 
 #
 # A prefix on which taxonomies are served

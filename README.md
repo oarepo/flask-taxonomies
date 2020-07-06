@@ -32,7 +32,9 @@
       - [Deleting](#deleting-1)
       - [Un-Deleting](#un-deleting)
       - [Moving](#moving)
+      - [Renaming](#renaming)
   - [Configuration](#configuration)
+    - [Configuration Variables](#configuration-variables)
     - [Security](#security)
   - [Python API](#python-api)
     - [Signals](#signals)
@@ -1083,6 +1085,56 @@ Location: http://localhost/api/2.0/taxonomies/test/renamed-nested
 
 
 ## Configuration
+
+### Configuration Variables
+
+``FLASK_TAXONOMIES_SERVER_NAME``
+
+Server name hosting the taxonomies. If not set, SERVER_NAME is used.
+
+``FLASK_TAXONOMIES_SERVER_SCHEME``
+
+Scheme to use in generated urls, defaults to ``https``
+
+``FLASK_TAXONOMIES_URL_PREFIX``
+
+A prefix on which taxonomies are served, defaults to ``/api/2.0/taxonomies/``
+
+``FLASK_TAXONOMIES_REPRESENTATION``
+
+Values for ``Prefer: return=`` header. ``minimal`` and ``representation`` are obligatory,
+you are free to add other return representations. 
+
+```python
+from flask_taxonomies.constants import *
+
+FLASK_TAXONOMIES_REPRESENTATION = {
+    'minimal': {
+        'include': [INCLUDE_SLUG, INCLUDE_SELF],
+        'exclude': [],
+        'select': None,
+        'options': {}
+    },
+    'representation': {
+        'include': [INCLUDE_DATA, INCLUDE_ANCESTORS, 
+                    INCLUDE_URL, INCLUDE_SELF],
+        'exclude': [],
+        'select': None,
+        'options': {}
+    },
+    'full': {
+        'include': [INCLUDE_DATA, INCLUDE_ANCESTORS, INCLUDE_URL, 
+                    INCLUDE_DESCENDANTS_URL, INCLUDE_SELF],
+        'exclude': [],
+        'select': None,
+        'options': {}
+    }
+}
+```
+
+``FLASK_TAXONOMIES_MAX_RESULTS_RETURNED``
+
+Specifies max results returned when pagination is not used. Defaults to ``10000``.
 
 ### Security
 
