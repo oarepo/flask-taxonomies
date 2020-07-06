@@ -36,6 +36,7 @@
   - [Configuration](#configuration)
     - [Configuration Variables](#configuration-variables)
     - [Security](#security)
+      - [Recommended initial settings](#recommended-initial-settings)
   - [Python API](#python-api)
     - [Signals](#signals)
 
@@ -1169,6 +1170,101 @@ the first request.
 
 If ``.can`` on any of the permissions returns True or the list is empty, access is granted.
 
+#### Recommended initial settings
+
+The recommended initial settings are read-only for everyone except admin role:
+
+```python
+from flask_principal import RoleNeed
+
+FLASK_TAXONOMIES_PERMISSION_FACTORIES = {
+    'taxonomy_create': [RoleNeed('admin')],
+    'taxonomy_update': [RoleNeed('admin')],
+    'taxonomy_delete': [RoleNeed('admin')],
+
+    'taxonomy_term_create': [RoleNeed('admin')],
+    'taxonomy_term_update': [RoleNeed('admin')],
+    'taxonomy_term_delete': [RoleNeed('admin')],
+    'taxonomy_term_move': [RoleNeed('admin')]
+}
+```
+
 ## Python API
 
+The calls below use ``session`` as an optional parameter. If not supplied, session from
+current_app is used. 
+
+``TermIdentification`` is a class to identify taxonomy term, binding taxonomy (or its code),
+slug or a term instance. See [flask_taxonomies/term_identification.py](./flask_taxonomies/term_identification.py)
+for details.
+
+```python
+from flask_taxonomies.proxies import current_flask_taxonomies
+
+# returns a taxonomy list
+current_flask_taxonomies.list_taxonomies(session=None)
+
+# returns a taxonomy with the given code. Fails by default if not found
+current_flask_taxonomies.get_taxonomy(code, fail=True, session=None)
+
+# creates a new taxonomy
+current_flask_taxonomies.create_taxonomy(code, extra_data=None, url=None, 
+    select=None, session=None)
+
+# updates a taxonomy
+current_flask_taxonomies.update_taxonomy(
+    taxonomy: [Taxonomy, str], extra_data, 
+    url=MISSING, select=MISSING,
+    session=None)
+
+# deletes a taxonomy
+current_flask_taxonomies.delete_taxonomy(taxonomy: Taxonomy, session=None)
+
+# lists terms within the taxonomy. 
+current_flask_taxonomies.list_taxonomy(taxonomy: [Taxonomy, str], levels=None,
+    status_cond=TaxonomyTerm.status == TermStatusEnum.alive,
+    order=True, session=None)
+
+# creates a new term inside a taxonomy
+current_flask_taxonomies.create_term(ti: TermIdentification, 
+    extra_data=None, session=None)
+
+# updates a term, setting or patching extra_data
+current_flask_taxonomies.update_term(ti: [TaxonomyTerm, TermIdentification],
+    status_cond=TaxonomyTerm.status == TermStatusEnum.alive,
+    extra_data=None, patch=False, status=MISSING, session=None)
+
+# returns all descendants of a term
+current_flask_taxonomies.descendants(ti: TermIdentification, levels=None,
+    status_cond=TaxonomyTerm.status == TermStatusEnum.alive,
+    order=True, session=None)
+
+# returns a term and its descendants
+current_flask_taxonomies.descendants_or_self(ti: TermIdentification, levels=None,
+    status_cond=TaxonomyTerm.status == TermStatusEnum.alive,
+    order=True, session=None)
+
+# returns all ancestors of a term
+current_flask_taxonomies.ancestors(ti: TermIdentification, 
+    status_cond=TaxonomyTerm.status == TermStatusEnum.alive, session=None)
+
+# returns term and its ancestors
+current_flask_taxonomies.ancestors_or_self(ti: TermIdentification,
+    status_cond=TaxonomyTerm.status == TermStatusEnum.alive, session=None)
+
+# removes a term
+current_flask_taxonomies.delete_term(ti: TermIdentification, 
+    remove_after_delete=True, session=None)
+
+# renames term's slug
+current_flask_taxonomies.rename_term(ti: TermIdentification, new_slug=None,
+    remove_after_delete=True, session=None)
+
+# moves term into a new parent within the same taxonomy
+current_flask_taxonomies.move_term(ti: TermIdentification, new_parent=None,
+    remove_after_delete=True, session=None)
+```
+
 ### Signals
+
+See [flask_taxonomies/signals.py](flask_taxonomies/signals.py) for details
