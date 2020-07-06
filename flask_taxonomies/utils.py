@@ -1,77 +1,42 @@
-# -*- coding: utf-8 -*-
-"""Taxonomy utility functions."""
-import json
-
-import six
 import sqlalchemy
-from flask import current_app
-from werkzeug.utils import import_string
 
-from flask_taxonomies.models import TaxonomyTerm
-
-try:
-    from marshmallow import __version_info__ as marshmallow_version
-except:
-    marshmallow_version = (2, 'x')
+from flask_taxonomies.models import Taxonomy, TaxonomyTerm
+from flask_taxonomies.term_identification import TermIdentification
 
 
-def obj_or_import_string(value, default=None):
-    """
-    Import string or return object.
-    :params value: Import path or class object to instantiate.
-    :params default: Default object to return if the import fails.
-    :returns: The imported object.
-    """
-    if isinstance(value, six.string_types):
-        return import_string(value)
-    elif value:  # pragma: nocover
-        return value  # pragma: nocover
-    return default  # pragma: nocover
+def to_json(api, taxonomy_or_term):
+    if isinstance(taxonomy_or_term, Taxonomy):
+        elements = api.list_taxonomy(
+            taxonomy_or_term,
+            status_cond=sqlalchemy.sql.true()
+        )
+    else:
+        elements = api.descendants_or_self(
+            TermIdentification(term=taxonomy_or_term),
+            status_cond=sqlalchemy.sql.true()
+        )
+    stack = None
+    min_level = None
 
-
-def load_or_import_from_config(key, app=None, default=None):
-    """
-    Load or import value from config.
-    :returns: The loaded value.
-    """
-    app = app or current_app
-    imp = app.config.get(key)
-    return obj_or_import_string(imp, default=default)
-
-
-def find_in_json(search_term: str, taxonomy, tree_address=("title", 0, "value")):
-    """
-    Function returns taxonomy field based on searching term in json tree.
-    :param search_term: searched term
-    :param taxonomy: Taxonomy class
-    :param tree_address: Address of searched field. Address is inserted as tuple.
-    :return: SQLAlchemy BaseQuery
-    """
-    ed = TaxonomyTerm.extra_data
-    for t in tree_address:
-        ed = ed[t]
-    expr = sqlalchemy.cast(ed, sqlalchemy.String) == json.dumps(search_term, ensure_ascii=False)
-    query = taxonomy.descendants.filter(expr)
-    return query
-
-
-def find_in_json_contains(search_term: str, taxonomy, tree_address="aliases"):
-    """
-    Function returns taxonomy field based on searching term in json tree.
-    :param search_term: searched term
-    :param taxonomy: Taxonomy class
-    :param tree_address: Address of searched field.
-    :return: SQLAlchemy BaseQuery
-    """
-    expr = sqlalchemy.cast(TaxonomyTerm.extra_data[tree_address], sqlalchemy.String). \
-        contains(search_term)
-    query = taxonomy.descendants.filter(expr)
-    return query
-
-
-if marshmallow_version[0] >= 3:
-    def load_dump(x):
-        return dict(data_key=x)
-else:
-    def load_dump(x):
-        return dict(load_from=x, dump_to=x)
+    for el in elements:
+        level = len(el.slug.split('/'))
+        if stack is None:
+            stack = [{
+                'children': []
+            }]
+            min_level = level
+        data = {
+            **(el.extra_data or {}),
+            'slug': el.slug,
+            'level': el.level,
+            'status': el.status.value,
+            'children': []
+        }
+        if el.obsoleted_by_id:
+            data['obsoleted_by'] = el.obsoleted_by.slug
+        idx = level - min_level
+        stack[idx]['children'].append(data)
+        if idx + 1 == len(stack):
+            stack.append(None)
+        stack[idx + 1] = data
+    return stack[0]['children']

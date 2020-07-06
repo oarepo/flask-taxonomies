@@ -1,36 +1,29 @@
-# -*- coding: utf-8 -*-
-#
-# Copyright (C) 2019 Miroslav Bauer, CESNET.
-#
-# flask-taxonomies is free software; you can redistribute it and/or modify
-# it under the terms of the MIT License; see LICENSE file for more details.
+import logging
 
-"""Taxonomy signal handlers"""
+from blinker import Namespace
 
-from __future__ import absolute_import, print_function
+logger = logging.getLogger('taxonomies')
 
-from oarepo_references.proxies import current_oarepo_references
+taxonomy_signals = Namespace()
 
-from flask_taxonomies.errors import TaxonomyDeleteError
-from flask_taxonomies.proxies import current_flask_taxonomies
+# signals emitted by REST methods
+before_taxonomy_created = taxonomy_signals.signal('before-taxonomy-created')
+after_taxonomy_created = taxonomy_signals.signal('after-taxonomy-created')
 
+before_taxonomy_updated = taxonomy_signals.signal('before-taxonomy-updated')
+after_taxonomy_updated = taxonomy_signals.signal('after-taxonomy-updated')
 
-def reindex_referencing_records(sender, taxonomy=None, term=None, *args, **kwargs):
-    if taxonomy and not term:
-        current_oarepo_references.reindex_referencing_records(ref=taxonomy.link_self,
-                                                              ref_obj=taxonomy)
-    elif taxonomy and term:
-        links = current_flask_taxonomies.term_links(taxonomy.code, term.tree_path)
-        current_oarepo_references.reindex_referencing_records(ref=links['self'], ref_obj=term)
+before_taxonomy_deleted = taxonomy_signals.signal('before-taxonomy-deleted')
+after_taxonomy_deleted = taxonomy_signals.signal('after-taxonomy-deleted')
 
+before_taxonomy_term_created = taxonomy_signals.signal('before-taxonomy-term-created')
+after_taxonomy_term_created = taxonomy_signals.signal('after-taxonomy-term-created')
 
-def check_references_before_delete(sender, taxonomy=None, term=None, *args, **kwargs):
-    records = []
-    if taxonomy and not term:
-        records = current_oarepo_references.get_records(taxonomy.link_self)
-    elif taxonomy and term:
-        links = current_flask_taxonomies.term_links(taxonomy.code, term.tree_path)
-        records = current_oarepo_references.get_records(links['self'])
-    if len(records) > 0:
-        raise TaxonomyDeleteError(
-            'Cannot Delete. Taxonomy is being referenced from some records.', records)
+before_taxonomy_term_updated = taxonomy_signals.signal('before-taxonomy-term-updated')
+after_taxonomy_term_updated = taxonomy_signals.signal('after-taxonomy-term-updated')
+
+before_taxonomy_term_deleted = taxonomy_signals.signal('before-taxonomy-term-deleted')
+after_taxonomy_term_deleted = taxonomy_signals.signal('after-taxonomy-term-deleted')
+
+before_taxonomy_term_moved = taxonomy_signals.signal('before-taxonomy-term-moved')
+after_taxonomy_term_moved = taxonomy_signals.signal('after-taxonomy-term-moved')
