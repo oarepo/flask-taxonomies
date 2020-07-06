@@ -19,7 +19,6 @@ tests_require = [
     'pytest',
     'pytest-flask-sqlalchemy',
     'md-toc',
-    'shlex',
     'isort'
 ]
 
