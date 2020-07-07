@@ -1,4 +1,5 @@
 from distutils.core import setup
+import setuptools
 
 requires = [
     'flask',
@@ -27,7 +28,7 @@ tests_require = [
 
 setup(
     name='flask-taxonomies',
-    version='7.0.0dev0',
+    version='7.0.0.dev0',
     packages=['flask_taxonomies', ],
     install_requires=requires,
     tests_require=tests_require,
