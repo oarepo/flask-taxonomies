@@ -28,7 +28,7 @@ tests_require = [
 
 setup(
     name='flask-taxonomies',
-    version='7.0.0.dev1',
+    version='7.0.0a1',
     packages=['flask_taxonomies', ],
     install_requires=requires,
     tests_require=tests_require,
