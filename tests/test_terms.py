@@ -41,9 +41,28 @@ def simple_op_test(api, test_taxonomy):
     assert list(api.filter_term(TermIdentification(parent='test', slug='b'))) == [term2]
     assert list(api.filter_term(TermIdentification(parent='test/b', slug='bb'))) == [term21]
 
+    # term filter with descendant count
+    assert api.filter_term(TermIdentification(taxonomy=test_taxonomy, slug=term1.slug),
+                           return_descendants_count=True).first().descendants_count == 1
+    assert api.filter_term(TermIdentification(taxonomy=test_taxonomy, slug=term11.slug),
+                           return_descendants_count=True).first().descendants_count == 0
+
+    assert api.filter_term(TermIdentification(taxonomy=test_taxonomy, slug=term2.slug),
+                           return_descendants_count=True).first().descendants_count == 2
+    assert api.filter_term(TermIdentification(taxonomy=test_taxonomy, slug=term22.slug),
+                           return_descendants_count=True).first().descendants_count == 0
+
     # different ways of listing taxonomy
     assert list(api.list_taxonomy(test_taxonomy)) == [term1, term11, term2, term21, term22]
     assert list(api.list_taxonomy('test')) == [term1, term11, term2, term21, term22]
+
+    dsc = list(
+        api.list_taxonomy(test_taxonomy, return_descendants_count=True))
+    assert [x.descendants_count for x in dsc] == [1, 0, 2, 0, 0]  # == [term1, term11, term2, term21, term22]
+
+    dsc = list(
+        api.list_taxonomy('test', return_descendants_count=True))
+    assert [x.descendants_count for x in dsc] == [1, 0, 2, 0, 0]  # == [term1, term11, term2, term21, term22]
 
     # list just 1 level
     assert list(api.list_taxonomy(test_taxonomy, levels=1)) == [term1, term2]
@@ -70,12 +89,20 @@ def simple_op_test(api, test_taxonomy):
     assert list(api.descendants_or_self(test_taxonomy.code + '/a', levels=1)) == [term1, term11]
     assert list(api.descendants_or_self(test_taxonomy.code + '/a', levels=0)) == [term1]
 
+    dsc = list(api.descendants_or_self(test_taxonomy.code + '/a', levels=1, return_descendants_count=True))
+    assert dsc[0].descendants_count == 1
+    assert dsc[1].descendants_count == 0
+
     # descendant of non-existing
     assert list(api.descendants(TermIdentification(taxonomy=test_taxonomy, slug='a/bb'))) == []
 
     # ancestors
     assert list(api.ancestors_or_self(term11)) == [term1, term11]
     assert list(api.ancestors(term11)) == [term1]
+
+    dsc = list(api.ancestors_or_self(term11, return_descendants_count=True))
+    assert dsc[0].descendants_count == 1
+    assert dsc[1].descendants_count == 0
 
     # empty ancestor of a taxonomy (term not given)
 

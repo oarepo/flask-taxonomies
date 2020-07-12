@@ -389,3 +389,15 @@ def get_excluded_title_descendants(api, client, excluded_title_sample_taxonomy):
             }
         ]
     }
+
+
+def list_dcn_test(client, country_taxonomy):
+    taxonomy = client.get('/api/2.0/taxonomies/country',
+                          headers={
+                              'prefer': 'return=minimal; include=dcn'
+                          })
+    assert taxonomy.status_code == 200
+    assert taxonomy.json == {
+        'code': 'country',
+        'descendants_count': 253
+    }

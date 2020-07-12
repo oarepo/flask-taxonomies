@@ -1,5 +1,6 @@
 from flask import current_app, jsonify
 from link_header import Link, LinkHeader
+from sqlalchemy.engine import result
 from sqlalchemy.orm.exc import NoResultFound
 from werkzeug.utils import cached_property
 
@@ -9,6 +10,16 @@ from flask_taxonomies.constants import (
     INCLUDE_SELF,
 )
 from flask_taxonomies.models import EnvelopeLinks
+
+
+def enrich_data_with_computed(res):
+    if not hasattr(res, '_asdict'):
+        return res
+    term = res[0]
+    for k, v in res._asdict().items():
+        if v is not term:
+            setattr(term, k, v)
+    return term
 
 
 class Paginator:
@@ -47,6 +58,7 @@ class Paginator:
         else:
             max_items = current_app.config['FLASK_TAXONOMIES_MAX_RESULTS_RETURNED']
             data = list(self.data[self_offset:max_items])
+        data = [enrich_data_with_computed(x) for x in data]
         if not self.allow_empty and not data:
             raise NoResultFound()
         return self.json_converter(data), data

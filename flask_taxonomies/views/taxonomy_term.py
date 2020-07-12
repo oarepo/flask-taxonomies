@@ -10,6 +10,7 @@ from webargs.flaskparser import use_kwargs
 from flask_taxonomies.constants import (
     INCLUDE_DELETED,
     INCLUDE_DESCENDANTS,
+    INCLUDE_DESCENDANTS_COUNT,
     INCLUDE_SELF,
 )
 from flask_taxonomies.marshmallow import (
@@ -48,12 +49,14 @@ def get_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None, s
             query = current_flask_taxonomies.descendants_or_self(
                 TermIdentification(taxonomy=code, slug=slug),
                 levels=prefer.options.get('levels', None),
-                status_cond=status_cond
+                status_cond=status_cond,
+                return_descendants_count=INCLUDE_DESCENDANTS_COUNT in prefer
             )
         else:
             query = current_flask_taxonomies.filter_term(
                 TermIdentification(taxonomy=code, slug=slug),
-                status_cond=status_cond
+                status_cond=status_cond,
+                return_descendants_count=INCLUDE_DESCENDANTS_COUNT in prefer
             )
 
         paginator = Paginator(

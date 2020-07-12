@@ -6,13 +6,17 @@ from flask import Response, abort, request
 from sqlalchemy.orm.exc import NoResultFound
 from webargs.flaskparser import use_kwargs
 
-from flask_taxonomies.constants import INCLUDE_DELETED, INCLUDE_DESCENDANTS
+from flask_taxonomies.constants import (
+    INCLUDE_DELETED,
+    INCLUDE_DESCENDANTS,
+    INCLUDE_DESCENDANTS_COUNT,
+)
 from flask_taxonomies.marshmallow import HeaderSchema, PaginatedQuerySchema, QuerySchema
 from flask_taxonomies.models import EnvelopeLinks, TaxonomyTerm, TermStatusEnum
 from flask_taxonomies.proxies import current_flask_taxonomies
 
 from .common import blueprint, build_descendants, json_abort, with_prefer
-from .paginator import Paginator
+from .paginator import Paginator, enrich_data_with_computed
 
 
 @blueprint.route('/')
@@ -21,7 +25,7 @@ from .paginator import Paginator
 @with_prefer
 def list_taxonomies(prefer=None, page=None, size=None):
     current_flask_taxonomies.permissions.taxonomy_list.enforce(request=request)
-    taxonomies = current_flask_taxonomies.list_taxonomies()
+    taxonomies = current_flask_taxonomies.list_taxonomies(return_descendants_count=INCLUDE_DESCENDANTS_COUNT in prefer)
     paginator = Paginator(
         prefer, taxonomies, page, size,
         json_converter=lambda data: [x.json(representation=prefer) for x in data],
@@ -39,7 +43,10 @@ def list_taxonomies(prefer=None, page=None, size=None):
 @with_prefer
 def get_taxonomy(code=None, prefer=None, page=None, size=None, status_code=200):
     try:
-        taxonomy = current_flask_taxonomies.get_taxonomy(code)
+        taxonomy = current_flask_taxonomies.get_taxonomy(
+            code, return_descendants_count=INCLUDE_DESCENDANTS_COUNT in prefer
+        )
+        taxonomy = enrich_data_with_computed(taxonomy)
     except NoResultFound:
         json_abort(404, {})
         return  # make pycharm happy
@@ -69,7 +76,8 @@ def get_taxonomy(code=None, prefer=None, page=None, size=None, status_code=200):
                 prefer, current_flask_taxonomies.list_taxonomy(
                     taxonomy,
                     levels=prefer.options.get('levels', None),
-                    status_cond=status_cond
+                    status_cond=status_cond,
+                    return_descendants_count=INCLUDE_DESCENDANTS_COUNT in prefer
                 ), page, size,
                 json_converter=lambda data: build_descendants(data, prefer, root_slug=None)
             )

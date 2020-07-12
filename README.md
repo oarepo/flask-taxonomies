@@ -203,6 +203,7 @@ Currently supported includes/excludes are:
 ```python
 INCLUDE_URL = 'url'
 INCLUDE_DESCENDANTS_URL = 'drl'
+INCLUDE_DESCENDANTS_COUNT = 'dcn'
 INCLUDE_ANCESTORS_HIERARCHY = 'anh'
 INCLUDE_ANCESTORS = 'anc'
 INCLUDE_ANCESTOR_LIST = 'anl'
@@ -260,6 +261,41 @@ Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe?representation:in
 ```
 
 Adds a ``links`` section to payload with recoord url with descendants (``"tree":``)
+
+**Include descendants count in response**
+
+```console
+$ curl -i -H "Prefer: return=minimal; include=dcn" \
+  http://127.0.0.1:5000/api/2.0/taxonomies/country/europe
+
+HTTP/1.0 200 OK
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe>; rel=self
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe?representation:include=dsc>; rel=tree
+
+{
+  "slug": "europe",
+  "descendants_count": 58
+}
+```
+
+Adds a ``descendant_count`` with a number of descendant terms under the term. The value is 0
+if the term is a leaf term.
+
+On taxonomy, returns the total number of terms in taxonomy:
+
+```console
+$ curl -i -H "Prefer: return=minimal; include=dcn" \
+  http://127.0.0.1:5000/api/2.0/taxonomies/country
+
+HTTP/1.0 200 OK
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country>; rel=self
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country?representation:include=dsc>; rel=tree
+
+{
+  "code": "country",
+  "descendants_count": 253
+}
+```
 
 **Include ancestors with hierarchy in response**
 
@@ -807,7 +843,7 @@ Link: <http://127.0.0.1:5000/api/2.0/taxonomies/test/?representation:include=dsc
 
 Note that terms are not updated nor removed when taxonomy metadata are updated.
 
-##### Patching with HTTP POST
+##### Patching with HTTP PATCH
 
 ```console
 $ curl -i -X PATCH 'http://127.0.0.1:5000/api/2.0/taxonomies/test' \

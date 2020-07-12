@@ -9,6 +9,7 @@ from flask_taxonomies.constants import (
     INCLUDE_ANCESTORS,
     INCLUDE_ANCESTORS_HIERARCHY,
     INCLUDE_DELETED,
+    INCLUDE_DESCENDANTS_COUNT,
 )
 from flask_taxonomies.models import TaxonomyTerm, TermStatusEnum
 from flask_taxonomies.proxies import current_flask_taxonomies
@@ -97,6 +98,7 @@ def build_descendants(descendants, representation, root_slug, stack=None, tops=N
         if transformers:
             for transformer in transformers:
                 desc_repr = transformer(json=desc_repr, term=desc, representation=representation)
+
         if stack:
             children = stack[-1][1].setdefault('children', [])
             if ancestor_list:

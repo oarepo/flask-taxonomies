@@ -50,6 +50,7 @@ class Representation:
         INCLUDE_DATA,
         INCLUDE_ID,
         INCLUDE_DESCENDANTS,
+        INCLUDE_DESCENDANTS_COUNT,
         INCLUDE_ENVELOPE,
         INCLUDE_LEVEL
     }
@@ -218,7 +219,8 @@ class Taxonomy(Base):
         if INCLUDE_DATA in representation and self.extra_data:
             representation = self.merge_select(representation)
             resp.update(current_flask_taxonomies.extract_data(representation, self))
-
+        if INCLUDE_DESCENDANTS_COUNT in representation and hasattr(self, 'descendants_count'):
+            resp['descendants_count'] = self.descendants_count
         if INCLUDE_ENVELOPE in representation:
             resp = {
                 'data': resp
@@ -321,6 +323,9 @@ class TaxonomyTerm(Base):
             resp['status'] = self.status.name if self.status else None
         if INCLUDE_DATA in representation and self.extra_data:
             resp.update(current_flask_taxonomies.extract_data(representation, self))
+        if INCLUDE_DESCENDANTS_COUNT in representation and hasattr(self, 'descendants_count'):
+            resp['descendants_count'] = self.descendants_count
+
         if INCLUDE_ENVELOPE in representation:
             resp = {
                 'data': resp

@@ -1,3 +1,6 @@
+from sqlalchemy import func
+from sqlalchemy.orm import aliased
+
 from flask_taxonomies.models import Taxonomy, TaxonomyError, TaxonomyTerm
 
 
@@ -55,8 +58,16 @@ class TermIdentification:
             return None
         return TermIdentification(taxonomy=self.taxonomy, slug='/'.join(self.slug.split('/')[:-1]))
 
-    def term_query(self, session):
-        ret = session.query(TaxonomyTerm)
+    def term_query(self, session, return_descendants_count=False):
+        if return_descendants_count:
+            aliased_descendant = aliased(TaxonomyTerm, name='aliased_descendant')
+            stmt = session.query(func.count(aliased_descendant.id))
+            stmt = stmt.filter(aliased_descendant.slug.descendant_of(TaxonomyTerm.slug))
+            stmt = stmt.filter(aliased_descendant.slug != TaxonomyTerm.slug)
+            stmt = stmt.label('descendants_count')
+            ret = session.query(TaxonomyTerm, stmt)
+        else:
+            ret = session.query(TaxonomyTerm)
         if self.term:
             return ret.filter(TaxonomyTerm.id == self.term.id)
         ret = self._filter_taxonomy(ret)
@@ -64,20 +75,39 @@ class TermIdentification:
             ret = ret.filter(TaxonomyTerm.slug == self.slug)
         return ret
 
-    def descendant_query(self, session):
-        ret = session.query(TaxonomyTerm)
+    def descendant_query(self, session, return_descendants_count=False):
+        if return_descendants_count:
+            aliased_descendant = aliased(TaxonomyTerm, name='aliased_descendant')
+            stmt = session.query(func.count(aliased_descendant.id))
+            stmt = stmt.filter(aliased_descendant.slug.descendant_of(TaxonomyTerm.slug))
+            stmt = stmt.filter(aliased_descendant.slug != TaxonomyTerm.slug)
+            stmt = stmt.label('descendants_count')
+            ret = session.query(TaxonomyTerm, stmt)
+        else:
+            ret = session.query(TaxonomyTerm)
+
         if self.term:
-            return ret.filter(
+            ret = ret.filter(
                 TaxonomyTerm.taxonomy_id == self.term.taxonomy_id,
                 TaxonomyTerm.slug.descendant_of(self.term.slug),
             )
-        ret = self._filter_taxonomy(ret)
-        if self.slug:
-            ret = ret.filter(TaxonomyTerm.slug.descendant_of(self.slug))
+        else:
+            ret = self._filter_taxonomy(ret)
+            if self.slug:
+                ret = ret.filter(TaxonomyTerm.slug.descendant_of(self.slug))
         return ret
 
-    def ancestor_query(self, session):
-        ret = session.query(TaxonomyTerm)
+    def ancestor_query(self, session, return_descendants_count=False):
+        if return_descendants_count:
+            aliased_descendant = aliased(TaxonomyTerm, name='aliased_ancestor_descendant')
+            stmt = session.query(func.count(aliased_descendant.id))
+            stmt = stmt.filter(aliased_descendant.slug.descendant_of(TaxonomyTerm.slug))
+            stmt = stmt.filter(aliased_descendant.slug != TaxonomyTerm.slug)
+            stmt = stmt.label('descendants_count')
+            ret = session.query(TaxonomyTerm, stmt)
+        else:
+            ret = session.query(TaxonomyTerm)
+
         if self.term:
             return ret.filter(
                 TaxonomyTerm.taxonomy_id == self.term.taxonomy_id,
