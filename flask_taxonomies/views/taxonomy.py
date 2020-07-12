@@ -15,8 +15,14 @@ from flask_taxonomies.marshmallow import HeaderSchema, PaginatedQuerySchema, Que
 from flask_taxonomies.models import EnvelopeLinks, TaxonomyTerm, TermStatusEnum
 from flask_taxonomies.proxies import current_flask_taxonomies
 
-from .common import blueprint, build_descendants, json_abort, with_prefer
-from .paginator import Paginator, enrich_data_with_computed
+from .common import (
+    blueprint,
+    build_descendants,
+    enrich_data_with_computed,
+    json_abort,
+    with_prefer,
+)
+from .paginator import Paginator
 
 
 @blueprint.route('/')

@@ -18,6 +18,16 @@ from flask_taxonomies.term_identification import TermIdentification
 blueprint = Blueprint('flask_taxonomies', __name__)
 
 
+def enrich_data_with_computed(res):
+    if not hasattr(res, '_asdict'):
+        return res
+    term = res[0]
+    for k, v in res._asdict().items():
+        if v is not term:
+            setattr(term, k, v)
+    return term
+
+
 def with_prefer(func):
     @functools.wraps(func)
     def wrapped(*args, **kwargs):
@@ -44,14 +54,17 @@ def build_ancestors(term, tops, stack, representation, root_slug, transformers=N
         status_cond = TaxonomyTerm.status == TermStatusEnum.alive
 
     ancestors = current_flask_taxonomies.ancestors(
-        TermIdentification(term=term), status_cond=status_cond
+        TermIdentification(term=term), status_cond=status_cond,
+        return_descendants_count=INCLUDE_DESCENDANTS_COUNT in representation
     )
     if root_slug is not None:
         ancestors = ancestors.filter(TaxonomyTerm.slug > root_slug)
     ancestors = ancestors.order_by(TaxonomyTerm.slug)
+    ancestors = [enrich_data_with_computed(anc) for anc in ancestors]
     if INCLUDE_ANCESTORS in representation and INCLUDE_ANCESTORS_HIERARCHY not in representation:
         ret = []
         for anc in ancestors:
+
             desc_repr = anc.json(representation)
             if transformers:
                 for transformer in transformers:

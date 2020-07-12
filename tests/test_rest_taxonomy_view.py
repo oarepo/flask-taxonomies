@@ -401,3 +401,12 @@ def list_dcn_test(client, country_taxonomy):
         'code': 'country',
         'descendants_count': 253
     }
+
+
+def list_paginated_dcn_test(client, country_taxonomy):
+    terms = client.get('/api/2.0/taxonomies/country?page=2&size=50',
+                       headers={
+                           'prefer': 'return=minimal; include=dcn dsc anh'
+                       })
+    assert terms.status_code == 200
+    assert terms.json['children'][0]['descendants_count'] == 58

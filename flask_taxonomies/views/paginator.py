@@ -11,15 +11,7 @@ from flask_taxonomies.constants import (
 )
 from flask_taxonomies.models import EnvelopeLinks
 
-
-def enrich_data_with_computed(res):
-    if not hasattr(res, '_asdict'):
-        return res
-    term = res[0]
-    for k, v in res._asdict().items():
-        if v is not term:
-            setattr(term, k, v)
-    return term
+from .common import enrich_data_with_computed
 
 
 class Paginator:
