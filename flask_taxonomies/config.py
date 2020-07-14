@@ -12,7 +12,7 @@ from flask_taxonomies.constants import (
 # Server name hosting the taxonomies. If not set,
 # SERVER_NAME will be used.
 #
-# FLASK_TAXONOMIES_SERVER_NAME =
+FLASK_TAXONOMIES_SERVER_NAME = None
 
 #
 # Protocol to use in generated urls. If not set, defaults to PREFERRED_URL_SCHEME

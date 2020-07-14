@@ -818,6 +818,7 @@ Location: http://127.0.0.1:5000/api/2.0/taxonomies/test1/
 }
 ```
 
+
 #### Updating
 
 ##### Replacing via HTTP PUT
@@ -918,6 +919,25 @@ Location: http://127.0.0.1:5000/api/2.0/taxonomies/test/term1
 }
 ``` 
  
+As PUT/POST operation also mean updating term if slug exists, to be sure
+that you are creating a new one use ``If-None-Match: '*'`` header:
+
+```console
+$ curl -i -X PUT 'http://127.0.0.1:5000/api/2.0/taxonomies/test/term' \
+  --header 'Content-Type: application/json' \
+  --header 'If-None-Match: '*'' \
+  --data-raw '{
+    "title": "Test Term"
+}'
+
+HTTP/1.0 412 Precondition Failed
+
+{
+     "message": "The taxonomy already contains a term on this slug. As If-None-Match: '*' has been requested, not modifying the term",
+     "reason": "term-exists"
+}
+```
+ 
 Terms can be created within terms via HTTP PUT:
 
 ```console
@@ -1017,6 +1037,26 @@ Link: <http://127.0.0.1:5000/api/2.0/taxonomies/test/term?representation:include
   "title": "Test taxonomy term updated via patch"
 }
 ```
+
+As PUT operation also means creating term if slug does not exist, to be sure
+that you are just updating use ``If-Match: '*'`` header:
+
+```console
+$ curl -i -X PUT 'http://127.0.0.1:5000/api/2.0/taxonomies/test/unknown' \
+  --header 'Content-Type: application/json' \
+  --header 'If-Match: '*'' \
+  --data-raw '{
+    "title": "Test Term"
+}'
+
+HTTP/1.0 412 Precondition Failed
+
+{
+         "message": "The taxonomy does not contain a term on this slug. As If-Match: '*' has been requested, not creating a new term",
+         "reason": "term-does-not-exist"
+}
+```
+
 
 #### Deleting
 

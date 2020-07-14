@@ -5,6 +5,7 @@ from urllib.parse import urljoin, urlparse
 import sqlalchemy
 from flask import Response, abort, current_app, jsonify, request
 from link_header import Link, LinkHeader
+from slugify import slugify
 from sqlalchemy.orm.exc import NoResultFound
 from webargs.flaskparser import use_kwargs
 
@@ -106,10 +107,16 @@ def get_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None, s
 @use_kwargs(PaginatedQuerySchema, location="query")
 @with_prefer
 def create_update_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None):
-    return _create_update_taxonomy_term_internal(code, slug, prefer, page, size, request.json)
+    if_none_match = request.headers.get('If-None-Match', None) == '*'
+    if_match = request.headers.get('If-Match', None) == '*'
+    return _create_update_taxonomy_term_internal(code, slug, prefer, page, size,
+                                                 request.json,
+                                                 if_none_match=if_none_match,
+                                                 if_match=if_match)
 
 
-def _create_update_taxonomy_term_internal(code, slug, prefer, page, size, extra_data):
+def _create_update_taxonomy_term_internal(code, slug, prefer, page, size, extra_data,
+                                          if_none_match=False, if_match=False):
     try:
         taxonomy = current_flask_taxonomies.get_taxonomy(code)
         prefer = taxonomy.merge_select(prefer)
@@ -119,8 +126,28 @@ def _create_update_taxonomy_term_internal(code, slug, prefer, page, size, extra_
         else:
             status_cond = TaxonomyTerm.status == TermStatusEnum.alive
 
+        slug = '/'.join(slugify(x) for x in slug.split('/'))
+
         ti = TermIdentification(taxonomy=code, slug=slug)
-        term = current_flask_taxonomies.filter_term(ti, status_cond=status_cond).one_or_none()
+        term = original_term = current_flask_taxonomies.filter_term(ti, status_cond=sqlalchemy.sql.true()).one_or_none()
+
+        if term and INCLUDE_DELETED not in prefer:
+            if term.status != TermStatusEnum.alive:
+                term = None
+
+        if if_none_match and term:
+            json_abort(412, {
+                'message': 'The taxonomy already contains a term on this slug. ' +
+                           'As If-None-Match: \'*\' has been requested, not modifying the term',
+                'reason': 'term-exists'
+            })
+
+        if if_match and not term:
+            json_abort(412, {
+                'message': 'The taxonomy does not contain a term on this slug. ' +
+                           'As If-Match: \'*\' has been requested, not creating a new term',
+                'reason': 'term-does-not-exist'
+            })
 
         if term:
             current_flask_taxonomies.permissions.taxonomy_term_update.enforce(request=request, taxonomy=taxonomy,
@@ -132,6 +159,14 @@ def _create_update_taxonomy_term_internal(code, slug, prefer, page, size, extra_
             )
             status_code = 200
         else:
+            if original_term:
+                # there is a deleted term, so return a 409 Conflict
+                json_abort(409, {
+                    'message': 'The taxonomy already contains a deleted term on this slug. '
+                               'To reuse the term, repeat the operation with `del` in representation:include.',
+                    'reason': 'deleted-term-exists'
+                })
+
             current_flask_taxonomies.permissions.taxonomy_term_create.enforce(request=request, taxonomy=taxonomy,
                                                                               slug=slug)
             current_flask_taxonomies.create_term(
@@ -155,11 +190,15 @@ def _create_update_taxonomy_term_internal(code, slug, prefer, page, size, extra_
 @use_kwargs(PaginatedQuerySchema, location="query")
 @with_prefer
 def create_taxonomy_term_post(code=None, slug=None, prefer=None, page=None, size=None):
+    if_none_match = request.headers.get('If-None-Match', None) == '*'
+    if_match = request.headers.get('If-Match', None) == '*'
     extra_data = {**request.json}
     if 'slug' not in extra_data:
         return Response('slug missing in payload', status=400)
     _slug = extra_data.pop('slug')
-    return _create_update_taxonomy_term_internal(code, slug + '/' + _slug, prefer, page, size, extra_data)
+    return _create_update_taxonomy_term_internal(code, slug + '/' + _slug, prefer, page, size,
+                                                 extra_data, if_none_match=if_none_match,
+                                                 if_match=if_match)
 
 
 @blueprint.route('/<code>', methods=['POST'], strict_slashes=False)

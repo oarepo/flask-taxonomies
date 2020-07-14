@@ -78,3 +78,36 @@ def term_create_post_test(api, client, sample_taxonomy):
     assert json.loads(term.data) == exp
     taxonomies = client.get('/api/2.0/taxonomies/test/aaa/bbb')
     assert json.loads(taxonomies.data) == exp
+
+
+def term_create_on_deleted_test(api, client, sample_taxonomy):
+    client.delete('/api/2.0/taxonomies/test/b')
+    resp = client.put('/api/2.0/taxonomies/test/b', data='{}', content_type='application/json')
+    assert resp.status_code == 409
+    assert resp.json['reason'] == 'deleted-term-exists'
+
+    resp = client.put('/api/2.0/taxonomies/test/b?representation:include=del', data='{}',
+                      content_type='application/json')
+    assert resp.status_code == 200
+
+
+def term_create_term_only_test(api, client, sample_taxonomy):
+    resp = client.put('/api/2.0/taxonomies/test/b', data='{}',
+                      content_type='application/json', headers={'If-None-Match': '*'})
+    assert resp.status_code == 412
+    assert resp.json['reason'] == 'term-exists'
+
+    resp = client.put('/api/2.0/taxonomies/test/c', data='{}',
+                      content_type='application/json', headers={'If-None-Match': '*'})
+    assert resp.status_code == 201
+
+
+def term_update_term_only_test(api, client, sample_taxonomy):
+    resp = client.put('/api/2.0/taxonomies/test/c', data='{}',
+                      content_type='application/json', headers={'If-Match': '*'})
+    assert resp.status_code == 412
+    assert resp.json['reason'] == 'term-does-not-exist'
+
+    resp = client.put('/api/2.0/taxonomies/test/b', data='{}',
+                      content_type='application/json', headers={'If-Match': '*'})
+    assert resp.status_code == 200  # updated existing term
