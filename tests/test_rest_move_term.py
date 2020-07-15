@@ -1,6 +1,6 @@
 import json
 
-from link_header import parse, LinkHeader, Link
+from link_header import Link, LinkHeader, parse
 
 
 def links2dict(links):

@@ -12,6 +12,7 @@ from sqlalchemy.orm import aliased
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.util import deprecated
+from werkzeug.utils import cached_property, import_string
 
 from .constants import INCLUDE_DATA, INCLUDE_DESCENDANTS
 from .models import Taxonomy, TaxonomyError, TaxonomyTerm, TermStatusEnum
@@ -481,3 +482,28 @@ class Api:
     @staticmethod
     def _last_slug_element(slug):
         return slug.split('/')[-1]
+
+    @cached_property
+    def query_parser(self):
+        parser_or_import = self.app.config.get('FLASK_TAXONOMIES_QUERY_PARSER',
+                                               'flask_taxonomies.query.default_query_parser')
+        if isinstance(parser_or_import, str):
+            return import_string(parser_or_import)
+        return parser_or_import
+
+    @cached_property
+    def query_executor(self):
+        executor_or_import = self.app.config.get('FLASK_TAXONOMIES_QUERY_EXECUTOR',
+                                                 'flask_taxonomies.query.default_query_executor')
+        if isinstance(executor_or_import, str):
+            return import_string(executor_or_import)
+        return executor_or_import
+
+    def apply_taxonomy_query(self, sqlalchemy_query, query_string, session=None):
+        session = session or self.session
+        return self.query_executor(session, sqlalchemy_query, Taxonomy, self.query_parser(query_string))
+
+    def apply_term_query(self, sqlalchemy_query, query_string, taxonomy_code, session=None):
+        session = session or self.session
+        return self.query_executor(session, sqlalchemy_query, TaxonomyTerm,
+                                   self.query_parser(query_string, taxonomy_code=taxonomy_code))

@@ -33,7 +33,7 @@ from .paginator import Paginator
 @use_kwargs(HeaderSchema, location="headers")
 @use_kwargs(PaginatedQuerySchema, location="query")
 @with_prefer
-def get_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None, status_code=200):
+def get_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None, status_code=200, q=None):
     try:
         taxonomy = current_flask_taxonomies.get_taxonomy(code)
         prefer = taxonomy.merge_select(prefer)
@@ -60,14 +60,16 @@ def get_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None, s
                 status_cond=status_cond,
                 return_descendants_count=INCLUDE_DESCENDANTS_COUNT in prefer
             )
-
+        if q:
+            query = current_flask_taxonomies.apply_term_query(query, q, code)
         paginator = Paginator(
             prefer,
             query, page if return_descendants else None,
             size if return_descendants else None,
             json_converter=lambda data:
             build_descendants(data, prefer, root_slug=None),
-            allow_empty=INCLUDE_SELF not in prefer, single_result=INCLUDE_SELF in prefer
+            allow_empty=INCLUDE_SELF not in prefer, single_result=INCLUDE_SELF in prefer,
+            has_query=q is not None
         )
 
         return paginator.jsonify(status_code=status_code)
@@ -106,7 +108,12 @@ def get_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None, s
 @use_kwargs(HeaderSchema, location="headers")
 @use_kwargs(PaginatedQuerySchema, location="query")
 @with_prefer
-def create_update_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None):
+def create_update_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None, q=None):
+    if q:
+        json_abort(422, {
+            'message': 'Query not appropriate when creating or updating term',
+            'reason': 'search-query-not-allowed'
+        })
     if_none_match = request.headers.get('If-None-Match', None) == '*'
     if_match = request.headers.get('If-Match', None) == '*'
     return _create_update_taxonomy_term_internal(code, slug, prefer, page, size,
@@ -189,7 +196,12 @@ def _create_update_taxonomy_term_internal(code, slug, prefer, page, size, extra_
 @use_kwargs(MoveHeaderSchema, location="headers")
 @use_kwargs(PaginatedQuerySchema, location="query")
 @with_prefer
-def create_taxonomy_term_post(code=None, slug=None, prefer=None, page=None, size=None):
+def create_taxonomy_term_post(code=None, slug=None, prefer=None, page=None, size=None, q=None):
+    if q:
+        json_abort(422, {
+            'message': 'Query not appropriate when creating or updating term',
+            'reason': 'search-query-not-allowed'
+        })
     if_none_match = request.headers.get('If-None-Match', None) == '*'
     if_match = request.headers.get('If-Match', None) == '*'
     extra_data = {**request.json}
@@ -205,7 +217,12 @@ def create_taxonomy_term_post(code=None, slug=None, prefer=None, page=None, size
 @use_kwargs(HeaderSchema, location="headers")
 @use_kwargs(PaginatedQuerySchema, location="query")
 @with_prefer
-def create_taxonomy_term_post_on_root(code=None, slug=None, prefer=None, page=None, size=None):
+def create_taxonomy_term_post_on_root(code=None, slug=None, prefer=None, page=None, size=None, q=None):
+    if q:
+        json_abort(422, {
+            'message': 'Query not appropriate when creating or updating term',
+            'reason': 'search-query-not-allowed'
+        })
     extra_data = {**request.json}
     if 'slug' not in extra_data:
         return Response('slug missing in payload', status=400)
@@ -217,7 +234,12 @@ def create_taxonomy_term_post_on_root(code=None, slug=None, prefer=None, page=No
 @use_kwargs(HeaderSchema, location="headers")
 @use_kwargs(PaginatedQuerySchema, location="query")
 @with_prefer
-def patch_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None):
+def patch_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None, q=None):
+    if q:
+        json_abort(422, {
+            'message': 'Query not appropriate when creating or updating term',
+            'reason': 'search-query-not-allowed'
+        })
     taxonomy = current_flask_taxonomies.get_taxonomy(code, fail=False)
     if not taxonomy:
         json_abort(404, {})
@@ -251,7 +273,12 @@ def patch_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None)
 @use_kwargs(HeaderSchema, location="headers")
 @use_kwargs(PaginatedQuerySchema, location="query")
 @with_prefer
-def delete_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None):
+def delete_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None, q=None):
+    if q:
+        json_abort(422, {
+            'message': 'Query not appropriate when deleting term',
+            'reason': 'search-query-not-allowed'
+        })
     try:
         taxonomy = current_flask_taxonomies.get_taxonomy(code)
         ti = TermIdentification(taxonomy=code, slug=slug)
@@ -269,8 +296,13 @@ def delete_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None
 @use_kwargs(MoveHeaderSchema, location="headers")
 @use_kwargs(PaginatedQuerySchema, location="query")
 @with_prefer
-def taxonomy_move_term(code=None, slug=None, prefer=None, page=None, size=None, destination='', rename=''):
+def taxonomy_move_term(code=None, slug=None, prefer=None, page=None, size=None, destination='', rename='', q=None):
     """Move term into a new parent or rename it."""
+    if q:
+        json_abort(422, {
+            'message': 'Query not appropriate when moving term',
+            'reason': 'search-query-not-allowed'
+        })
 
     try:
         taxonomy = current_flask_taxonomies.get_taxonomy(code)

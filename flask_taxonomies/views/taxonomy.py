@@ -29,9 +29,11 @@ from .paginator import Paginator
 @use_kwargs(HeaderSchema, location="headers")
 @use_kwargs(PaginatedQuerySchema, location="query")
 @with_prefer
-def list_taxonomies(prefer=None, page=None, size=None):
+def list_taxonomies(prefer=None, page=None, size=None, q=None):
     current_flask_taxonomies.permissions.taxonomy_list.enforce(request=request)
     taxonomies = current_flask_taxonomies.list_taxonomies(return_descendants_count=INCLUDE_DESCENDANTS_COUNT in prefer)
+    if q:
+        taxonomies = current_flask_taxonomies.apply_taxonomy_query(taxonomies, q)
     paginator = Paginator(
         prefer, taxonomies, page, size,
         json_converter=lambda data: [x.json(representation=prefer) for x in data],
@@ -47,11 +49,12 @@ def list_taxonomies(prefer=None, page=None, size=None):
 @use_kwargs(HeaderSchema, location="headers")
 @use_kwargs(PaginatedQuerySchema, location="query")
 @with_prefer
-def get_taxonomy(code=None, prefer=None, page=None, size=None, status_code=200):
+def get_taxonomy(code=None, prefer=None, page=None, size=None, status_code=200, q=None):
     try:
-        taxonomy = current_flask_taxonomies.get_taxonomy(
+        taxonomies = current_flask_taxonomies.filter_taxonomy(
             code, return_descendants_count=INCLUDE_DESCENDANTS_COUNT in prefer
         )
+        taxonomy = taxonomies.one()
         taxonomy = enrich_data_with_computed(taxonomy)
     except NoResultFound:
         json_abort(404, {})
@@ -78,13 +81,17 @@ def get_taxonomy(code=None, prefer=None, page=None, size=None, status_code=200):
             else:
                 status_cond = TaxonomyTerm.status == TermStatusEnum.alive
 
+            descendants = current_flask_taxonomies.list_taxonomy(
+                taxonomy,
+                levels=prefer.options.get('levels', None),
+                status_cond=status_cond,
+                return_descendants_count=INCLUDE_DESCENDANTS_COUNT in prefer
+            )
+            if q:
+                descendants = current_flask_taxonomies.apply_term_query(descendants, q, code)
+
             child_paginator = Paginator(
-                prefer, current_flask_taxonomies.list_taxonomy(
-                    taxonomy,
-                    levels=prefer.options.get('levels', None),
-                    status_cond=status_cond,
-                    return_descendants_count=INCLUDE_DESCENDANTS_COUNT in prefer
-                ), page, size,
+                prefer, descendants, page, size,
                 json_converter=lambda data: build_descendants(data, prefer, root_slug=None)
             )
 
@@ -108,7 +115,12 @@ def get_taxonomy(code=None, prefer=None, page=None, size=None, status_code=200):
 @use_kwargs(HeaderSchema, location="headers")
 @use_kwargs(PaginatedQuerySchema, location="query")
 @with_prefer
-def create_update_taxonomy(code=None, prefer=None, page=None, size=None):
+def create_update_taxonomy(code=None, prefer=None, page=None, size=None, q=None):
+    if q:
+        json_abort(422, {
+            'message': 'Query not appropriate when creating or updating taxonomy',
+            'reason': 'search-query-not-allowed'
+        })
     tax = current_flask_taxonomies.get_taxonomy(code=code, fail=False)
 
     if tax:
@@ -133,7 +145,13 @@ def create_update_taxonomy(code=None, prefer=None, page=None, size=None):
 @use_kwargs(HeaderSchema, location="headers")
 @use_kwargs(PaginatedQuerySchema, location="query")
 @with_prefer
-def patch_taxonomy(code=None, prefer=None, page=None, size=None):
+def patch_taxonomy(code=None, prefer=None, page=None, size=None, q=None):
+    if q:
+        json_abort(422, {
+            'message': 'Query not appropriate when creating or updating taxonomy',
+            'reason': 'search-query-not-allowed'
+        })
+
     tax = current_flask_taxonomies.get_taxonomy(code=code, fail=False)
     if not tax:
         json_abort(404, {})
@@ -158,7 +176,12 @@ def patch_taxonomy(code=None, prefer=None, page=None, size=None):
 @use_kwargs(HeaderSchema, location="headers")
 @use_kwargs(QuerySchema, location="query")
 @with_prefer
-def create_update_taxonomy_post(prefer=None):
+def create_update_taxonomy_post(prefer=None, q=None):
+    if q:
+        json_abort(422, {
+            'message': 'Query not appropriate when creating or updating taxonomy',
+            'reason': 'search-query-not-allowed'
+        })
     data = request.json
     if 'code' not in data:
         abort(Response('Code missing', status=400))

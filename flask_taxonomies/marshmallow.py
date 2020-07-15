@@ -84,6 +84,7 @@ class QuerySchema(Schema):
     exclude = PreferQueryField(missing=None, data_key='representation:exclude')
     select = PreferQueryField(missing=None, data_key='representation:select')
     levels = Integer(missing=None, data_key='representation:levels')
+    q = String(missing=None, data_key='q')
 
     class Meta:
         unknown = EXCLUDE

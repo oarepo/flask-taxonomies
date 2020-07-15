@@ -1,5 +1,4 @@
-from distutils.core import setup
-import setuptools
+from setuptools import setup
 
 requires = [
     'flask',
@@ -13,7 +12,8 @@ requires = [
     'jsonpointer',
     'LinkHeader',
     'jsonpatch',
-    'flask-principal'
+    'flask-principal',
+    'luqum'
 ]
 
 tests_require = [
@@ -28,7 +28,7 @@ tests_require = [
 
 setup(
     name='flask-taxonomies',
-    version='7.0.0a5',
+    version='7.0.0a6',
     packages=['flask_taxonomies', ],
     install_requires=requires,
     tests_require=tests_require,

@@ -55,3 +55,7 @@ FLASK_TAXONOMIES_REPRESENTATION = {
 }
 
 FLASK_TAXONOMIES_MAX_RESULTS_RETURNED = 10000
+
+# FLASK_TAXONOMIES_QUERY_PARSER = 'flask_taxonomies.query.default_query_parser'
+
+# FLASK_TAXONOMIES_QUERY_EXECUTOR = 'flask_taxonomies.query.default_query_executor'

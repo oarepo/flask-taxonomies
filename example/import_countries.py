@@ -1,4 +1,5 @@
 # countries are taken from https://www.kaggle.com/nikitagrec/world-capitals-gps/data
+import sys
 import traceback
 
 from flask_taxonomies.api import TermIdentification
@@ -9,44 +10,50 @@ import csv
 
 
 def import_countries(db):
-    with db.session.begin_nested():
-        try:
-            Base.metadata.create_all(db.engine)
-        except:
-            pass
-        tax = current_flask_taxonomies.get_taxonomy(code='country', fail=False)
-        if tax:
-            return
+    # with db.session.begin_nested():
+    try:
+        Base.metadata.create_all(db.engine)
+    except:
+        pass
 
-        tax = current_flask_taxonomies.create_taxonomy(
-            code='country',
-            extra_data={
-                'title': 'List of countries'
-            },
-            url='https://www.kaggle.com/nikitagrec/world-capitals-gps/data')
+    tax = current_flask_taxonomies.get_taxonomy(code='country', fail=False)
+    if tax:
+        return
 
-        continents = {}
-        with open(os.path.join(os.path.dirname(__file__), 'countries.csv'), 'r') as f:
-            rdr = csv.DictReader(f)
-            for row in rdr:
-                try:
-                    continent = row['ContinentName']
-                    country = row['CountryCode']
-                    if continent not in continents:
-                        print('Creating continent', continent.lower())
-                        continent_term = current_flask_taxonomies.create_term(
-                            TermIdentification(taxonomy=tax, slug=continent.lower().replace(' ', '-')),
-                        )
-                        continents[continent] = continent_term
+    tax = current_flask_taxonomies.create_taxonomy(
+        code='country',
+        extra_data={
+            'title': 'List of countries'
+        },
+        url='https://www.kaggle.com/nikitagrec/world-capitals-gps/data')
 
-                    slug = '%s/%s' % (continent.lower(), country.lower())
-                    slug = slug.replace(' ', '-')
-                    print('Importing', slug)
-                    current_flask_taxonomies.create_term(
-                        TermIdentification(taxonomy=tax, slug=slug),
-                        extra_data=row
+    continents = {}
+    with open(os.path.join(os.path.dirname(__file__), 'countries.csv'), 'r') as f:
+        rdr = csv.DictReader(f)
+        for row in rdr:
+            try:
+                continent = row['ContinentName']
+                country = row['CountryCode']
+                if continent not in continents:
+                    print('Creating continent', continent.lower())
+                    continent_term = current_flask_taxonomies.create_term(
+                        TermIdentification(taxonomy=tax, slug=continent.lower().replace(' ', '-')),
                     )
-                except:
-                    traceback.print_exc()
-                    return
-    db.session.commit()
+                    continents[continent] = continent_term
+
+                slug = '%s/%s' % (continent.lower(), country.lower())
+                slug = slug.replace(' ', '-')
+                print('Importing', slug)
+                current_flask_taxonomies.create_term(
+                    TermIdentification(taxonomy=tax, slug=slug),
+                    extra_data=row
+                )
+            except:
+                traceback.print_exc()
+                return
+    try:
+        db.session.commit()
+    except:
+        traceback.print_exc()
+        sys.exit(1)
+        

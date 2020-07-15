@@ -770,6 +770,54 @@ X-Total: 58
 ]
 ```
 
+#### Searching
+
+Use ``q=`` parameter to search within terms. Returns all the resources
+whose ``metadata`` contain the expression in q.
+
+##### Simple query
+
+If ``q`` is a simple string not containing ':' or string in quotes,
+it is interpreted as a string that must be present in any of 
+values inside the json.
+
+The current implementation is dependent on the database backend
+and might perform sub-optimal ``ilike %x%`` query on textified json.
+
+```console
+$ curl -i -H "Prefer: return=minimal; include=data dsc; exclude=self" \
+  http://127.0.0.1:5000/api/2.0/taxonomies/country/europe?q=Prague
+
+HTTP/1.0 200 OK
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe>; rel=self
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe?representation:include=dsc>; rel=tree
+
+[
+    {
+      "CapitalLatitude": "50.083333333333336", 
+      "CapitalLongitude": "14.466667", 
+      "CapitalName": "Prague", 
+      "ContinentName": "Europe", 
+      "CountryCode": "CZ", 
+      "CountryName": "Czech Republic", 
+      "slug": "europe/cz"
+    }
+]
+```
+
+##### Lucene-like query
+
+If the ``q`` contains a ':' character not enclosed in quotes,
+it is parsed as a query in lucene syntax, with the following
+allowed constructs:
+
+   * path:value for matching value at the given path
+   * a.b.c:value for representing nested paths 
+   * AND, OR, NOT, brackets
+   
+The query will be executed if the database or search backend support
+it. If not supported, HTTP 501 will be returned.
+
 ### Taxonomy
 #### Creating
 

@@ -17,7 +17,7 @@ from .common import enrich_data_with_computed
 class Paginator:
     def __init__(self, representation, data, page, size,
                  json_converter=None, envelope_links=None,
-                 allow_empty=True, single_result=False):
+                 allow_empty=True, single_result=False, has_query=False):
         self.data = data
         self.page = page
         self.size = size
@@ -28,10 +28,14 @@ class Paginator:
         self.single_result = single_result
         self._envelope_links = envelope_links or self._default_envelope_links
         self.representation = representation
+        self.has_query = has_query
 
     @cached_property
     def _data(self):
-        self_offset = 0 if INCLUDE_SELF in self.representation else 1
+        if not self.has_query:
+            self_offset = 0 if INCLUDE_SELF in self.representation else 1
+        else:
+            self_offset = 0
         if self.size:
             data = self.data
             if isinstance(data, (list, tuple)):
