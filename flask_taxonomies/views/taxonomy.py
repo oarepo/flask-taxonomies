@@ -10,6 +10,7 @@ from flask_taxonomies.constants import (
     INCLUDE_DELETED,
     INCLUDE_DESCENDANTS,
     INCLUDE_DESCENDANTS_COUNT,
+    INCLUDE_SELF,
 )
 from flask_taxonomies.marshmallow import HeaderSchema, PaginatedQuerySchema, QuerySchema
 from flask_taxonomies.models import EnvelopeLinks, TaxonomyTerm, TermStatusEnum
@@ -65,15 +66,18 @@ def get_taxonomy(code=None, prefer=None, page=None, size=None, status_code=200, 
     prefer = taxonomy.merge_select(prefer)
 
     try:
-        paginator = Paginator(
-            prefer, [taxonomy], page=0, size=0,
-            json_converter=lambda data: [x.json(prefer) for x in data],
-            envelope_links=lambda prefer, data, original_data: original_data[0].links(
-                prefer) if original_data else EnvelopeLinks({}, {}),
-            single_result=True, allow_empty=False)
+        if INCLUDE_SELF in prefer:
+            paginator = Paginator(
+                prefer, [taxonomy], page=0, size=0,
+                json_converter=lambda data: [x.json(prefer) for x in data],
+                envelope_links=lambda prefer, data, original_data: original_data[0].links(
+                    prefer) if original_data else EnvelopeLinks({}, {}),
+                single_result=True, allow_empty=False)
 
-        if INCLUDE_DESCENDANTS not in prefer:
-            return paginator.jsonify(status_code=status_code)
+            if INCLUDE_DESCENDANTS not in prefer:
+                return paginator.jsonify(status_code=status_code)
+        else:
+            paginator = None
 
         if INCLUDE_DESCENDANTS in prefer:
             if INCLUDE_DELETED in prefer:
@@ -90,17 +94,23 @@ def get_taxonomy(code=None, prefer=None, page=None, size=None, status_code=200, 
             if q:
                 descendants = current_flask_taxonomies.apply_term_query(descendants, q, code)
 
+            child_exclude = set(prefer.exclude)
+            child_exclude.discard(INCLUDE_SELF)
+            child_prefer = prefer.copy(exclude=child_exclude).extend(include=[INCLUDE_SELF])
+
             child_paginator = Paginator(
-                prefer, descendants, page, size,
+                child_prefer, descendants, page, size,
                 json_converter=lambda data: build_descendants(data, prefer, root_slug=None)
             )
 
-            paginator.set_children(child_paginator.paginated_data_without_envelope)
-
-            # reset page, size, count from the child paginator
-            paginator.page = page
-            paginator.size = size
-            paginator.count = child_paginator.count
+            if INCLUDE_SELF in prefer:
+                paginator.set_children(child_paginator.paginated_data_without_envelope)
+                # reset page, size, count from the child paginator
+                paginator.page = page
+                paginator.size = size
+                paginator.count = child_paginator.count
+            else:
+                paginator = child_paginator
 
         return paginator.jsonify(status_code=status_code)
 

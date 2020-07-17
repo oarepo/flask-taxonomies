@@ -115,6 +115,42 @@ def sample_taxonomy(api):
 
 
 @pytest.fixture
+def deep_taxonomy(api):
+    tax = api.create_taxonomy(code='deep', extra_data={
+        'title': 'Test deep taxonomy'
+    })
+    api.create_term(TermIdentification(taxonomy=tax, slug='b'), extra_data={
+        'title': 'B'
+    })
+    api.create_term(TermIdentification(taxonomy=tax, slug='b/b1'), extra_data={
+        'title': 'B1'
+    })
+    api.create_term(TermIdentification(taxonomy=tax, slug='b/b2'), extra_data={
+        'title': 'B2'
+    })
+    api.create_term(TermIdentification(taxonomy=tax, slug='b/b2/b21'), extra_data={
+        'title': 'B21'
+    })
+    api.create_term(TermIdentification(taxonomy=tax, slug='b/b2/b22'), extra_data={
+        'title': 'B22'
+    })
+    api.create_term(TermIdentification(taxonomy=tax, slug='a'), extra_data={
+        'title': 'A'
+    })
+    api.create_term(TermIdentification(taxonomy=tax, slug='a/aa'), extra_data={
+        'title': 'AA'
+    })
+    api.create_term(TermIdentification(taxonomy=tax, slug='a/aa/aaa'), extra_data={
+        'title': 'AAA'
+    })
+    api.create_term(TermIdentification(taxonomy=tax, slug='a/aa/aaa/aaaa'), extra_data={
+        'title': 'AAAA'
+    })
+
+    return tax
+
+
+@pytest.fixture
 def excluded_title_sample_taxonomy(api):
     tax = api.create_taxonomy(code='test', extra_data={
         'title': 'Test taxonomy'

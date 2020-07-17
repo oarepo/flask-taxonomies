@@ -632,6 +632,37 @@ Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/cz?representation
 }
 ```
 
+#### Maximum levels
+
+When descendants are selected, a maximum level of descendants can be specified via
+``levels=<n>`` part of ``prefer`` header (or representation:levels=n in the query).
+
+Example:
+
+ ```console
+$ curl -i -H "Prefer: return=representation; levels=1" \ 
+    "http://127.0.0.1:5000/api/2.0/taxonomies/country"
+
+HTTP/1.0 200 OK
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country>; rel=self
+Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country?representation:include=dsc>; rel=tree
+
+{
+        'children': [
+            {'slug': 'africa'},
+            {'slug': 'antarctica'},
+            {'slug': 'asia'},
+            {'slug': 'australia'},
+            {'slug': 'central-america'},
+            {'slug': 'europe'},
+            {'slug': 'north-america'},
+            {'slug': 'south-america'}
+        ],
+        'code': 'country',
+        'title': 'List of countries'
+}
+```
+
 #### Pagination
 
 If descendants are requested without further arguments the whole tree is returned (well, in fact 

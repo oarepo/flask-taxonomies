@@ -26,18 +26,23 @@ class PreferHeaderField(Field):
         except UnicodeDecodeError as error:
             raise self.make_error("invalid_utf8") from error
         value = parse_options_header(value)
-        command, options = value
+        command, _options = value
         if not command.startswith(RETURN_PREFIX):
             return None
         representation = command[len(RETURN_PREFIX):]
-        options = {
-            k: set((v or '').split()) for k, v in options.items()
-        }
+        options = {}
+        for k, v in _options.items():
+            if k in ('include', 'exclude', 'select'):
+                options[k] = set((v or '').strip().split())
+            else:
+                options[k] = (v or '').strip()
+
         return Representation(
             representation,
-            include=options.get('include', None),
-            exclude=options.get('exclude', None),
-            select=options.get('select', None)
+            include=options.pop('include', None),
+            exclude=options.pop('exclude', None),
+            select=options.pop('select', None),
+            options=options
         )
 
 

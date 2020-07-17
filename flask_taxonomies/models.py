@@ -130,9 +130,10 @@ class Representation:
 
     def copy(self, representation=None, include=None, exclude=None, select=None, options=None):
         return Representation(representation or self.representation,
-                              include or self.include, exclude or self.exclude,
-                              select or self.select,
-                              options or self.options)
+                              include if include is not None else self.include,
+                              exclude if exclude is not None else self.exclude,
+                              select if select is not None else self.select,
+                              options if options is not None else self.options)
 
     def extend(self, include=None, exclude=None, select=None, options=None):
         if include:
