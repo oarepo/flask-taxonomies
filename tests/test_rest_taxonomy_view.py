@@ -125,16 +125,16 @@ def taxonomy_list_pagination_test(api, client, many_taxonomies):
     assert taxonomies.status_code == 200
     assert json.loads(taxonomies.data) == {
         'data': [
-            {'data': {'code': 'test-11', 'title': 'Test taxonomy #11'}},
-            {'data': {'code': 'test-12', 'title': 'Test taxonomy #12'}},
-            {'data': {'code': 'test-13', 'title': 'Test taxonomy #13'}},
-            {'data': {'code': 'test-14', 'title': 'Test taxonomy #14'}},
-            {'data': {'code': 'test-15', 'title': 'Test taxonomy #15'}},
-            {'data': {'code': 'test-16', 'title': 'Test taxonomy #16'}},
-            {'data': {'code': 'test-17', 'title': 'Test taxonomy #17'}},
-            {'data': {'code': 'test-18', 'title': 'Test taxonomy #18'}},
-            {'data': {'code': 'test-19', 'title': 'Test taxonomy #19'}},
-            {'data': {'code': 'test-20', 'title': 'Test taxonomy #20'}}],
+            {'code': 'test-11', 'data': {'title': 'Test taxonomy #11'}},
+            {'code': 'test-12', 'data': {'title': 'Test taxonomy #12'}},
+            {'code': 'test-13', 'data': {'title': 'Test taxonomy #13'}},
+            {'code': 'test-14', 'data': {'title': 'Test taxonomy #14'}},
+            {'code': 'test-15', 'data': {'title': 'Test taxonomy #15'}},
+            {'code': 'test-16', 'data': {'title': 'Test taxonomy #16'}},
+            {'code': 'test-17', 'data': {'title': 'Test taxonomy #17'}},
+            {'code': 'test-18', 'data': {'title': 'Test taxonomy #18'}},
+            {'code': 'test-19', 'data': {'title': 'Test taxonomy #19'}},
+            {'code': 'test-20', 'data': {'title': 'Test taxonomy #20'}}],
         'links': {'self': 'http://localhost/api/2.0/taxonomies/?page=2&size=10'},
         'page': 2,
         'size': 10,
@@ -313,7 +313,8 @@ def get_taxonomy_paginated_descendants_test(api, client, sample_taxonomy):
         'children': [
             {'data': {'title': 'A'}}
         ],
-        'data': {'code': 'test', 'title': 'Test taxonomy'},
+        'code': 'test',
+        'data': {'title': 'Test taxonomy'},
         'page': 1,
         'size': 1,
         'total': 3
@@ -335,7 +336,8 @@ def get_taxonomy_paginated_descendants_test(api, client, sample_taxonomy):
                 'data': {'title': 'A'}
             }
         ],
-        'data': {'code': 'test', 'title': 'Test taxonomy'},
+        'code': 'test',
+        'data': {'title': 'Test taxonomy'},
         'page': 2,
         'size': 1,
         'total': 3
@@ -351,7 +353,8 @@ def get_taxonomy_paginated_descendants_test(api, client, sample_taxonomy):
         'children': [
             {'data': {'title': 'B'}}
         ],
-        'data': {'code': 'test', 'title': 'Test taxonomy'},
+        'code': 'test',
+        'data': {'title': 'Test taxonomy'},
         'page': 3,
         'size': 1,
         'total': 3

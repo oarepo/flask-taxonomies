@@ -540,14 +540,21 @@ Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe/gb?representation
 
 {
   "slug": "europe/gb", 
-  "status": "deleted"
+  "status": "deleted",
+  "busy_count":0,
+  "descendants_busy_count":0
 }
 ```
 
 **Include term status**
 
-Normally not needed, but if deleted terms are included in descendants status can be used to identify them.
-
+Including the status will add the following metadata:
+  * ``status`` of the term (alive, delete_pending, deleted, moved)
+  * ``busy_count`` - an integer saying how "busy" the term is. Being busy means
+    that a potentially destructive operation (such as deleting, moving or renaming slug)
+    is in progress. 
+  * ``descendants_busy_count`` - a number of descendants that are busy
+  
 ```console
 $ curl -i -H "Prefer: return=minimal; include=del sta dsc" \
   http://127.0.0.1:5000/api/2.0/taxonomies/country/europe
@@ -557,22 +564,30 @@ Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe>; rel=self
 Link: <http://127.0.0.1:5000/api/2.0/taxonomies/country/europe?representation:include=dsc>; rel=tree
 
 {
+  "busy_count":0,
   "children": [
     {
+      "busy_count":0,
+      "descendants_busy_count":0,
       "slug": "europe/ad", 
       "status": "alive"
     }, 
     ...
     {
+      "busy_count":0,
+      "descendants_busy_count":0,
       "slug": "europe/gb", 
       "status": "deleted"
     }, 
     ...
     {
+      "busy_count":0,
+      "descendants_busy_count":0,
       "slug": "europe/va", 
       "status": "alive"
     }
   ], 
+  "descendants_busy_count":0,
   "slug": "europe", 
   "status": "alive"
 }

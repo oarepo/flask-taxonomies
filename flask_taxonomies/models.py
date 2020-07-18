@@ -209,23 +209,30 @@ class Taxonomy(Base):
         :param representation:
         :return:
         """
-        resp = {
+        metadata_resp = {
             'code': self.code,
         }
+        resp = {}
 
         if INCLUDE_ID in representation:
-            resp['id'] = self.id
+            metadata_resp['id'] = self.id
         if INCLUDE_LEVEL in representation:
-            resp['level'] = 0
+            metadata_resp['level'] = 0
         if INCLUDE_DATA in representation and self.extra_data:
             representation = self.merge_select(representation)
             resp.update(current_flask_taxonomies.extract_data(representation, self))
         if INCLUDE_DESCENDANTS_COUNT in representation and hasattr(self, 'descendants_count'):
-            resp['descendants_count'] = self.descendants_count
+            metadata_resp['descendants_count'] = self.descendants_count
+        if INCLUDE_STATUS in representation:
+            if hasattr(self, 'descendants_busy_count'):
+                metadata_resp['descendants_busy_count'] = self.descendants_busy_count
         if INCLUDE_ENVELOPE in representation:
             resp = {
+                **metadata_resp,
                 'data': resp
             }
+        else:
+            resp.update(metadata_resp)
 
         if INCLUDE_URL in representation or INCLUDE_DESCENDANTS_URL in representation:
             resp['links'] = self.links(representation).envelope
@@ -310,30 +317,40 @@ class TaxonomyTerm(Base):
         :param representation:
         :return:
         """
+        metadata_resp = {}
         resp = {}
         if INCLUDE_SLUG in representation:
-            resp['slug'] = self.slug
+            metadata_resp['slug'] = self.slug
         if INCLUDE_LEVEL in representation:
-            resp['level'] = self.level
+            metadata_resp['level'] = self.level
 
         if INCLUDE_ID in representation:
-            resp['id'] = self.id
+            metadata_resp['id'] = self.id
         if INCLUDE_LEVEL in representation:
-            resp['level'] = self.level + 1
+            metadata_resp['level'] = self.level + 1
         if INCLUDE_STATUS in representation:
             if self.status in (TermStatusEnum.deleted, TermStatusEnum.delete_pending) and self.obsoleted_by_id:
-                resp['status'] = 'moved'
+                metadata_resp['status'] = 'moved'
             else:
-                resp['status'] = self.status.name if self.status else None
+                metadata_resp['status'] = self.status.name if self.status else None
+
+            metadata_resp['busy_count'] = self.busy_count
+            if hasattr(self, 'descendants_busy_count'):
+                metadata_resp['descendants_busy_count'] = self.descendants_busy_count
+
         if INCLUDE_DATA in representation and self.extra_data:
             resp.update(current_flask_taxonomies.extract_data(representation, self))
+
         if INCLUDE_DESCENDANTS_COUNT in representation and hasattr(self, 'descendants_count'):
-            resp['descendants_count'] = self.descendants_count
+            metadata_resp['descendants_count'] = self.descendants_count
 
         if INCLUDE_ENVELOPE in representation:
             resp = {
-                'data': resp
+                'data': resp,
+                **metadata_resp
             }
+        else:
+            resp.update(metadata_resp)
         if INCLUDE_URL in representation or INCLUDE_DESCENDANTS_URL in representation:
             resp['links'] = self.links(representation).envelope
 

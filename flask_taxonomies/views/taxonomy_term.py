@@ -14,6 +14,7 @@ from flask_taxonomies.constants import (
     INCLUDE_DESCENDANTS,
     INCLUDE_DESCENDANTS_COUNT,
     INCLUDE_SELF,
+    INCLUDE_STATUS,
 )
 from flask_taxonomies.marshmallow import (
     HeaderSchema,
@@ -52,13 +53,15 @@ def get_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None, s
                 TermIdentification(taxonomy=code, slug=slug),
                 levels=prefer.options.get('levels', None),
                 status_cond=status_cond,
-                return_descendants_count=INCLUDE_DESCENDANTS_COUNT in prefer
+                return_descendants_count=INCLUDE_DESCENDANTS_COUNT in prefer,
+                return_descendants_busy_count=INCLUDE_STATUS in prefer
             )
         else:
             query = current_flask_taxonomies.filter_term(
                 TermIdentification(taxonomy=code, slug=slug),
                 status_cond=status_cond,
-                return_descendants_count=INCLUDE_DESCENDANTS_COUNT in prefer
+                return_descendants_count=INCLUDE_DESCENDANTS_COUNT in prefer,
+                return_descendants_busy_count=INCLUDE_STATUS in prefer
             )
         if q:
             query = current_flask_taxonomies.apply_term_query(query, q, code)

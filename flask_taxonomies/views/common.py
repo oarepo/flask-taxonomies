@@ -10,6 +10,7 @@ from flask_taxonomies.constants import (
     INCLUDE_ANCESTORS_HIERARCHY,
     INCLUDE_DELETED,
     INCLUDE_DESCENDANTS_COUNT,
+    INCLUDE_STATUS,
 )
 from flask_taxonomies.models import TaxonomyTerm, TermStatusEnum
 from flask_taxonomies.proxies import current_flask_taxonomies
@@ -55,7 +56,8 @@ def build_ancestors(term, tops, stack, representation, root_slug, transformers=N
 
     ancestors = current_flask_taxonomies.ancestors(
         TermIdentification(term=term), status_cond=status_cond,
-        return_descendants_count=INCLUDE_DESCENDANTS_COUNT in representation
+        return_descendants_count=INCLUDE_DESCENDANTS_COUNT in representation,
+        return_descendants_busy_count=INCLUDE_STATUS in representation
     )
     if root_slug is not None:
         ancestors = ancestors.filter(TaxonomyTerm.slug > root_slug)

@@ -11,6 +11,7 @@ from flask_taxonomies.constants import (
     INCLUDE_DESCENDANTS,
     INCLUDE_DESCENDANTS_COUNT,
     INCLUDE_SELF,
+    INCLUDE_STATUS,
 )
 from flask_taxonomies.marshmallow import HeaderSchema, PaginatedQuerySchema, QuerySchema
 from flask_taxonomies.models import EnvelopeLinks, TaxonomyTerm, TermStatusEnum
@@ -32,7 +33,9 @@ from .paginator import Paginator
 @with_prefer
 def list_taxonomies(prefer=None, page=None, size=None, q=None):
     current_flask_taxonomies.permissions.taxonomy_list.enforce(request=request)
-    taxonomies = current_flask_taxonomies.list_taxonomies(return_descendants_count=INCLUDE_DESCENDANTS_COUNT in prefer)
+    taxonomies = current_flask_taxonomies.list_taxonomies(
+        return_descendants_count=INCLUDE_DESCENDANTS_COUNT in prefer,
+        return_descendants_busy_count=INCLUDE_STATUS in prefer)
     if q:
         taxonomies = current_flask_taxonomies.apply_taxonomy_query(taxonomies, q)
     paginator = Paginator(
@@ -53,7 +56,8 @@ def list_taxonomies(prefer=None, page=None, size=None, q=None):
 def get_taxonomy(code=None, prefer=None, page=None, size=None, status_code=200, q=None):
     try:
         taxonomies = current_flask_taxonomies.filter_taxonomy(
-            code, return_descendants_count=INCLUDE_DESCENDANTS_COUNT in prefer
+            code, return_descendants_count=INCLUDE_DESCENDANTS_COUNT in prefer,
+            return_descendants_busy_count=INCLUDE_STATUS in prefer
         )
         taxonomy = taxonomies.one()
         taxonomy = enrich_data_with_computed(taxonomy)
@@ -89,7 +93,8 @@ def get_taxonomy(code=None, prefer=None, page=None, size=None, status_code=200, 
                 taxonomy,
                 levels=prefer.options.get('levels', None),
                 status_cond=status_cond,
-                return_descendants_count=INCLUDE_DESCENDANTS_COUNT in prefer
+                return_descendants_count=INCLUDE_DESCENDANTS_COUNT in prefer,
+                return_descendants_busy_count=INCLUDE_STATUS in prefer
             )
             if q:
                 descendants = current_flask_taxonomies.apply_term_query(descendants, q, code)

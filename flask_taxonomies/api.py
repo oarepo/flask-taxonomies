@@ -48,18 +48,28 @@ class Api:
         db = get_state(self.app).db
         return db.session
 
-    def list_taxonomies(self, session=None, return_descendants_count=False):
+    def list_taxonomies(self, session=None, return_descendants_count=False,
+                        return_descendants_busy_count=False):
         """Return a list of all available taxonomies."""
         session = session or self.session
 
+        query_parts = [Taxonomy]
         if return_descendants_count:
             aliased_descendant = aliased(TaxonomyTerm, name='aliased_descendant')
             stmt = session.query(func.count(aliased_descendant.id))
             stmt = stmt.filter(aliased_descendant.taxonomy_id == Taxonomy.id)
             stmt = stmt.label('descendants_count')
-            ret = session.query(Taxonomy, stmt)
-        else:
-            ret = session.query(Taxonomy)
+            query_parts.append(stmt)
+
+        if return_descendants_busy_count:
+            aliased_descendant = aliased(TaxonomyTerm, name='aliased_abc_descendant')
+            stmt = session.query(func.count(aliased_descendant.id))
+            stmt = stmt.filter(aliased_descendant.taxonomy_id == Taxonomy.id)
+            stmt = stmt.filter(aliased_descendant.busy_count > 0)
+            stmt = stmt.label('descendants_busy_count')
+            query_parts.append(stmt)
+
+        ret = session.query(*query_parts)
 
         return ret
 
@@ -67,22 +77,16 @@ class Api:
     def taxonomy_list(self):
         return self.list_taxonomies()  # pragma: no cover
 
-    def filter_taxonomy(self, code, session=None, return_descendants_count=False):
-        session = session or self.session
-
-        if return_descendants_count:
-            aliased_descendant = aliased(TaxonomyTerm, name='aliased_descendant')
-            stmt = session.query(func.count(aliased_descendant.id))
-            stmt = stmt.filter(aliased_descendant.taxonomy_id == Taxonomy.id)
-            stmt = stmt.label('descendants_count')
-            ret = session.query(Taxonomy, stmt)
-        else:
-            ret = session.query(Taxonomy)
-
+    def filter_taxonomy(self, code, session=None, return_descendants_count=False,
+                        return_descendants_busy_count=False):
+        ret = self.list_taxonomies(session=session, return_descendants_count=return_descendants_count,
+                                   return_descendants_busy_count=return_descendants_busy_count)
         return ret.filter(Taxonomy.code == code)
 
-    def get_taxonomy(self, code, fail=True, session=None, return_descendants_count=False):
-        ret = self.filter_taxonomy(code, session, return_descendants_count=return_descendants_count)
+    def get_taxonomy(self, code, fail=True, session=None, return_descendants_count=False,
+                     return_descendants_busy_count=False):
+        ret = self.filter_taxonomy(code, session, return_descendants_count=return_descendants_count,
+                                   return_descendants_busy_count=return_descendants_busy_count)
         if fail:
             return ret.one()
         else:
@@ -143,18 +147,29 @@ class Api:
 
     def list_taxonomy(self, taxonomy: [Taxonomy, str], levels=None,
                       status_cond=TaxonomyTerm.status == TermStatusEnum.alive,
-                      order=True, session=None, return_descendants_count=False):
+                      order=True, session=None, return_descendants_count=False,
+                      return_descendants_busy_count=False):
         session = session or self.session
 
+        query_parts = [TaxonomyTerm]
         if return_descendants_count:
             aliased_descendant = aliased(TaxonomyTerm, name='aliased_descendant')
             stmt = session.query(func.count(aliased_descendant.id))
             stmt = stmt.filter(aliased_descendant.slug.descendant_of(TaxonomyTerm.slug))
             stmt = stmt.filter(aliased_descendant.slug != TaxonomyTerm.slug)
             stmt = stmt.label('descendants_count')
-            query = session.query(TaxonomyTerm, stmt)
-        else:
-            query = session.query(TaxonomyTerm)
+            query_parts.append(stmt)
+
+        if return_descendants_busy_count:
+            aliased_descendant = aliased(TaxonomyTerm, name='aliased_abc_descendant')
+            stmt = session.query(func.count(aliased_descendant.id))
+            stmt = stmt.filter(aliased_descendant.slug.descendant_of(TaxonomyTerm.slug))
+            stmt = stmt.filter(aliased_descendant.slug != TaxonomyTerm.slug)
+            stmt = stmt.filter(aliased_descendant.busy_count > 0)
+            stmt = stmt.label('descendants_busy_count')
+            query_parts.append(stmt)
+
+        query = session.query(*query_parts)
 
         if isinstance(taxonomy, Taxonomy):
             query = query.filter(TaxonomyTerm.taxonomy_id == taxonomy.id)
@@ -230,10 +245,12 @@ class Api:
     def filter_term(self, ti: TermIdentification,
                     status_cond=TaxonomyTerm.status == TermStatusEnum.alive,
                     return_descendants_count=False,
+                    return_descendants_busy_count=False,
                     session=None):
         ti = _coerce_ti(ti)
         session = session or self.session
-        return ti.term_query(session, return_descendants_count=return_descendants_count).filter(status_cond)
+        return ti.term_query(session, return_descendants_count=return_descendants_count,
+                             return_descendants_busy_count=return_descendants_busy_count).filter(status_cond)
 
     def update_term(self, ti: [TaxonomyTerm, TermIdentification],
                     status_cond=TaxonomyTerm.status == TermStatusEnum.alive,
@@ -261,31 +278,37 @@ class Api:
 
     def descendants(self, ti: TermIdentification, levels=None,
                     status_cond=TaxonomyTerm.status == TermStatusEnum.alive,
-                    order=True, session=None, return_descendants_count=False):
+                    order=True, session=None, return_descendants_count=False,
+                    return_descendants_busy_count=False):
         ret = self._descendants(ti, levels=levels, return_term=False,
                                 status_cond=status_cond, session=session,
-                                return_descendants_count=return_descendants_count)
+                                return_descendants_count=return_descendants_count,
+                                return_descendants_busy_count=return_descendants_busy_count)
         if order:
             return ret.order_by(TaxonomyTerm.slug)
         return ret  # pragma: no cover
 
     def descendants_or_self(self, ti: TermIdentification, levels=None,
                             status_cond=TaxonomyTerm.status == TermStatusEnum.alive,
-                            order=True, session=None, return_descendants_count=False):
+                            order=True, session=None, return_descendants_count=False,
+                            return_descendants_busy_count=False):
         ret = self._descendants(ti, levels=levels, return_term=True,
                                 status_cond=status_cond, session=session,
-                                return_descendants_count=return_descendants_count)
+                                return_descendants_count=return_descendants_count,
+                                return_descendants_busy_count=return_descendants_busy_count)
         if order:
             return ret.order_by(TaxonomyTerm.slug)
         return ret
 
     def _descendants(self, ti: TermIdentification, levels=None,
                      return_term=True, status_cond=None, session=None,
-                     return_descendants_count=False):
+                     return_descendants_count=False,
+                     return_descendants_busy_count=False):
         ti = _coerce_ti(ti)
         session = session or self.session
         query = ti.descendant_query(session,
-                                    return_descendants_count=return_descendants_count)
+                                    return_descendants_count=return_descendants_count,
+                                    return_descendants_busy_count=return_descendants_busy_count)
         if levels is not None:
             query = query.filter(TaxonomyTerm.level <= ti.level + levels)
         if not return_term:
@@ -295,22 +318,26 @@ class Api:
         return query
 
     def ancestors(self, ti: TermIdentification, status_cond=TaxonomyTerm.status == TermStatusEnum.alive, session=None,
-                  return_descendants_count=False):
+                  return_descendants_count=False, return_descendants_busy_count=False):
         return self._ancestors(ti, return_term=False, status_cond=status_cond, session=session,
-                               return_descendants_count=return_descendants_count)
+                               return_descendants_count=return_descendants_count,
+                               return_descendants_busy_count=return_descendants_busy_count)
 
     def ancestors_or_self(self, ti: TermIdentification,
                           status_cond=TaxonomyTerm.status == TermStatusEnum.alive, session=None,
-                          return_descendants_count=False):
+                          return_descendants_count=False,
+                          return_descendants_busy_count=False):
         return self._ancestors(ti, return_term=True, status_cond=status_cond, session=session,
-                               return_descendants_count=return_descendants_count)
+                               return_descendants_count=return_descendants_count,
+                               return_descendants_busy_count=return_descendants_busy_count)
 
     def _ancestors(self, ti: TermIdentification, return_term=True, status_cond=None, session=session,
-                   return_descendants_count=False):
+                   return_descendants_count=False, return_descendants_busy_count=False):
         ti = _coerce_ti(ti)
         session = session or self.session
         query = ti.ancestor_query(session,
-                                  return_descendants_count=return_descendants_count)
+                                  return_descendants_count=return_descendants_count,
+                                  return_descendants_busy_count=return_descendants_busy_count)
         if status_cond is not None:
             query = query.filter(status_cond)
         if not return_term:
