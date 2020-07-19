@@ -21,7 +21,7 @@ from flask_taxonomies.marshmallow import (
     MoveHeaderSchema,
     PaginatedQuerySchema,
 )
-from flask_taxonomies.models import TaxonomyTerm, TermStatusEnum
+from flask_taxonomies.models import TaxonomyTerm, TaxonomyTermBusyError, TermStatusEnum
 from flask_taxonomies.proxies import current_flask_taxonomies
 from flask_taxonomies.routing import accept_fallback
 from flask_taxonomies.term_identification import TermIdentification
@@ -290,6 +290,11 @@ def delete_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None
         current_flask_taxonomies.permissions.taxonomy_term_delete.enforce(request=request, taxonomy=taxonomy, term=term)
         term = current_flask_taxonomies.delete_term(TermIdentification(taxonomy=code, slug=slug),
                                                     remove_after_delete=False)
+    except TaxonomyTermBusyError as e:
+        return json_abort(412, {
+            'message': str(e),
+            'reason': 'term-busy'
+        })
     except NoResultFound as e:
         return json_abort(404, {})
     return jsonify(term.json(representation=prefer))
@@ -315,7 +320,6 @@ def taxonomy_move_term(code=None, slug=None, prefer=None, page=None, size=None, 
         current_flask_taxonomies.permissions.taxonomy_term_move.enforce(
             request=request, taxonomy=taxonomy, term=term,
             destination=destination, rename=rename)
-
     except NoResultFound as e:
         return json_abort(404, {})
 
@@ -342,11 +346,17 @@ def taxonomy_move_term(code=None, slug=None, prefer=None, page=None, size=None, 
         if not current_flask_taxonomies.filter_term(TermIdentification(taxonomy=code, slug=slug)).count():
             abort(404, 'Term %s/%s does not exist' % (code, slug))
 
-        old_term, new_term = current_flask_taxonomies.move_term(
-            TermIdentification(taxonomy=code, slug=slug),
-            new_parent=TermIdentification(taxonomy=destination_taxonomy,
-                                          slug=destination_slug) if destination_slug else '',
-            remove_after_delete=False)  # do not remove the original node from the database, just mark it as deleted
+        try:
+            old_term, new_term = current_flask_taxonomies.move_term(
+                TermIdentification(taxonomy=code, slug=slug),
+                new_parent=TermIdentification(taxonomy=destination_taxonomy,
+                                              slug=destination_slug) if destination_slug else '',
+                remove_after_delete=False)  # do not remove the original node from the database, just mark it as deleted
+        except TaxonomyTermBusyError as e:
+            return json_abort(412, {
+                'message': str(e),
+                'reason': 'term-busy'
+            })
     elif rename:
         new_slug = slug
         if new_slug.endswith('/'):
@@ -356,10 +366,16 @@ def taxonomy_move_term(code=None, slug=None, prefer=None, page=None, size=None, 
             new_slug = new_slug + '/' + rename
         else:
             new_slug = rename
-        old_term, new_term = current_flask_taxonomies.rename_term(
-            TermIdentification(taxonomy=code, slug=slug),
-            new_slug=new_slug,
-            remove_after_delete=False)  # do not remove the original node from the database, just mark it as deleted
+        try:
+            old_term, new_term = current_flask_taxonomies.rename_term(
+                TermIdentification(taxonomy=code, slug=slug),
+                new_slug=new_slug,
+                remove_after_delete=False)  # do not remove the original node from the database, just mark it as deleted
+        except TaxonomyTermBusyError as e:
+            return json_abort(412, {
+                'message': str(e),
+                'reason': 'term-busy'
+            })
         destination_taxonomy = code
     else:
         abort(400, 'Pass either `destination` or `rename` parameters ')

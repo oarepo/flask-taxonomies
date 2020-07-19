@@ -8,14 +8,20 @@ from flask import current_app
 from flask_sqlalchemy import get_state
 from slugify import slugify
 from sqlalchemy import func
-from sqlalchemy.orm import aliased
+from sqlalchemy.orm import Session, aliased
 from sqlalchemy.orm.attributes import flag_modified
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.util import deprecated
 from werkzeug.utils import cached_property, import_string
 
 from .constants import INCLUDE_DATA, INCLUDE_DESCENDANTS
-from .models import Taxonomy, TaxonomyError, TaxonomyTerm, TermStatusEnum
+from .models import (
+    Taxonomy,
+    TaxonomyError,
+    TaxonomyTerm,
+    TaxonomyTermBusyError,
+    TermStatusEnum,
+)
 from .signals import (
     after_taxonomy_created,
     after_taxonomy_deleted,
@@ -352,8 +358,12 @@ class Api:
                                              order=False, status_cond=sqlalchemy.sql.true())
             locked_terms = [r[0] for r in
                             terms.with_for_update().values(TaxonomyTerm.id)]  # get ids to actually lock the terms
+
             if terms.filter(TaxonomyTerm.busy_count > 0).count():
-                raise TaxonomyError('Can not delete busy terms')
+                raise TaxonomyTermBusyError('Can not delete busy terms')
+
+            if self._in_busy_tree(ti, session):
+                raise TaxonomyTermBusyError('Can not move to locked parent %s' % ti.slug)
 
             term = terms.first()
             if not term:
@@ -363,7 +373,8 @@ class Api:
                            session=session)
             # can call mark_busy if the deletion should be postponed
             taxonomy = term.taxonomy
-            before_taxonomy_term_deleted.send(term, taxonomy=taxonomy, term=term, terms=terms)
+            before_taxonomy_term_deleted.send(term, taxonomy=taxonomy, term=term, terms=terms,
+                                              locked_terms=locked_terms)
             self.unmark_busy(locked_terms, session=session)
             after_taxonomy_term_deleted.send(term, taxonomy=taxonomy, term=term)
             return term
@@ -437,6 +448,10 @@ class Api:
 
     def _rename_or_move(self, elements, parent_query=None, slug=None,
                         remove_after_delete=False, session=None):
+        for el in elements:
+            if el.busy_count:
+                raise TaxonomyTermBusyError('Element %s is locked, can not move or rename it' % el.slug)
+
         session = session or self.session
         with session.begin_nested():
             if slug and '/' in slug:
@@ -461,6 +476,10 @@ class Api:
             else:
                 target_path = self._last_slug_element(root.slug)
 
+            if parent:
+                if self._in_busy_tree(parent, session):
+                    raise TaxonomyTermBusyError('Can not move to locked parent %s' % parent.slug)
+
             locked_terms = [r[0] for r in
                             elements.with_for_update().values(TaxonomyTerm.id)]  # get ids to actually lock the terms
 
@@ -469,7 +488,7 @@ class Api:
                                TermStatusEnum.delete_pending
                                if remove_after_delete else TermStatusEnum.deleted
                            ))
-            before_taxonomy_term_moved.send(root, target_path=target_path, terms=elements)
+            before_taxonomy_term_moved.send(root, target_path=target_path, terms=elements, locked_terms=locked_terms)
             target_root = self._copy(root, parent, target_path, session)
             self.unmark_busy(locked_terms)
             if not remove_after_delete:
@@ -478,6 +497,10 @@ class Api:
                 session.add(root)
             after_taxonomy_term_moved.send(root, term=root, new_term=target_root)
             return root, target_root
+
+    def _in_busy_tree(self, el, session):
+        return self.ancestors_or_self(el, session=session).\
+                   filter(TaxonomyTerm.busy_count > 0).count() > 0
 
     def _copy(self, term: TaxonomyTerm, parent, target_path, session):
         new_term = TaxonomyTerm(

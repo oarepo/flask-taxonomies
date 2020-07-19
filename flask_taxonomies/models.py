@@ -29,6 +29,10 @@ class TaxonomyError(Exception):
     pass
 
 
+class TaxonomyTermBusyError(TaxonomyError):
+    pass
+
+
 Base = declarative_base()
 
 
