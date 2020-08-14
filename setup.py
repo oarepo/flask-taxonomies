@@ -8,7 +8,7 @@ requires = [
     'python-slugify',
     'jsonpatch',
     'flask-migrate',
-    'webargs',
+    'webargs<6.0.0',
     'jsonpointer',
     'LinkHeader',
     'jsonpatch',
@@ -28,7 +28,7 @@ tests_require = [
 
 setup(
     name='flask-taxonomies',
-    version='7.0.0a11',
+    version='7.0.0a12',
     packages=['flask_taxonomies', 'flask_taxonomies.alembic', 'flask_taxonomies.views'],
     install_requires=requires,
     tests_require=tests_require,

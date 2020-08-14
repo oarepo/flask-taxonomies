@@ -28,8 +28,8 @@ from .paginator import Paginator
 
 
 @blueprint.route('/')
-@use_kwargs(HeaderSchema, location="headers")
-@use_kwargs(PaginatedQuerySchema, location="query")
+@use_kwargs(HeaderSchema, locations=("headers",))
+@use_kwargs(PaginatedQuerySchema, locations=("query",))
 @with_prefer
 def list_taxonomies(prefer=None, page=None, size=None, q=None):
     current_flask_taxonomies.permissions.taxonomy_list.enforce(request=request)
@@ -50,8 +50,8 @@ def list_taxonomies(prefer=None, page=None, size=None, q=None):
 
 
 @blueprint.route('/<code>', strict_slashes=False)
-@use_kwargs(HeaderSchema, location="headers")
-@use_kwargs(PaginatedQuerySchema, location="query")
+@use_kwargs(HeaderSchema, locations=("headers",))
+@use_kwargs(PaginatedQuerySchema, locations=("query",))
 @with_prefer
 def get_taxonomy(code=None, prefer=None, page=None, size=None, status_code=200, q=None):
     try:
@@ -127,8 +127,8 @@ def get_taxonomy(code=None, prefer=None, page=None, size=None, status_code=200, 
 
 
 @blueprint.route('/<code>', methods=['PUT'], strict_slashes=False)
-@use_kwargs(HeaderSchema, location="headers")
-@use_kwargs(PaginatedQuerySchema, location="query")
+@use_kwargs(HeaderSchema, locations=("headers",))
+@use_kwargs(PaginatedQuerySchema, locations=("query",))
 @with_prefer
 def create_update_taxonomy(code=None, prefer=None, page=None, size=None, q=None):
     if q:
@@ -157,8 +157,8 @@ def create_update_taxonomy(code=None, prefer=None, page=None, size=None, q=None)
 
 
 @blueprint.route('/<code>', methods=['PATCH'], strict_slashes=False)
-@use_kwargs(HeaderSchema, location="headers")
-@use_kwargs(PaginatedQuerySchema, location="query")
+@use_kwargs(HeaderSchema, locations=("headers",))
+@use_kwargs(PaginatedQuerySchema, locations=("query",))
 @with_prefer
 def patch_taxonomy(code=None, prefer=None, page=None, size=None, q=None):
     if q:
@@ -188,8 +188,8 @@ def patch_taxonomy(code=None, prefer=None, page=None, size=None, q=None):
 
 
 @blueprint.route('/', methods=['POST'], strict_slashes=False)
-@use_kwargs(HeaderSchema, location="headers")
-@use_kwargs(QuerySchema, location="query")
+@use_kwargs(HeaderSchema, locations=("headers",))
+@use_kwargs(QuerySchema, locations=("query",))
 @with_prefer
 def create_update_taxonomy_post(prefer=None, q=None):
     if q:

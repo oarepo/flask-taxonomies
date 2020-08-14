@@ -31,15 +31,18 @@ from .paginator import Paginator
 
 
 @blueprint.route('/<code>/<path:slug>', strict_slashes=False)
-@use_kwargs(HeaderSchema, location="headers")
-@use_kwargs(PaginatedQuerySchema, location="query")
+@use_kwargs(HeaderSchema, locations=("headers",))
+@use_kwargs(PaginatedQuerySchema, locations=("query",))
 @with_prefer
-def get_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None, status_code=200, q=None):
+def get_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None, status_code=200,
+                      q=None):
     try:
         taxonomy = current_flask_taxonomies.get_taxonomy(code)
         prefer = taxonomy.merge_select(prefer)
 
-        current_flask_taxonomies.permissions.taxonomy_term_read.enforce(request=request, taxonomy=taxonomy, slug=slug)
+        current_flask_taxonomies.permissions.taxonomy_term_read.enforce(request=request,
+                                                                        taxonomy=taxonomy,
+                                                                        slug=slug)
 
         if INCLUDE_DELETED in prefer:
             status_cond = sqlalchemy.sql.true()
@@ -95,7 +98,8 @@ def get_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None, s
                 'status': 'moved'
             }), status=301, headers={
                 'Location': obsoleted_by_links.headers['self'],
-                'Link': str(LinkHeader([Link(v, rel=k) for k, v in term.links(representation=prefer).envelope.items()]))
+                'Link': str(LinkHeader([Link(v, rel=k) for k, v in
+                                        term.links(representation=prefer).envelope.items()]))
             }, content_type='application/json')
         else:
             json_abort(410, {
@@ -108,8 +112,8 @@ def get_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None, s
 
 
 @blueprint.route('/<code>/<path:slug>', methods=['PUT'], strict_slashes=False)
-@use_kwargs(HeaderSchema, location="headers")
-@use_kwargs(PaginatedQuerySchema, location="query")
+@use_kwargs(HeaderSchema, locations=("headers",))
+@use_kwargs(PaginatedQuerySchema, locations=("query",))
 @with_prefer
 def create_update_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None, q=None):
     if q:
@@ -139,7 +143,8 @@ def _create_update_taxonomy_term_internal(code, slug, prefer, page, size, extra_
         slug = '/'.join(slugify(x) for x in slug.split('/'))
 
         ti = TermIdentification(taxonomy=code, slug=slug)
-        term = original_term = current_flask_taxonomies.filter_term(ti, status_cond=sqlalchemy.sql.true()).one_or_none()
+        term = original_term = current_flask_taxonomies.filter_term(ti,
+                                                                    status_cond=sqlalchemy.sql.true()).one_or_none()
 
         if term and INCLUDE_DELETED not in prefer:
             if term.status != TermStatusEnum.alive:
@@ -160,7 +165,8 @@ def _create_update_taxonomy_term_internal(code, slug, prefer, page, size, extra_
             })
 
         if term:
-            current_flask_taxonomies.permissions.taxonomy_term_update.enforce(request=request, taxonomy=taxonomy,
+            current_flask_taxonomies.permissions.taxonomy_term_update.enforce(request=request,
+                                                                              taxonomy=taxonomy,
                                                                               term=term)
             current_flask_taxonomies.update_term(
                 term,
@@ -173,11 +179,13 @@ def _create_update_taxonomy_term_internal(code, slug, prefer, page, size, extra_
                 # there is a deleted term, so return a 409 Conflict
                 json_abort(409, {
                     'message': 'The taxonomy already contains a deleted term on this slug. '
-                               'To reuse the term, repeat the operation with `del` in representation:include.',
+                               'To reuse the term, repeat the operation with `del` in '
+                               'representation:include.',
                     'reason': 'deleted-term-exists'
                 })
 
-            current_flask_taxonomies.permissions.taxonomy_term_create.enforce(request=request, taxonomy=taxonomy,
+            current_flask_taxonomies.permissions.taxonomy_term_create.enforce(request=request,
+                                                                              taxonomy=taxonomy,
                                                                               slug=slug)
             current_flask_taxonomies.create_term(
                 ti,
@@ -185,7 +193,8 @@ def _create_update_taxonomy_term_internal(code, slug, prefer, page, size, extra_
             )
             status_code = 201
 
-        return get_taxonomy_term(code=code, slug=slug, prefer=prefer, page=page, size=size, status_code=status_code)
+        return get_taxonomy_term(code=code, slug=slug, prefer=prefer, page=page, size=size,
+                                 status_code=status_code)
 
     except NoResultFound:
         json_abort(404, {})
@@ -196,8 +205,8 @@ def _create_update_taxonomy_term_internal(code, slug, prefer, page, size, extra_
 
 @blueprint.route('/<code>/<path:slug>', methods=['POST'], strict_slashes=False)
 @accept_fallback('content_type')
-@use_kwargs(MoveHeaderSchema, location="headers")
-@use_kwargs(PaginatedQuerySchema, location="query")
+@use_kwargs(MoveHeaderSchema, locations=("headers",))
+@use_kwargs(PaginatedQuerySchema, locations=("query",))
 @with_prefer
 def create_taxonomy_term_post(code=None, slug=None, prefer=None, page=None, size=None, q=None):
     if q:
@@ -217,10 +226,11 @@ def create_taxonomy_term_post(code=None, slug=None, prefer=None, page=None, size
 
 
 @blueprint.route('/<code>', methods=['POST'], strict_slashes=False)
-@use_kwargs(HeaderSchema, location="headers")
-@use_kwargs(PaginatedQuerySchema, location="query")
+@use_kwargs(HeaderSchema, locations=("headers",))
+@use_kwargs(PaginatedQuerySchema, locations=("query",))
 @with_prefer
-def create_taxonomy_term_post_on_root(code=None, slug=None, prefer=None, page=None, size=None, q=None):
+def create_taxonomy_term_post_on_root(code=None, slug=None, prefer=None, page=None, size=None,
+                                      q=None):
     if q:
         json_abort(422, {
             'message': 'Query not appropriate when creating or updating term',
@@ -230,12 +240,13 @@ def create_taxonomy_term_post_on_root(code=None, slug=None, prefer=None, page=No
     if 'slug' not in extra_data:
         return Response('slug missing in payload', status=400)
     _slug = extra_data.pop('slug')
-    return _create_update_taxonomy_term_internal(code, urljoin(slug, _slug), prefer, page, size, extra_data)
+    return _create_update_taxonomy_term_internal(code, urljoin(slug, _slug), prefer, page, size,
+                                                 extra_data)
 
 
 @blueprint.route('/<code>/<path:slug>', methods=['PATCH'], strict_slashes=False)
-@use_kwargs(HeaderSchema, location="headers")
-@use_kwargs(PaginatedQuerySchema, location="query")
+@use_kwargs(HeaderSchema, locations=("headers",))
+@use_kwargs(PaginatedQuerySchema, locations=("query",))
 @with_prefer
 def patch_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None, q=None):
     if q:
@@ -259,7 +270,8 @@ def patch_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None,
     if not term:
         abort(404)
 
-    current_flask_taxonomies.permissions.taxonomy_term_update.enforce(request=request, taxonomy=taxonomy, term=term)
+    current_flask_taxonomies.permissions.taxonomy_term_update.enforce(request=request,
+                                                                      taxonomy=taxonomy, term=term)
 
     current_flask_taxonomies.update_term(
         term,
@@ -273,8 +285,8 @@ def patch_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None,
 
 
 @blueprint.route('/<code>/<path:slug>', methods=['DELETE'], strict_slashes=False)
-@use_kwargs(HeaderSchema, location="headers")
-@use_kwargs(PaginatedQuerySchema, location="query")
+@use_kwargs(HeaderSchema, locations=("headers",))
+@use_kwargs(PaginatedQuerySchema, locations=("query",))
 @with_prefer
 def delete_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None, q=None):
     if q:
@@ -287,7 +299,9 @@ def delete_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None
         ti = TermIdentification(taxonomy=code, slug=slug)
         term = current_flask_taxonomies.filter_term(ti).one()
 
-        current_flask_taxonomies.permissions.taxonomy_term_delete.enforce(request=request, taxonomy=taxonomy, term=term)
+        current_flask_taxonomies.permissions.taxonomy_term_delete.enforce(request=request,
+                                                                          taxonomy=taxonomy,
+                                                                          term=term)
         term = current_flask_taxonomies.delete_term(TermIdentification(taxonomy=code, slug=slug),
                                                     remove_after_delete=False)
     except TaxonomyTermBusyError as e:
@@ -301,10 +315,11 @@ def delete_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None
 
 
 @create_taxonomy_term_post.support('application/vnd.move')
-@use_kwargs(MoveHeaderSchema, location="headers")
-@use_kwargs(PaginatedQuerySchema, location="query")
+@use_kwargs(MoveHeaderSchema, locations=("headers",))
+@use_kwargs(PaginatedQuerySchema, locations=("query",))
 @with_prefer
-def taxonomy_move_term(code=None, slug=None, prefer=None, page=None, size=None, destination='', rename='', q=None):
+def taxonomy_move_term(code=None, slug=None, prefer=None, page=None, size=None, destination='',
+                       rename='', q=None):
     """Move term into a new parent or rename it."""
     if q:
         json_abort(422, {
@@ -343,7 +358,8 @@ def taxonomy_move_term(code=None, slug=None, prefer=None, page=None, size=None, 
             destination_slug = destination
             if destination_slug.startswith('/'):
                 destination_slug = destination_slug[1:]
-        if not current_flask_taxonomies.filter_term(TermIdentification(taxonomy=code, slug=slug)).count():
+        if not current_flask_taxonomies.filter_term(
+                TermIdentification(taxonomy=code, slug=slug)).count():
             abort(404, 'Term %s/%s does not exist' % (code, slug))
 
         try:
@@ -351,7 +367,8 @@ def taxonomy_move_term(code=None, slug=None, prefer=None, page=None, size=None, 
                 TermIdentification(taxonomy=code, slug=slug),
                 new_parent=TermIdentification(taxonomy=destination_taxonomy,
                                               slug=destination_slug) if destination_slug else '',
-                remove_after_delete=False)  # do not remove the original node from the database, just mark it as deleted
+                remove_after_delete=False)  # do not remove the original node from the database,
+            # just mark it as deleted
         except TaxonomyTermBusyError as e:
             return json_abort(412, {
                 'message': str(e),
