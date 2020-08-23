@@ -557,3 +557,7 @@ class Api:
         session = session or self.session
         return self.query_executor(session, sqlalchemy_query, TaxonomyTerm,
                                    self.query_parser(query_string, taxonomy_code=taxonomy_code))
+
+    def commit(self, session=None):
+        session = session or self.session
+        session.commit()

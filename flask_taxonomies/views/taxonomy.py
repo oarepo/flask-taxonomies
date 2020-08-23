@@ -152,7 +152,7 @@ def create_update_taxonomy(code=None, prefer=None, page=None, size=None, q=None)
     else:
         current_flask_taxonomies.update_taxonomy(tax, extra_data=request.json, url=url, select=select)
         status_code = 200
-
+    current_flask_taxonomies.commit()
     return get_taxonomy(code, prefer=prefer, page=page, size=size, status_code=status_code)
 
 
@@ -183,6 +183,7 @@ def patch_taxonomy(code=None, prefer=None, page=None, size=None, q=None):
     select = data.pop('select', None)
     current_flask_taxonomies.update_taxonomy(tax, extra_data=data, url=url, select=select)
     status_code = 200
+    current_flask_taxonomies.commit()
 
     return get_taxonomy(code, prefer=prefer, page=page, size=size, status_code=status_code)
 
@@ -212,6 +213,7 @@ def create_update_taxonomy_post(prefer=None, q=None):
         current_flask_taxonomies.permissions.taxonomy_update.enforce(request=request, taxonomy=tax)
         current_flask_taxonomies.update_taxonomy(tax, extra_data=data, url=url, select=select)
         status_code = 200
+    current_flask_taxonomies.commit()
 
     return get_taxonomy(code, prefer=prefer, status_code=status_code)
 
@@ -232,4 +234,5 @@ def delete_taxonomy(code=None):
 
     current_flask_taxonomies.permissions.taxonomy_delete.enforce(request=request, code=code)
     current_flask_taxonomies.delete_taxonomy(tax)
+    current_flask_taxonomies.commit()
     return Response(status=204)

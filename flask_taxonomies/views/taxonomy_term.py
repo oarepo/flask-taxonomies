@@ -193,6 +193,8 @@ def _create_update_taxonomy_term_internal(code, slug, prefer, page, size, extra_
             )
             status_code = 201
 
+        current_flask_taxonomies.commit()
+
         return get_taxonomy_term(code=code, slug=slug, prefer=prefer, page=page, size=size,
                                  status_code=status_code)
 
@@ -280,6 +282,7 @@ def patch_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None,
         patch=True,
         status=TermStatusEnum.alive  # make it alive if it  was deleted
     )
+    current_flask_taxonomies.commit()
 
     return get_taxonomy_term(code=code, slug=slug, prefer=prefer, page=page, size=size)
 
@@ -304,6 +307,8 @@ def delete_taxonomy_term(code=None, slug=None, prefer=None, page=None, size=None
                                                                           term=term)
         term = current_flask_taxonomies.delete_term(TermIdentification(taxonomy=code, slug=slug),
                                                     remove_after_delete=False)
+        current_flask_taxonomies.commit()
+
     except TaxonomyTermBusyError as e:
         return json_abort(412, {
             'message': str(e),
@@ -397,6 +402,8 @@ def taxonomy_move_term(code=None, slug=None, prefer=None, page=None, size=None, 
     else:
         abort(400, 'Pass either `destination` or `rename` parameters ')
         return  # just to make pycharm happy
+
+    current_flask_taxonomies.commit()
 
     return get_taxonomy_term(code=destination_taxonomy, slug=new_term.slug,
                              prefer=prefer, page=page, size=size)
