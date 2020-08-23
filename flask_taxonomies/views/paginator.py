@@ -130,7 +130,7 @@ class Paginator:
     def jsonify(self, status_code=200):
         ret = jsonify(self.paginated_data)
         headers, links = self.headers
-        ret.headers.update(headers)
+        ret.headers.extend(headers)
         ret.status_code = status_code
         if ret.status_code == 201 and 'self' in links:
             ret.headers['Location'] = links['self']
