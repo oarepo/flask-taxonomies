@@ -1,3 +1,6 @@
+from collections import Counter
+
+from flatten_json import unflatten_list
 from invenio_db import db
 from slugify import slugify
 
@@ -62,6 +65,7 @@ def convert_data_to_dict(data, int_conversions={}, str_args={}, bool_args={}):
     header = [x.split() if x else None for x in data[0]]
     for block in read_data_blocks(data[1:]):
         ret = {}
+        counter = Counter()
         for block_row in block:
             converted_row = {}
             for arridx, prop_path, val in zip(range(0, len(header)), header, block_row):
@@ -76,21 +80,19 @@ def convert_data_to_dict(data, int_conversions={}, str_args={}, bool_args={}):
                         val = val == 'True'
                     else:
                         continue
-
-                for part in reversed(prop_path):
-                    if part[0] == '@':
-                        val = {part[1:]: [val]}
+                flattened_path = []
+                for item in prop_path:
+                    if "@" in item:
+                        flattened_path.append(item[1:])
+                        key = "_".join(prop_path)
+                        flattened_path.append(str(counter[key]))
+                        counter.update({key: 1})
                     else:
-                        val = {part: val}
-
-                # merge converted_row with val, merge items in arrays
-                piecewise_merge(converted_row, val,
-                                list_update=lambda target, source: target[0].update(source[0]))
-
-            # merge converted_row into ret, but handle arrays this time
-            piecewise_merge(ret, converted_row,
-                            list_update=lambda target, source: target.extend(source))
-        yield ret
+                        flattened_path.append(item)
+                converted_row["_".join(flattened_path)] = val
+            converted_row = {k: v for k, v in converted_row.items() if len(v) > 0}
+            ret.update(converted_row)
+        yield unflatten_list(ret)
 
 
 def piecewise_merge(target, source, list_update):
@@ -121,6 +123,15 @@ def read_data_blocks(data):
 
 
 def read_block(data, startrow):
+    """
+    The function returns a block of rows with some data in a row.
+    A blank line separates the block.
+    :param data: Data is a list of tuples, where each tuple represents a row.
+     The element for tuple is Cell.
+    :param startrow: Starting row, where function finding block.
+    :return: Returns a list of lists. The inner list represents columns and the outer row list.
+     Cell values are strings.
+    """
     ret = []
 
     def convert(x):
