@@ -1,17 +1,8 @@
-# -*- coding: utf-8 -*-
-"""Taxonomy proxies."""
-
 from flask import current_app
 from werkzeug.local import LocalProxy
 
-current_flask_taxonomies = LocalProxy(
+if False:
+    import flask_taxonomies.api
+
+current_flask_taxonomies = LocalProxy(  # type: flask_taxonomies.api.Api
     lambda: current_app.extensions['flask-taxonomies'])
-"""Helper proxy to access flask taxonomies state object."""
-
-current_permission_factory = LocalProxy(
-    lambda: current_flask_taxonomies.permission_factory)
-"""Helper proxy to access to the configured permission factory."""
-
-current_flask_taxonomies_redis = LocalProxy(
-    lambda: current_app.extensions['flask-taxonomies-redis'])
-"""Helper proxy to access flask taxonomies state object."""
