@@ -5,6 +5,7 @@ from sqlalchemy.orm.exc import NoResultFound
 from werkzeug.utils import cached_property
 
 from flask_taxonomies.constants import (
+    INCLUDE_ANCESTOR_LIST,
     INCLUDE_ANCESTORS_HIERARCHY,
     INCLUDE_ENVELOPE,
     INCLUDE_SELF,
@@ -79,7 +80,7 @@ class Paginator:
         return headers, links
 
     def check_single_result(self, data, original):
-        if self.single_result:
+        if self.single_result and not INCLUDE_ANCESTOR_LIST in self.representation:
             if not data:
                 raise NoResultFound()
 
