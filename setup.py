@@ -7,7 +7,7 @@ requires = [
     'sqlalchemy-utils',
     'python-slugify',
     'jsonpatch',
-    'webargs<6.0.0',
+    'webargs<8.0.0',
     'jsonpointer',
     'LinkHeader',
     'jsonpatch',
